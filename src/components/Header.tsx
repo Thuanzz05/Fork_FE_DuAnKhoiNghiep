@@ -75,7 +75,7 @@ function Header() {
             <span>
               <b>Hotline:</b>
               <br />
-              19006750
+              0986126955
             </span>
           </div>
 
@@ -87,7 +87,7 @@ function Header() {
             <span>
               <b>Email:</b>
               <br />
-              support@redbean.vn
+              Hoangthingocmai2005@gmail.com
             </span>
           </div>
         </div>
