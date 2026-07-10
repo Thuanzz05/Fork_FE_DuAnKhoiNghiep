@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { categories } from '../data/products'
+import { getCartCount, getCartItems } from '../utils/cart'
 import { getWishlistIds } from '../utils/wishlist'
 import './Header.css'
 
@@ -16,6 +17,7 @@ function Header() {
   const location = useLocation()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [wishlistCount, setWishlistCount] = useState(() => getWishlistIds().length)
+  const [cartCount, setCartCount] = useState(() => getCartCount())
 
   useEffect(() => {
     const syncWishlistCount = () => setWishlistCount(getWishlistIds().length)
@@ -30,6 +32,22 @@ function Header() {
     return () => {
       window.removeEventListener('storage', syncWishlistCount)
       window.removeEventListener('wishlist-updated', handleWishlistUpdated)
+    }
+  }, [])
+
+  useEffect(() => {
+    const syncCartCount = () => setCartCount(getCartCount())
+    const handleCartUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<ReturnType<typeof getCartItems>>
+      setCartCount((customEvent.detail || getCartItems()).reduce((total, item) => total + item.quantity, 0))
+    }
+
+    window.addEventListener('storage', syncCartCount)
+    window.addEventListener('cart-updated', handleCartUpdated)
+
+    return () => {
+      window.removeEventListener('storage', syncCartCount)
+      window.removeEventListener('cart-updated', handleCartUpdated)
     }
   }, [])
 
@@ -108,14 +126,15 @@ function Header() {
             </svg>
           </Link>
 
-          <button className="cart-button" type="button">
-            <span className="count-badge">0</span>
+          <Link className="cart-button" to="/gio-hang">
+            <span className="count-badge">{cartCount}</span>
             <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6 8h12l-1 13H7L6 8Z" />
-              <path d="M9 8a3 3 0 0 1 6 0" />
+              <circle cx="9" cy="20" r="1.7" />
+              <circle cx="18" cy="20" r="1.7" />
+              <path d="M3 4h2l2.4 10.8a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L21 8H6" />
             </svg>
             <span>Cart</span>
-          </button>
+          </Link>
         </div>
       </div>
 

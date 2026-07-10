@@ -125,7 +125,7 @@ function Footer() {
             </svg>
             <div>
               <span className="contact-label">Địa Chỉ</span>
-              <span className="contact-value address">Thị xã Mỹ Hào, Phố Nối, Hưng Yên</span>
+              <span className="contact-value address">Cầu Treo, Yên Mỹ, Hưng Yên</span>
             </div>
           </div>
         </div>

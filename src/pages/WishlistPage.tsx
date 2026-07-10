@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { formatPrice, products } from '../data/products'
 import type { Product } from '../data/products'
+import { addCartItem } from '../utils/cart'
 import { getWishlistIds, removeWishlistId } from '../utils/wishlist'
 import ProductQuickViewModal from '../components/ProductQuickViewModal'
 import './WishlistPage.css'
@@ -42,6 +43,10 @@ function WishlistPage() {
 
   const closeQuickView = () => setQuickViewProduct(null)
 
+  const handleAddToCart = (productId: string) => {
+    addCartItem(productId)
+  }
+
   return (
     <main className="wishlist-page">
       <section className="wishlist-hero">
@@ -61,19 +66,19 @@ function WishlistPage() {
                   </Link>
 
                   <div className="wishlist-hover-actions" aria-label="Tùy chọn sản phẩm yêu thích">
-                    <Link to={`/san-pham/${product.slug}`} className="wishlist-action" title="Xem chi tiết" aria-label="Xem chi tiết">
+                    <button
+                      type="button"
+                      className="wishlist-action"
+                      title="Thêm vào giỏ hàng"
+                      aria-label="Thêm vào giỏ hàng"
+                      onClick={() => handleAddToCart(product.id)}
+                    >
                       <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M4 7h10" />
-                        <path d="M18 7h2" />
-                        <path d="M4 17h2" />
-                        <path d="M10 17h10" />
-                        <path d="M4 12h4" />
-                        <path d="M12 12h8" />
-                        <circle cx="16" cy="7" r="2" />
-                        <circle cx="8" cy="17" r="2" />
-                        <circle cx="10" cy="12" r="2" />
+                        <circle cx="9" cy="20" r="1.7" />
+                        <circle cx="18" cy="20" r="1.7" />
+                        <path d="M3 4h2l2.4 10.8a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L21 8H6" />
                       </svg>
-                    </Link>
+                    </button>
 
                     <button
                       type="button"

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { categories, formatPrice, products } from '../data/products'
 import type { Product } from '../data/products'
+import { addCartItem } from '../utils/cart'
 import { getWishlistIds, toggleWishlistId } from '../utils/wishlist'
 import './ProductsPage.css'
 
@@ -143,6 +144,10 @@ function ProductsPage() {
     }
   }
 
+  const handleAddToCart = (productId: string, quantity = 1) => {
+    addCartItem(productId, quantity)
+  }
+
   return (
     <div className="products-page">
       <div className="products-breadcrumb">
@@ -242,19 +247,19 @@ function ProductsPage() {
                     <img src={product.image} alt={product.name} loading="lazy" />
                   </Link>
                   <div className="product-hover-actions" aria-label="TÃ¹y chá»n sáº£n pháº©m">
-                    <Link to={`/san-pham/${product.slug}`} className="product-action" title="Xem chi tiết" aria-label="Xem chi tiết">
+                    <button
+                      type="button"
+                      className="product-action"
+                      title="Thêm vào giỏ hàng"
+                      aria-label="Thêm vào giỏ hàng"
+                      onClick={() => handleAddToCart(product.id)}
+                    >
                       <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M4 7h10" />
-                        <path d="M18 7h2" />
-                        <path d="M4 17h2" />
-                        <path d="M10 17h10" />
-                        <path d="M4 12h4" />
-                        <path d="M12 12h8" />
-                        <circle cx="16" cy="7" r="2" />
-                        <circle cx="8" cy="17" r="2" />
-                        <circle cx="10" cy="12" r="2" />
+                        <circle cx="9" cy="20" r="1.7" />
+                        <circle cx="18" cy="20" r="1.7" />
+                        <path d="M3 4h2l2.4 10.8a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L21 8H6" />
                       </svg>
-                    </Link>
+                    </button>
                     <button
                       type="button"
                       className={`product-action${wishlistIds.includes(product.id) ? ' active' : ''}`}
@@ -410,7 +415,7 @@ function ProductsPage() {
                     +
                   </button>
                 </div>
-                <button type="button" className="quick-view-add">
+                <button type="button" className="quick-view-add" onClick={() => handleAddToCart(quickViewProduct.id, quickViewQuantity)}>
                   Thêm vào giỏ hàng
                 </button>
               </div>

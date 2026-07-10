@@ -1,0 +1,65 @@
+.cart-toast {
+  position: fixed;
+  top: 18px;
+  right: 24px;
+  z-index: 1700;
+  width: min(360px, calc(100vw - 32px));
+  padding: 14px 38px 14px 18px;
+  border: 1px solid #c0e2d0;
+  border-radius: 5px;
+  background: #d8eee4;
+  color: #064d35;
+  box-shadow: 0 16px 36px rgba(6, 77, 53, 0.14);
+  animation: cart-toast-in 0.22s ease-out;
+}
+
+.cart-toast strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.cart-toast p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.cart-toast a {
+  color: #1683ff;
+  text-decoration: none;
+}
+
+.cart-toast a:hover {
+  text-decoration: underline;
+}
+
+.cart-toast-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(6, 77, 53, 0.35);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cart-toast-close:hover {
+  color: #064d35;
+}
+
+@keyframes cart-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

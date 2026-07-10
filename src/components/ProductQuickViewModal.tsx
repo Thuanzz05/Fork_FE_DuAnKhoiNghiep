@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { productGalleries } from '../data/productGalleries'
 import { formatPrice } from '../data/products'
 import type { Product } from '../data/products'
+import { addCartItem } from '../utils/cart'
 import './ProductQuickViewModal.css'
 
 interface ProductQuickViewModalProps {
@@ -90,7 +91,7 @@ function ProductQuickViewModal({ product, onClose }: ProductQuickViewModalProps)
                 +
               </button>
             </div>
-            <button type="button" className="quick-view-add">
+            <button type="button" className="quick-view-add" onClick={() => addCartItem(product.id, quantity)}>
               Thêm vào giỏ hàng
             </button>
           </div>
