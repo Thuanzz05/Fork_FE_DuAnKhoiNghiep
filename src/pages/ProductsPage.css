@@ -1060,7 +1060,7 @@
     display: block;
     position: fixed;
     inset: 0;
-    z-index: 200;
+    z-index: 998; /* Cover header (z-index: 900) */
     background: rgba(0, 0, 0, 0.35);
     animation: filter-fade 0.2s ease-out;
   }
@@ -1081,10 +1081,11 @@
     position: fixed;
     top: 0;
     right: 0;
-    z-index: 210;
+    z-index: 999; /* Cover header */
     width: 300px;
     max-width: 85vw;
     height: 100dvh;
+    max-height: 100dvh; /* Reset inherited max-height */
     margin: 0;
     padding: 0 16px 24px;
     background: #ffffff;
@@ -1122,7 +1123,7 @@
     border: none;
     transform: translate(calc(100vw + 300px), -50%); /* Start hidden off-screen */
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 220; /* Above overlay and sidebar */
+    z-index: 1000; /* Above overlay and sidebar */
     cursor: pointer;
   }
 
