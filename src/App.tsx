@@ -17,6 +17,7 @@ import CustomerAccountPage from './pages/CustomerAccountPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
 import ScrollToTop from './components/ScrollToTop'
 import ProductDetailPage from './pages/ProductDetailPage'
+import AboutPage from './pages/AboutPage'
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
 
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/gioi-thieu" element={<AboutPage />} />
         <Route path="/san-pham" element={<ProductsPage />} />
         <Route path="/san-pham/:slug" element={<ProductDetailPage />} />
         <Route path="/yeu-thich" element={<WishlistPage />} />
