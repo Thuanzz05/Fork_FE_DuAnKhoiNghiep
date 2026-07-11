@@ -95,6 +95,11 @@
   margin-top: 30px;
 }
 
+.policy-section-note {
+  margin: 0 0 14px !important;
+  color: #574c4d;
+}
+
 .policy-section-title {
   display: flex;
   align-items: center;
@@ -180,6 +185,64 @@
   border-radius: 50%;
   background: #d56a72;
   content: '';
+}
+
+.policy-evidence-box {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border: 1px dashed #dbaeb2;
+  border-radius: 7px;
+  background: #fffafa;
+}
+
+.policy-evidence-box h3 {
+  margin: 0 0 6px;
+  color: #b53740;
+  font-size: 15px;
+}
+
+.policy-evidence-box p {
+  margin: 0;
+  color: #615556;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.return-process {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 13px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.return-process li {
+  display: flex;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid #eadbdd;
+  border-radius: 7px;
+  background: #ffffff;
+}
+
+.return-process li > span {
+  color: #d56a72;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.return-process h3 {
+  margin: 0 0 4px;
+  color: #493234;
+  font-size: 14px;
+}
+
+.return-process p {
+  margin: 0;
+  color: #706465;
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 .shipping-fee-box {
@@ -315,7 +378,8 @@
   }
 
   .delivery-time-grid,
-  .shipping-fee-box {
+  .shipping-fee-box,
+  .return-process {
     grid-template-columns: 1fr;
   }
 

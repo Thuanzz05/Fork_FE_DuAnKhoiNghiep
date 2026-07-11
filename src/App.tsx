@@ -11,6 +11,7 @@ import NewsPage from './pages/NewsPage'
 import NewsDetailPage from './pages/NewsDetailPage'
 import AccountPage from './pages/AccountPage'
 import ShippingPolicyPage from './pages/ShippingPolicyPage'
+import ReturnPolicyPage from './pages/ReturnPolicyPage'
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
         <Route path="/tin-tuc/:id" element={<NewsDetailPage />} />
         <Route path="/tai-khoan" element={<AccountPage />} />
         <Route path="/chinh-sach-giao-hang" element={<ShippingPolicyPage />} />
+        <Route path="/chinh-sach-doi-tra" element={<ReturnPolicyPage />} />
       </Routes>
 
       <Footer />
