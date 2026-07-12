@@ -1,3 +1,5 @@
+import { seedMockOrders } from './orders'
+
 export type CustomerAddress = {
   id: string
   recipientName: string
@@ -50,6 +52,43 @@ const getStoredAccounts = (): Record<string, AuthSession> => {
   }
 }
 
+const seedQuangUser = () => {
+  if (typeof window === 'undefined') return
+  try {
+    const accounts = getStoredAccounts()
+    const email = 'quang@gmail.com'
+    if (!accounts[email]) {
+      const user: AuthUser = {
+        id: 'user-quang-demo',
+        email,
+        firstName: 'Quang',
+        lastName: 'Lê Văn',
+        phone: '0987654321',
+        addresses: [
+          {
+            id: 'address-quang-default',
+            recipientName: 'Lê Văn Quang',
+            phone: '0987654321',
+            provinceCode: '79',
+            provinceName: 'Thành phố Hồ Chí Minh',
+            wardCode: '26734',
+            wardName: 'Phường Bến Thành',
+            detail: 'Số 15, Đường Trần Hưng Đạo',
+            isDefault: true,
+          },
+        ],
+      }
+      accounts[email] = { user, password: '123456' }
+      localStorage.setItem(AUTH_USERS_KEY, JSON.stringify(accounts))
+    }
+  } catch (e) {
+    console.error('Error seeding demo user:', e)
+  }
+}
+
+// Chạy gieo hạt ngay khi load file
+seedQuangUser()
+
 export const getCurrentUser = () => getAuthSession()?.user ?? null
 
 const saveSession = (session: AuthSession | null) => {
@@ -84,6 +123,11 @@ export const loginDemo = (email: string, password: string) => {
     lastName: generatedName.lastName,
     phone: '',
     addresses: [],
+  }
+
+  // Tự động gieo hạt đơn hàng mẫu nếu đây là tài khoản quang@gmail.com
+  if (normalizedEmail === 'quang@gmail.com') {
+    seedMockOrders(user.id)
   }
 
   saveSession({ user, password: existingAccount?.password || password })

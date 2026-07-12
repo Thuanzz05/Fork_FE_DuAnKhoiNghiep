@@ -1,11 +1,24 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { formatPrice, products } from '../data/products'
 import { getCartItems, removeCartItem, updateCartItemQuantity } from '../utils/cart'
+import { getCurrentUser } from '../utils/auth'
 import './CartPage.css'
 
 function CartPage() {
+  const navigate = useNavigate()
   const [cartItems, setCartItems] = useState(() => getCartItems())
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>(() =>
+    getCartItems().map((item) => item.productId)
+  )
+
+  useEffect(() => {
+    // Nếu có sản phẩm bị xóa khỏi giỏ hàng, bỏ chọn sản phẩm đó
+    setSelectedProductIds((prev) => {
+      const cartIds = cartItems.map((item) => item.productId)
+      return prev.filter((id) => cartIds.includes(id))
+    })
+  }, [cartItems])
 
   useEffect(() => {
     const syncCart = () => setCartItems(getCartItems())
@@ -32,7 +45,11 @@ function CartPage() {
       .filter((item): item is NonNullable<typeof item> => Boolean(item))
   }, [cartItems])
 
-  const totalPrice = cartProducts.reduce((total, item) => total + item.product.price * item.quantity, 0)
+  const selectedProducts = useMemo(() => {
+    return cartProducts.filter(({ product }) => selectedProductIds.includes(product.id))
+  }, [cartProducts, selectedProductIds])
+
+  const totalPrice = selectedProducts.reduce((total, item) => total + item.product.price * item.quantity, 0)
 
   const handleQuantityChange = (productId: string, quantity: number) => {
     setCartItems(updateCartItemQuantity(productId, quantity))
@@ -40,6 +57,34 @@ function CartPage() {
 
   const handleRemove = (productId: string) => {
     setCartItems(removeCartItem(productId))
+  }
+
+  const handleToggleSelect = (productId: string) => {
+    setSelectedProductIds((prev) =>
+      prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]
+    )
+  }
+
+  const isAllSelected = cartProducts.length > 0 && selectedProductIds.length === cartProducts.length
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedProductIds([])
+    } else {
+      setSelectedProductIds(cartProducts.map((p) => p.product.id))
+    }
+  }
+
+  const handleCheckout = () => {
+    const currentUser = getCurrentUser()
+    if (!currentUser) {
+      navigate('/tai-khoan?che-do=dang-nhap')
+      return
+    }
+
+    if (selectedProductIds.length === 0) return
+
+    navigate('/thanh-toan', { state: { selectedIds: selectedProductIds } })
   }
 
   return (
@@ -59,6 +104,14 @@ function CartPage() {
           <>
             <div className="cart-table">
               <div className="cart-table-head">
+                <div className="cart-head-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={handleToggleSelectAll}
+                    aria-label="Chọn tất cả sản phẩm"
+                  />
+                </div>
                 <span>Thông tin sản phẩm</span>
                 <span>Đơn giá</span>
                 <span>Số lượng</span>
@@ -66,40 +119,51 @@ function CartPage() {
                 <span>Thao tác</span>
               </div>
 
-              {cartProducts.map(({ product, quantity }) => (
-                <div className="cart-row" key={product.id}>
-                  <div className="cart-product">
-                    <Link to={`/san-pham/${product.slug}`} className="cart-product-image">
-                      <img src={product.image} alt={product.name} />
-                    </Link>
-                    <div>
-                      <Link to={`/san-pham/${product.slug}`} className="cart-product-name">
-                        {product.name}
+              {cartProducts.map(({ product, quantity }) => {
+                const isSelected = selectedProductIds.includes(product.id)
+                return (
+                  <div className={`cart-row${isSelected ? ' selected' : ''}`} key={product.id}>
+                    <div className="cart-row-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleToggleSelect(product.id)}
+                        aria-label={`Chọn sản phẩm ${product.name}`}
+                      />
+                    </div>
+                    <div className="cart-product">
+                      <Link to={`/san-pham/${product.slug}`} className="cart-product-image">
+                        <img src={product.image} alt={product.name} />
                       </Link>
+                      <div>
+                        <Link to={`/san-pham/${product.slug}`} className="cart-product-name">
+                          {product.name}
+                        </Link>
+                      </div>
+                    </div>
+
+                    <div className="cart-price">{formatPrice(product.price)}</div>
+
+                    <div className="cart-qty">
+                      <button type="button" onClick={() => handleQuantityChange(product.id, quantity - 1)}>
+                        -
+                      </button>
+                      <span>{quantity}</span>
+                      <button type="button" onClick={() => handleQuantityChange(product.id, quantity + 1)}>
+                        +
+                      </button>
+                    </div>
+
+                    <div className="cart-line-total">{formatPrice(product.price * quantity)}</div>
+
+                    <div className="cart-action-cell">
+                      <button type="button" className="cart-remove" onClick={() => handleRemove(product.id)}>
+                        Xóa
+                      </button>
                     </div>
                   </div>
-
-                  <div className="cart-price">{formatPrice(product.price)}</div>
-
-                  <div className="cart-qty">
-                    <button type="button" onClick={() => handleQuantityChange(product.id, quantity - 1)}>
-                      -
-                    </button>
-                    <span>{quantity}</span>
-                    <button type="button" onClick={() => handleQuantityChange(product.id, quantity + 1)}>
-                      +
-                    </button>
-                  </div>
-
-                  <div className="cart-line-total">{formatPrice(product.price * quantity)}</div>
-
-                  <div className="cart-action-cell">
-                    <button type="button" className="cart-remove" onClick={() => handleRemove(product.id)}>
-                      Xóa
-                    </button>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
             <div className="cart-summary">
@@ -107,7 +171,12 @@ function CartPage() {
                 <span>Tổng tiền:</span>
                 <strong>{formatPrice(totalPrice)}</strong>
               </div>
-              <button type="button" className="cart-checkout">
+              <button
+                type="button"
+                className="cart-checkout"
+                onClick={handleCheckout}
+                disabled={selectedProductIds.length === 0}
+              >
                 Thanh toán
               </button>
             </div>

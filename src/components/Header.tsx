@@ -192,6 +192,13 @@ function Header() {
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0M12 11a4 4 0 1 0 0-8" /></svg>
                     Thông tin tài khoản
                   </Link>
+                  <Link role="menuitem" to="/tai-khoan/don-hang" onClick={(event) => { event.currentTarget.blur(); setAccountMenuOpen(false) }}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" />
+                      <path d="M9 11h6M9 15h4" />
+                    </svg>
+                    Đơn hàng của tôi
+                  </Link>
                   <Link role="menuitem" to="/tai-khoan/doi-mat-khau" onClick={(event) => { event.currentTarget.blur(); setAccountMenuOpen(false) }}>
                     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
                     Đổi mật khẩu
