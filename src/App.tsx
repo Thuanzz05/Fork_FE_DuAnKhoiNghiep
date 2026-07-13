@@ -22,6 +22,7 @@ import ProductDetailPage from './pages/ProductDetailPage'
 import AboutPage from './pages/AboutPage'
 import AdminDashboardPage from './pages/AdminDashboardPage'
 import AdminProductsPage from './pages/AdminProductsPage'
+import AdminAccountsPage from './pages/AdminAccountsPage'
 
 function AppContent() {
   const location = useLocation()
@@ -54,6 +55,7 @@ function AppContent() {
         <Route path="/admin" element={<AdminDashboardPage />} />
         <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
         <Route path="/admin/san-pham" element={<AdminProductsPage />} />
+        <Route path="/admin/tai-khoan" element={<AdminAccountsPage />} />
       </Routes>
 
       {!isAdminRoute && <Footer />}
