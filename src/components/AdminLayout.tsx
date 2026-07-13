@@ -29,6 +29,9 @@ export type AdminIconName =
   | 'upload'
   | 'lock'
   | 'unlock'
+  | 'pause'
+  | 'play'
+  | 'calendar'
 
 interface AdminIconProps extends SVGProps<SVGSVGElement> {
   name: AdminIconName
@@ -62,6 +65,9 @@ export const AdminIcon = ({ name, ...props }: AdminIconProps) => {
     upload: <><path d="M12 16V4M7 9l5-5 5 5" /><path d="M5 15v4h14v-4" /></>,
     lock: <><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></>,
     unlock: <><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 7.5-2" /></>,
+    pause: <><path d="M8 5v14M16 5v14" /></>,
+    play: <path d="m8 5 11 7-11 7Z" />,
+    calendar: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 10h18" /></>,
   }
 
   return (
@@ -71,7 +77,7 @@ export const AdminIcon = ({ name, ...props }: AdminIconProps) => {
   )
 }
 
-type AdminSection = 'dashboard' | 'products' | 'accounts'
+type AdminSection = 'dashboard' | 'products' | 'accounts' | 'promotions'
 
 interface AdminLayoutProps {
   activeItem: AdminSection
@@ -86,7 +92,7 @@ const navItems: Array<{ label: string; icon: AdminIconName; section?: AdminSecti
   { label: 'Đơn hàng', icon: 'orders', count: 12 },
   { label: 'Sản phẩm', icon: 'products', section: 'products', to: '/admin/san-pham' },
   { label: 'Tài khoản', icon: 'customers', section: 'accounts', to: '/admin/tai-khoan' },
-  { label: 'Khuyến mãi', icon: 'discount' },
+  { label: 'Khuyến mãi', icon: 'discount', section: 'promotions', to: '/admin/khuyen-mai' },
   { label: 'Bài viết', icon: 'news' },
 ]
 
