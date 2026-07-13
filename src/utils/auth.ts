@@ -91,6 +91,8 @@ seedQuangUser()
 
 export const getCurrentUser = () => getAuthSession()?.user ?? null
 
+export const getRegisteredUsers = (): AuthUser[] => Object.values(getStoredAccounts()).map((account) => account.user)
+
 const saveSession = (session: AuthSession | null) => {
   if (session) {
     localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session))
