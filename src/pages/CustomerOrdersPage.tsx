@@ -19,6 +19,9 @@ function CustomerOrdersPage() {
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null)
   const [cancelReason, setCancelReason] = useState('')
   const [actionNotice, setActionNotice] = useState({ message: '', type: '' })
+  const [searchTerm, setSearchTerm] = useState('')
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest')
+  const [dateFilter, setDateFilter] = useState<'all' | '7days' | '30days' | 'thisMonth' | 'thisYear'>('all')
 
   const [reviewOrder, setReviewOrder] = useState<Order | null>(null)
   const [viewReviewsOrder, setViewReviewsOrder] = useState<Order | null>(null)
@@ -106,15 +109,57 @@ function CustomerOrdersPage() {
   }
 
   const filteredOrders = orders.filter((order) => {
-    if (activeTab === 'ALL') return true
+    // 1. Lọc theo Tab trạng thái
+    let matchesTab = true
     if (activeTab === 'DANG_GIAO_HANG') {
-      return (
+      matchesTab =
         order.orderStatus === 'DA_XAC_NHAN' ||
         order.orderStatus === 'DANG_DONG_GOI' ||
         order.orderStatus === 'DANG_GIAO_HANG'
-      )
+    } else if (activeTab !== 'ALL') {
+      matchesTab = order.orderStatus === activeTab
     }
-    return order.orderStatus === activeTab
+
+    // 2. Lọc theo từ khóa tìm kiếm
+    let matchesSearch = true
+    if (searchTerm.trim()) {
+      const term = searchTerm.trim().toLowerCase()
+      const matchesCode = order.orderCode.toLowerCase().includes(term)
+      const matchesProduct = order.items.some((item) =>
+        item.productName.toLowerCase().includes(term)
+      )
+      matchesSearch = matchesCode || matchesProduct
+    }
+
+    // 3. Lọc theo thời gian
+    let matchesDate = true
+    if (dateFilter !== 'all') {
+      const orderTime = new Date(order.createdAt).getTime()
+      const now = Date.now()
+      if (dateFilter === '7days') {
+        matchesDate = now - orderTime <= 7 * 24 * 60 * 60 * 1000
+      } else if (dateFilter === '30days') {
+        matchesDate = now - orderTime <= 30 * 24 * 60 * 60 * 1000
+      } else if (dateFilter === 'thisMonth') {
+        const orderDate = new Date(order.createdAt)
+        const currentDate = new Date()
+        matchesDate =
+          orderDate.getMonth() === currentDate.getMonth() &&
+          orderDate.getFullYear() === currentDate.getFullYear()
+      } else if (dateFilter === 'thisYear') {
+        const orderDate = new Date(order.createdAt)
+        const currentDate = new Date()
+        matchesDate = orderDate.getFullYear() === currentDate.getFullYear()
+      }
+    }
+
+    return matchesTab && matchesSearch && matchesDate
+  })
+
+  const sortedOrders = [...filteredOrders].sort((a, b) => {
+    const timeA = new Date(a.createdAt).getTime()
+    const timeB = new Date(b.createdAt).getTime()
+    return sortBy === 'newest' ? timeB - timeA : timeA - timeB
   })
 
   const handleCancelClick = (orderId: string) => {
@@ -233,6 +278,30 @@ function CustomerOrdersPage() {
               </div>
             </div>
 
+            {/* Thanh tìm kiếm đơn hàng */}
+            <div className="order-search-bar">
+              <svg viewBox="0 0 24 24" className="search-icon" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2.5" fill="none" />
+                <path d="M21 21l-4.3-4.3" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Tìm kiếm theo mã đơn hàng hoặc tên sản phẩm..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  className="clear-search-btn"
+                  onClick={() => setSearchTerm('')}
+                  aria-label="Xóa từ khóa tìm kiếm"
+                >
+                  &times;
+                </button>
+              )}
+            </div>
+
             {/* Filter Tabs */}
             <div className="order-tabs" role="tablist" aria-label="Bộ lọc đơn hàng">
               {[
@@ -255,9 +324,41 @@ function CustomerOrdersPage() {
               ))}
             </div>
 
+            {/* Bộ lọc nâng cao: Sắp xếp & Thời gian */}
+            <div className="order-filters-row">
+              <div className="filter-select-wrapper">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  aria-label="Sắp xếp đơn hàng"
+                >
+                  <option value="newest">Sắp xếp: Mới nhất</option>
+                  <option value="oldest">Sắp xếp: Cũ nhất</option>
+                </select>
+              </div>
+
+              <div className="filter-select-wrapper date-filter">
+                <select
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value as any)}
+                  aria-label="Lọc theo thời gian"
+                >
+                  <option value="all">Tất cả thời gian</option>
+                  <option value="7days">7 ngày gần đây</option>
+                  <option value="30days">30 ngày gần đây</option>
+                  <option value="thisMonth">Tháng này</option>
+                  <option value="thisYear">Năm nay</option>
+                </select>
+                <svg viewBox="0 0 24 24" className="calendar-icon" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                  <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+
             {/* Orders List */}
             <div className="orders-list">
-              {filteredOrders.length === 0 ? (
+              {sortedOrders.length === 0 ? (
                 <div className="order-empty">
                   <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z" />
@@ -268,8 +369,11 @@ function CustomerOrdersPage() {
                   </Link>
                 </div>
               ) : (
-                filteredOrders.map((order) => (
+                sortedOrders.map((order, index) => (
                   <article className="order-card" key={order.id}>
+                    {index === 0 && sortBy === 'newest' && (
+                      <span className="latest-order-badge">ĐƠN HÀNG MỚI NHẤT</span>
+                    )}
                     <div className="order-card-header">
                       <div className="order-meta-info">
                         <span className="order-code-title">Đơn hàng <strong>#{order.orderCode}</strong></span>

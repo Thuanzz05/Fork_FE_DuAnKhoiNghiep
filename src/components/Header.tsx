@@ -106,17 +106,7 @@ function Header() {
         </button>
 
         <Link className="header-logo" to="/" aria-label="Red Bean Beauty">
-          <svg className="logo-svg" viewBox="0 0 40 40" aria-hidden="true">
-            <circle cx="20" cy="20" r="4" fill="#B53740" />
-            <ellipse cx="20" cy="10" rx="5" ry="8" fill="#D95A63" opacity="0.85" />
-            <ellipse cx="29" cy="15" rx="5" ry="8" fill="#C44850" opacity="0.75" transform="rotate(72 29 15)" />
-            <ellipse cx="26" cy="26" rx="5" ry="8" fill="#D95A63" opacity="0.7" transform="rotate(144 26 26)" />
-            <ellipse cx="14" cy="26" rx="5" ry="8" fill="#C44850" opacity="0.75" transform="rotate(216 14 26)" />
-            <ellipse cx="11" cy="15" rx="5" ry="8" fill="#D95A63" opacity="0.8" transform="rotate(288 11 15)" />
-            <circle cx="20" cy="20" r="2.5" fill="#F0A0A5" opacity="0.6" />
-            <path d="M28 32 C30 28, 34 30, 32 34 C30 36, 28 34, 28 32Z" fill="#7DAF8E" opacity="0.7" />
-          </svg>
-          <span className="logo-text">RED BEAN BEAUTY</span>
+          <img src="/images/logo1.png" alt="Red Bean Beauty" className="logo-img" />
         </Link>
 
         <form className="header-search" role="search">
