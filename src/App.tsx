@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import CartToast from './components/CartToast'
 import Header from './components/Header'
 import Footer from './components/Footer'
@@ -20,13 +20,17 @@ import CheckoutPage from './pages/CheckoutPage'
 import ScrollToTop from './components/ScrollToTop'
 import ProductDetailPage from './pages/ProductDetailPage'
 import AboutPage from './pages/AboutPage'
+import AdminDashboardPage from './pages/AdminDashboardPage'
 
-function App() {
+function AppContent() {
+  const location = useLocation()
+  const isAdminRoute = location.pathname.startsWith('/admin')
+
   return (
-    <BrowserRouter>
+    <>
       <ScrollToTop />
-      <Header />
-      <CartToast />
+      {!isAdminRoute && <Header />}
+      {!isAdminRoute && <CartToast />}
 
       <Routes>
         <Route path="/" element={<HomePage />} />
@@ -46,9 +50,19 @@ function App() {
         <Route path="/tai-khoan/doi-mat-khau" element={<ChangePasswordPage />} />
         <Route path="/tai-khoan/don-hang" element={<CustomerOrdersPage />} />
         <Route path="/thanh-toan" element={<CheckoutPage />} />
+        <Route path="/admin" element={<AdminDashboardPage />} />
+        <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
       </Routes>
 
-      <Footer />
+      {!isAdminRoute && <Footer />}
+    </>
+  )
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
     </BrowserRouter>
   )
 }
