@@ -20,10 +20,12 @@ import CheckoutPage from './pages/CheckoutPage'
 import ScrollToTop from './components/ScrollToTop'
 import ProductDetailPage from './pages/ProductDetailPage'
 import AboutPage from './pages/AboutPage'
-import AdminDashboardPage from './pages/AdminDashboardPage'
-import AdminProductsPage from './pages/AdminProductsPage'
-import AdminAccountsPage from './pages/AdminAccountsPage'
-import AdminPromotionsPage from './pages/AdminPromotionsPage'
+import AdminDashboardPage from './pages/admin/AdminDashboardPage'
+import AdminProductsPage from './pages/admin/AdminProductsPage'
+import AdminAccountsPage from './pages/admin/AdminAccountsPage'
+import AdminPromotionsPage from './pages/admin/AdminPromotionsPage'
+import AdminOrdersPage from './pages/admin/AdminOrdersPage'
+import AdminInventoryPage from './pages/admin/AdminInventoryPage'
 
 function AppContent() {
   const location = useLocation()
@@ -58,6 +60,8 @@ function AppContent() {
         <Route path="/admin/san-pham" element={<AdminProductsPage />} />
         <Route path="/admin/tai-khoan" element={<AdminAccountsPage />} />
         <Route path="/admin/khuyen-mai" element={<AdminPromotionsPage />} />
+        <Route path="/admin/don-hang" element={<AdminOrdersPage />} />
+        <Route path="/admin/kho" element={<AdminInventoryPage />} />
       </Routes>
 
       {!isAdminRoute && <Footer />}

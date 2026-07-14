@@ -1,10 +1,10 @@
-.admin-promotions-heading {
+.admin-accounts-heading {
   align-items: center;
 }
 
-.admin-promotion-primary,
-.admin-promotion-secondary,
-.admin-promotion-danger {
+.admin-account-primary,
+.admin-account-secondary,
+.admin-account-danger {
   display: inline-flex;
   min-height: 40px;
   align-items: center;
@@ -13,52 +13,52 @@
   padding: 0 17px;
   border: 1px solid transparent;
   border-radius: 7px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 750;
 }
 
-.admin-promotion-primary {
+.admin-account-primary {
   background: var(--admin-brand);
   color: #ffffff;
 }
 
-.admin-promotion-primary:hover {
+.admin-account-primary:hover {
   background: var(--admin-brand-dark);
 }
 
-.admin-promotion-primary svg {
+.admin-account-primary svg {
   width: 17px;
   height: 17px;
 }
 
-.admin-promotion-secondary {
+.admin-account-secondary {
   border-color: #ded4d5;
   background: #ffffff;
   color: #554a4b;
 }
 
-.admin-promotion-secondary:hover {
-  border-color: #cbbabc;
+.admin-account-secondary:hover {
   background: #faf7f7;
+  border-color: #cbbabc;
 }
 
-.admin-promotion-danger {
+.admin-account-danger {
   background: #a72f38;
   color: #ffffff;
 }
 
-.admin-promotion-danger:hover {
+.admin-account-danger:hover {
   background: #88242c;
 }
 
-.admin-promotion-summary {
+.admin-account-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 18px;
 }
 
-.admin-promotion-summary article {
+.admin-account-summary article {
   display: flex;
   min-width: 0;
   min-height: 86px;
@@ -70,7 +70,7 @@
   background: #ffffff;
 }
 
-.admin-promotion-summary article > span {
+.admin-account-summary article > span {
   display: grid;
   width: 42px;
   height: 42px;
@@ -79,56 +79,57 @@
   border-radius: 7px;
 }
 
-.admin-promotion-summary article > span svg {
+.admin-account-summary article > span svg {
   width: 20px;
   height: 20px;
 }
 
-.admin-promotion-summary .is-red {
+.admin-account-summary .is-red {
   background: #f9e7e9;
   color: var(--admin-brand);
 }
 
-.admin-promotion-summary .is-green {
+.admin-account-summary .is-green {
   background: #e5f4ec;
   color: #168156;
 }
 
-.admin-promotion-summary .is-blue {
+.admin-account-summary .is-blue {
   background: #e7f0fa;
   color: #3972ad;
 }
 
-.admin-promotion-summary .is-orange {
+.admin-account-summary .is-orange {
   background: #fff0dd;
   color: #b76612;
 }
 
-.admin-promotion-summary article div {
+.admin-account-summary article div {
   display: flex;
   min-width: 0;
   flex-direction: column;
   gap: 4px;
 }
 
-.admin-promotion-summary small {
+.admin-account-summary small {
   color: var(--admin-muted);
-  font-size: 10px;
+  font-size: 12px;
 }
 
-.admin-promotion-summary strong {
+.admin-account-summary strong {
   color: #312829;
-  font-size: 18px;
+  font-size: 19px;
+  line-height: 1.15;
 }
 
-.admin-promotions-panel {
+.admin-accounts-panel {
   overflow: hidden;
   border: 1px solid var(--admin-border);
   border-radius: 7px;
   background: #ffffff;
 }
 
-.admin-promotions-toolbar {
+.admin-accounts-toolbar {
   display: flex;
   min-height: 67px;
   align-items: center;
@@ -138,22 +139,22 @@
   border-bottom: 1px solid var(--admin-border);
 }
 
-.admin-promotions-toolbar > div {
+.admin-accounts-toolbar > div {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
 
-.admin-promotions-toolbar label {
+.admin-accounts-toolbar label {
   display: flex;
   align-items: center;
   gap: 7px;
   color: #796f70;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 650;
 }
 
-.admin-promotions-toolbar select {
+.admin-accounts-toolbar select {
   min-width: 135px;
   height: 37px;
   padding: 0 30px 0 10px;
@@ -162,240 +163,203 @@
   outline: 0;
   background: #ffffff;
   color: #4a4041;
-  font-size: 10px;
+  font-size: 11px;
 }
 
-.admin-promotions-toolbar select:focus {
+.admin-accounts-toolbar select:focus {
   border-color: #d19a9e;
   box-shadow: 0 0 0 3px rgba(181, 55, 64, .07);
 }
 
-.admin-promotions-toolbar > span {
+.admin-accounts-toolbar > span {
   flex: 0 0 auto;
   color: #8b8081;
-  font-size: 10px;
+  font-size: 11px;
 }
 
-.admin-promotions-toolbar > span strong {
+.admin-accounts-toolbar > span strong {
   color: var(--admin-brand);
 }
 
-.admin-promotions-table-wrap {
+.admin-accounts-table-wrap {
   overflow-x: auto;
 }
 
-.admin-promotions-table {
+.admin-accounts-table {
   width: 100%;
-  min-width: 980px;
+  min-width: 960px;
   border-collapse: collapse;
-  font-size: 9px;
+  font-size: 11px;
 }
 
-.admin-promotions-table th {
+.admin-accounts-table th {
   height: 43px;
-  padding: 0 9px;
+  padding: 0 11px;
   background: #fbf9f9;
   color: #8a7f80;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 800;
-  letter-spacing: .3px;
+  letter-spacing: .35px;
   text-align: left;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
-.admin-promotions-table td {
-  padding: 11px 9px;
+.admin-accounts-table td {
+  padding: 11px;
   border-top: 1px solid #f0e9ea;
   color: #5e5455;
   vertical-align: middle;
+  white-space: nowrap;
 }
 
-.admin-promotions-table tbody tr:hover {
+.admin-accounts-table tbody tr:hover {
   background: #fffafa;
 }
 
-.admin-promotions-table th:first-child,
-.admin-promotions-table td:first-child {
-  width: 26%;
+.admin-accounts-table th:first-child,
+.admin-accounts-table td:first-child {
+  width: 30%;
 }
 
-.admin-promotion-cell {
+.admin-account-cell {
   display: flex;
-  min-width: 235px;
+  min-width: 245px;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
 }
 
-.admin-promotion-cell > span {
+.admin-account-avatar {
   display: grid;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 7px;
-  background: #f8e7e9;
-  color: var(--admin-brand);
+  overflow: hidden;
+  border-radius: 50%;
+  background: #f1dadd;
+  color: #922c35;
+  font-size: 11px;
+  font-weight: 800;
 }
 
-.admin-promotion-cell > span svg {
-  width: 18px;
+.admin-account-avatar.is-staff {
+  background: #e5eef9;
+  color: #376b9f;
 }
 
-.admin-promotion-cell > div {
+.admin-account-avatar.is-admin {
+  background: #efe6f7;
+  color: #74449b;
+}
+
+.admin-account-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.admin-account-cell > div {
   display: flex;
   min-width: 0;
   flex-direction: column;
   gap: 2px;
 }
 
-.admin-promotion-cell strong {
-  color: var(--admin-brand);
-  font-family: Consolas, monospace;
-  font-size: 10px;
-}
-
-.admin-promotion-cell b {
+.admin-account-cell strong {
   overflow: hidden;
-  max-width: 190px;
+  max-width: 205px;
   color: #3b3132;
-  font-size: 9px;
+  font-size: 11px;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.admin-promotion-cell small {
-  display: -webkit-box;
+.admin-account-cell div > span {
   overflow: hidden;
-  max-width: 190px;
-  color: #9b9091;
-  font-size: 8px;
-  line-height: 1.35;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
+  max-width: 205px;
+  color: #817677;
+  font-size: 10px;
+  text-overflow: ellipsis;
 }
 
-.admin-promotion-type,
-.admin-promotion-status {
+.admin-account-cell small {
+  color: #aaa0a1;
+  font-size: 9px;
+}
+
+.admin-account-empty {
+  color: #aaa0a1;
+  font-style: italic;
+}
+
+.admin-account-role,
+.admin-account-status {
   display: inline-flex;
   align-items: center;
-  padding: 5px 7px;
+  padding: 5px 8px;
   border-radius: 12px;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 750;
-  white-space: nowrap;
 }
 
-.admin-promotion-type.is-percentage {
-  background: #f8e7e9;
-  color: #a13039;
+.admin-account-role.is-customer {
+  background: #f2eeee;
+  color: #685e5f;
 }
 
-.admin-promotion-type.is-fixed {
+.admin-account-role.is-staff {
   background: #e7f0fa;
   color: #3972ad;
 }
 
-.admin-promotion-type.is-shipping {
-  background: #e5f4ec;
-  color: #177950;
+.admin-account-role.is-admin {
+  background: #efe6f7;
+  color: #74449b;
 }
 
-.admin-promotion-type.is-gift {
-  background: #fff0dc;
-  color: #a85a10;
-}
-
-.admin-promotion-value,
-.admin-promotion-period,
-.admin-promotion-usage {
+.admin-account-orders {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  white-space: nowrap;
 }
 
-.admin-promotion-value strong {
+.admin-account-orders strong {
   color: #44393a;
+  font-size: 11px;
+}
+
+.admin-account-orders span {
+  color: #9b9091;
   font-size: 10px;
 }
 
-.admin-promotion-value span,
-.admin-promotion-condition,
-.admin-promotion-period span {
-  color: #8e8384;
-  font-size: 8px;
-  white-space: nowrap;
+.admin-account-status {
+  gap: 6px;
 }
 
-.admin-promotion-period i {
-  color: #b5aaab;
-  font-size: 8px;
-  font-style: normal;
-}
-
-.admin-promotion-usage > span {
-  color: #8e8384;
-  font-size: 8px;
-}
-
-.admin-promotion-usage > span strong {
-  color: #44393a;
-  font-size: 9px;
-}
-
-.admin-promotion-usage > i {
-  width: 62px;
-  height: 4px;
-  overflow: hidden;
-  border-radius: 3px;
-  background: #eee8e8;
-}
-
-.admin-promotion-usage > i b {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--admin-brand);
-}
-
-.admin-promotion-status {
-  gap: 5px;
-}
-
-.admin-promotion-status > i {
+.admin-account-status i {
   width: 5px;
   height: 5px;
   border-radius: 50%;
   background: currentColor;
 }
 
-.admin-promotion-status.is-active {
+.admin-account-status.is-active {
   background: #e5f4ec;
   color: #177950;
 }
 
-.admin-promotion-status.is-scheduled {
-  background: #e7f0fa;
-  color: #3972ad;
-}
-
-.admin-promotion-status.is-expired {
-  background: #f1eeee;
-  color: #776c6d;
-}
-
-.admin-promotion-status.is-disabled {
+.admin-account-status.is-locked {
   background: #f8e5e7;
   color: #a52d36;
 }
 
-.admin-promotion-actions {
+.admin-account-actions {
   display: flex;
   gap: 5px;
 }
 
-.admin-promotion-actions button {
+.admin-account-actions button {
   display: grid;
   width: 30px;
   height: 30px;
@@ -406,23 +370,28 @@
   color: #6d6263;
 }
 
-.admin-promotion-actions button:hover {
+.admin-account-actions button:hover:not(:disabled) {
   border-color: #d69da1;
   background: #fbf0f1;
   color: var(--admin-brand);
 }
 
-.admin-promotion-actions button.is-danger:hover {
+.admin-account-actions button.is-danger:hover:not(:disabled) {
   background: #f9e7e9;
   color: #a12832;
 }
 
-.admin-promotion-actions svg {
+.admin-account-actions button:disabled {
+  cursor: not-allowed;
+  opacity: .35;
+}
+
+.admin-account-actions svg {
   width: 14px;
   height: 14px;
 }
 
-.admin-promotions-empty {
+.admin-accounts-empty {
   display: flex;
   min-height: 230px;
   align-items: center;
@@ -432,20 +401,20 @@
   color: #918687;
 }
 
-.admin-promotions-empty svg {
+.admin-accounts-empty svg {
   width: 27px;
 }
 
-.admin-promotions-empty strong {
+.admin-accounts-empty strong {
   color: #514647;
   font-size: 13px;
 }
 
-.admin-promotions-empty span {
-  font-size: 10px;
+.admin-accounts-empty span {
+  font-size: 11px;
 }
 
-.admin-promotion-modal-backdrop {
+.admin-account-modal-backdrop {
   position: fixed;
   inset: 0;
   z-index: 100;
@@ -455,9 +424,9 @@
   background: rgba(35, 24, 25, .55);
 }
 
-.admin-promotion-modal {
+.admin-account-modal {
   display: grid;
-  width: min(760px, 100%);
+  width: min(680px, 100%);
   max-height: calc(100vh - 40px);
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
@@ -466,7 +435,7 @@
   box-shadow: 0 24px 70px rgba(31, 18, 20, .22);
 }
 
-.admin-promotion-modal > header {
+.admin-account-modal > header {
   display: flex;
   min-height: 70px;
   align-items: center;
@@ -476,21 +445,21 @@
   border-bottom: 1px solid var(--admin-border);
 }
 
-.admin-promotion-modal > header span {
+.admin-account-modal > header span {
   color: var(--admin-brand);
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: .8px;
 }
 
-.admin-promotion-modal h2,
-.admin-promotion-delete-modal h2 {
+.admin-account-modal h2,
+.admin-account-delete-modal h2 {
   margin: 3px 0 0;
   color: #302627;
-  font-size: 19px;
+  font-size: 20px;
 }
 
-.admin-promotion-modal > header button {
+.admin-account-modal > header button {
   display: grid;
   width: 34px;
   height: 34px;
@@ -501,95 +470,63 @@
   color: #6d6263;
 }
 
-.admin-promotion-modal > header button:hover {
+.admin-account-modal > header button:hover {
   background: #f2e4e5;
   color: var(--admin-brand);
 }
 
-.admin-promotion-modal > header svg {
+.admin-account-modal > header svg {
   width: 17px;
 }
 
-.admin-promotion-modal form {
+.admin-account-modal form {
   overflow-y: auto;
 }
 
-.admin-promotion-form-grid {
+.admin-account-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
   padding: 18px 20px;
 }
 
-.admin-promotion-form-grid label:not(.admin-promotion-checkbox) {
+.admin-account-form-grid label {
   display: flex;
   min-width: 0;
   flex-direction: column;
   gap: 6px;
 }
 
-.admin-promotion-form-grid label > span {
+.admin-account-form-grid label > span {
   color: #5d5253;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
 }
 
-.admin-promotion-form-grid .is-wide {
+.admin-account-form-grid .is-wide {
   grid-column: 1 / -1;
 }
 
-.admin-promotion-form-grid input:not([type='checkbox']),
-.admin-promotion-form-grid select,
-.admin-promotion-form-grid textarea {
+.admin-account-form-grid input,
+.admin-account-form-grid select {
   width: 100%;
+  height: 39px;
+  padding: 0 11px;
   border: 1px solid #ded5d6;
   border-radius: 6px;
   outline: none;
   background: #ffffff;
   color: #443a3b;
-  font-size: 11px;
+  font-size: 12px;
 }
 
-.admin-promotion-form-grid input:not([type='checkbox']),
-.admin-promotion-form-grid select {
-  height: 39px;
-  padding: 0 11px;
-}
-
-.admin-promotion-form-grid textarea {
-  min-height: 74px;
-  padding: 10px 11px;
-  line-height: 1.5;
-  resize: vertical;
-}
-
-.admin-promotion-form-grid input:focus,
-.admin-promotion-form-grid select:focus,
-.admin-promotion-form-grid textarea:focus {
+.admin-account-form-grid input:focus,
+.admin-account-form-grid select:focus {
   border-color: #cf9297;
   box-shadow: 0 0 0 3px rgba(181, 55, 64, .07);
 }
 
-.admin-promotion-form-grid input:disabled {
-  background: #f4f1f1;
-  color: #aaa0a1;
-}
-
-.admin-promotion-checkbox {
-  display: flex;
-  min-height: 39px;
-  align-items: center;
-  gap: 8px;
-  align-self: end;
-}
-
-.admin-promotion-checkbox input {
-  width: 15px;
-  height: 15px;
-  accent-color: var(--admin-brand);
-}
-
-.admin-promotion-modal form > footer {
+.admin-account-modal form > footer {
   position: sticky;
   bottom: 0;
   display: flex;
@@ -600,7 +537,7 @@
   background: rgba(255, 255, 255, .98);
 }
 
-.admin-promotion-delete-modal {
+.admin-account-delete-modal {
   width: min(420px, 100%);
   padding: 26px;
   border-radius: 8px;
@@ -609,7 +546,7 @@
   box-shadow: 0 24px 70px rgba(31, 18, 20, .22);
 }
 
-.admin-promotion-delete-modal > span {
+.admin-account-delete-modal > span {
   display: grid;
   width: 50px;
   height: 50px;
@@ -620,24 +557,24 @@
   color: #a52c35;
 }
 
-.admin-promotion-delete-modal > span svg {
+.admin-account-delete-modal > span svg {
   width: 22px;
 }
 
-.admin-promotion-delete-modal p {
+.admin-account-delete-modal p {
   margin: 11px 0 20px;
   color: #766b6c;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.65;
 }
 
-.admin-promotion-delete-modal > div {
+.admin-account-delete-modal > div {
   display: flex;
   justify-content: center;
   gap: 9px;
 }
 
-.admin-promotion-toast {
+.admin-account-toast {
   position: fixed;
   top: 92px;
   right: 24px;
@@ -652,12 +589,12 @@
   border-radius: 7px;
   background: #eaf7ef;
   color: #176440;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 650;
   box-shadow: 0 10px 30px rgba(35, 76, 52, .13);
 }
 
-.admin-promotion-toast > span {
+.admin-account-toast > span {
   display: grid;
   width: 22px;
   height: 22px;
@@ -668,84 +605,84 @@
   color: #ffffff;
 }
 
-.admin-promotion-toast.is-error {
+.admin-account-toast.is-error {
   border-color: #e3b6ba;
   background: #fae9ea;
   color: #8f2831;
 }
 
-.admin-promotion-toast.is-error > span {
+.admin-account-toast.is-error > span {
   background: #aa313a;
 }
 
 @media (max-width: 1180px) {
-  .admin-promotion-summary {
+  .admin-account-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 760px) {
-  .admin-promotions-heading {
+  .admin-accounts-heading {
     align-items: stretch;
   }
 
-  .admin-promotions-heading .admin-promotion-primary {
+  .admin-accounts-heading .admin-account-primary {
     align-self: flex-start;
   }
 
-  .admin-promotions-toolbar {
+  .admin-accounts-toolbar {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .admin-promotions-toolbar label {
+  .admin-accounts-toolbar label {
     flex: 1 1 100%;
     align-items: stretch;
     flex-direction: column;
     gap: 5px;
   }
 
-  .admin-promotions-toolbar select {
+  .admin-accounts-toolbar select {
     width: 100%;
   }
 
-  .admin-promotion-form-grid {
+  .admin-account-form-grid {
     grid-template-columns: 1fr;
     padding: 15px;
   }
 
-  .admin-promotion-form-grid .is-wide {
+  .admin-account-form-grid .is-wide {
     grid-column: auto;
   }
 
-  .admin-promotion-modal > header,
-  .admin-promotion-modal form > footer {
+  .admin-account-modal > header,
+  .admin-account-modal form > footer {
     padding-right: 15px;
     padding-left: 15px;
   }
 
-  .admin-promotion-toast {
+  .admin-account-toast {
     top: 76px;
     right: 16px;
   }
 }
 
 @media (max-width: 480px) {
-  .admin-promotion-summary {
+  .admin-account-summary {
     grid-template-columns: 1fr;
     gap: 9px;
   }
 
-  .admin-promotion-summary article {
+  .admin-account-summary article {
     min-height: 75px;
     padding: 12px;
   }
 
-  .admin-promotion-modal-backdrop {
+  .admin-account-modal-backdrop {
     padding: 10px;
   }
 
-  .admin-promotion-delete-modal {
+  .admin-account-delete-modal {
     padding: 22px 17px;
   }
 }

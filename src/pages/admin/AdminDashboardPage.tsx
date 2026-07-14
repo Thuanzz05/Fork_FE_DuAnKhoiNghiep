@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import AdminLayout, { AdminIcon, type AdminIconName } from '../components/AdminLayout'
+import AdminLayout, { AdminIcon, type AdminIconName } from '../../components/AdminLayout'
 import './AdminDashboardPage.css'
 
 type RevenuePeriod = 'week' | 'month' | 'quarter' | 'year'

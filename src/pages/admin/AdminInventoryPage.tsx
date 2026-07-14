@@ -1,0 +1,483 @@
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
+import { categories, formatPrice, products } from '../../data/products'
+import './AdminInventoryPage.css'
+
+type InventoryView = 'stock' | 'vouchers'
+type StockStatus = 'good' | 'low' | 'out'
+type VoucherType = 'in' | 'out'
+type VoucherPeriod = 'all' | '7days' | '30days'
+type VoucherSort = 'newest' | 'oldest' | 'quantity'
+
+interface InventoryProduct {
+  id: string
+  sku: string
+  name: string
+  image: string
+  category: string
+  categorySlug: string
+  unit: string
+  stock: number
+  minimumStock: number
+  costPrice: number
+  location: string
+  updatedAt: string
+}
+
+interface VoucherItem {
+  productId: string
+  quantity: number
+  unitCost: number
+}
+
+interface StockVoucher {
+  id: string
+  code: string
+  type: VoucherType
+  createdAt: string
+  partner: string
+  note: string
+  createdBy: string
+  items: VoucherItem[]
+}
+
+interface VoucherLineForm {
+  id: string
+  productId: string
+  quantity: string
+  unitCost: string
+}
+
+interface VoucherFormState {
+  type: VoucherType
+  date: string
+  partner: string
+  note: string
+  lines: VoucherLineForm[]
+}
+
+const stockByProductId: Record<string, number> = {
+  '1': 18,
+  '2': 42,
+  '3': 9,
+  '4': 31,
+  '5': 6,
+  '6': 24,
+  '7': 0,
+  '8': 15,
+}
+
+const costByProductId: Record<string, number> = {
+  '1': 305000,
+  '2': 150000,
+  '3': 170000,
+  '4': 145000,
+  '5': 170000,
+  '6': 185000,
+  '7': 190000,
+  '8': 160000,
+}
+
+const locationByProductId: Record<string, string> = {
+  '1': 'A1-01',
+  '2': 'A1-02',
+  '3': 'A1-03',
+  '4': 'A2-01',
+  '5': 'A1-04',
+  '6': 'A2-02',
+  '7': 'A2-03',
+  '8': 'A1-05',
+}
+
+const inventorySeed: InventoryProduct[] = products.map((product) => ({
+  id: product.id,
+  sku: `RBN-${product.id.padStart(3, '0')}`,
+  name: product.name,
+  image: product.image,
+  category: product.category,
+  categorySlug: product.categorySlug,
+  unit: product.isCombo ? 'Bộ' : product.categorySlug === 'mat-na' ? 'Hũ' : 'Chai',
+  stock: stockByProductId[product.id] ?? 0,
+  minimumStock: product.isCombo ? 8 : 10,
+  costPrice: costByProductId[product.id] ?? Math.round(product.price * 0.68),
+  location: locationByProductId[product.id] ?? 'A3-01',
+  updatedAt: '2026-07-14T08:35:00',
+}))
+
+const voucherSeed: StockVoucher[] = [
+  {
+    id: 'v1', code: 'PN-260714-005', type: 'in', createdAt: '2026-07-14T08:35:00',
+    partner: 'Xưởng sản xuất Rubeanora', note: 'Nhập thành phẩm đợt 2 tháng 7.', createdBy: 'Phạm Thu Hương',
+    items: [{ productId: '2', quantity: 30, unitCost: 150000 }, { productId: '4', quantity: 20, unitCost: 145000 }],
+  },
+  {
+    id: 'v2', code: 'PX-260714-009', type: 'out', createdAt: '2026-07-14T07:15:00',
+    partner: 'Đơn hàng RBB-26071402', note: 'Xuất bán cho đơn hàng đã xác nhận.', createdBy: 'Nguyễn Minh Anh',
+    items: [{ productId: '1', quantity: 1, unitCost: 305000 }],
+  },
+  {
+    id: 'v3', code: 'PX-260713-008', type: 'out', createdAt: '2026-07-13T18:40:00',
+    partner: 'Đơn hàng RBB-26071303', note: 'Xuất hàng giao cho đơn vị vận chuyển.', createdBy: 'Nguyễn Minh Anh',
+    items: [{ productId: '2', quantity: 2, unitCost: 150000 }, { productId: '3', quantity: 1, unitCost: 170000 }],
+  },
+  {
+    id: 'v4', code: 'PN-260712-004', type: 'in', createdAt: '2026-07-12T10:20:00',
+    partner: 'Xưởng sản xuất Rubeanora', note: 'Nhập combo và serum thành phẩm.', createdBy: 'Phạm Thu Hương',
+    items: [{ productId: '1', quantity: 12, unitCost: 305000 }, { productId: '6', quantity: 18, unitCost: 185000 }],
+  },
+  {
+    id: 'v5', code: 'PX-260711-007', type: 'out', createdAt: '2026-07-11T14:10:00',
+    partner: 'Bộ phận Marketing', note: 'Xuất sản phẩm mẫu cho buổi chụp hình.', createdBy: 'Trần Quang Huy',
+    items: [{ productId: '5', quantity: 2, unitCost: 170000 }, { productId: '6', quantity: 2, unitCost: 185000 }],
+  },
+  {
+    id: 'v6', code: 'PN-260709-003', type: 'in', createdAt: '2026-07-09T09:05:00',
+    partner: 'Xưởng sản xuất Rubeanora', note: 'Bổ sung mặt nạ và nước tẩy trang.', createdBy: 'Phạm Thu Hương',
+    items: [{ productId: '3', quantity: 20, unitCost: 170000 }, { productId: '8', quantity: 20, unitCost: 160000 }],
+  },
+]
+
+const stockStatusMeta: Record<StockStatus, { label: string; tone: string }> = {
+  good: { label: 'Tồn ổn định', tone: 'good' },
+  low: { label: 'Sắp hết', tone: 'low' },
+  out: { label: 'Hết hàng', tone: 'out' },
+}
+
+const getStockStatus = (product: InventoryProduct): StockStatus => {
+  if (product.stock === 0) return 'out'
+  if (product.stock <= product.minimumStock) return 'low'
+  return 'good'
+}
+
+const formatDateTime = (value: string) => new Intl.DateTimeFormat('vi-VN', {
+  hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric',
+}).format(new Date(value))
+
+const toDateInput = () => {
+  const now = new Date()
+  const offset = now.getTimezoneOffset() * 60000
+  return new Date(now.getTime() - offset).toISOString().slice(0, 10)
+}
+
+let voucherLineSequence = 0
+const createVoucherLine = (product: InventoryProduct): VoucherLineForm => ({
+  id: `line-${Date.now()}-${voucherLineSequence++}`,
+  productId: product.id,
+  quantity: '1',
+  unitCost: String(product.costPrice),
+})
+
+function AdminInventoryPage() {
+  const [inventory, setInventory] = useState<InventoryProduct[]>(inventorySeed)
+  const [vouchers, setVouchers] = useState<StockVoucher[]>(voucherSeed)
+  const [activeView, setActiveView] = useState<InventoryView>('stock')
+  const [searchValue, setSearchValue] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [stockFilter, setStockFilter] = useState<'all' | StockStatus>('all')
+  const [stockSort, setStockSort] = useState<'name' | 'stock-asc' | 'stock-desc' | 'value'>('stock-asc')
+  const [voucherTypeFilter, setVoucherTypeFilter] = useState<'all' | VoucherType>('all')
+  const [voucherPeriod, setVoucherPeriod] = useState<VoucherPeriod>('all')
+  const [voucherSort, setVoucherSort] = useState<VoucherSort>('newest')
+  const [isVoucherFormOpen, setIsVoucherFormOpen] = useState(false)
+  const [selectedVoucher, setSelectedVoucher] = useState<StockVoucher | null>(null)
+  const [notice, setNotice] = useState('')
+  const [voucherForm, setVoucherForm] = useState<VoucherFormState>(() => ({
+    type: 'in', date: toDateInput(), partner: '', note: '', lines: [createVoucherLine(inventorySeed[0])],
+  }))
+
+  useEffect(() => {
+    if (!notice) return
+    const timer = window.setTimeout(() => setNotice(''), 2600)
+    return () => window.clearTimeout(timer)
+  }, [notice])
+
+  useEffect(() => {
+    if (!isVoucherFormOpen && !selectedVoucher) return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsVoucherFormOpen(false)
+        setSelectedVoucher(null)
+      }
+    }
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.body.style.overflow = ''
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isVoucherFormOpen, selectedVoucher])
+
+  const filteredInventory = useMemo(() => {
+    const keyword = searchValue.trim().toLocaleLowerCase('vi-VN')
+    return inventory
+      .filter((product) => {
+        const matchesSearch = !keyword || [product.name, product.sku, product.category, product.location]
+          .some((value) => value.toLocaleLowerCase('vi-VN').includes(keyword))
+        const matchesCategory = categoryFilter === 'all' || product.categorySlug === categoryFilter
+        const matchesStatus = stockFilter === 'all' || getStockStatus(product) === stockFilter
+        return matchesSearch && matchesCategory && matchesStatus
+      })
+      .sort((a, b) => {
+        if (stockSort === 'stock-asc') return a.stock - b.stock
+        if (stockSort === 'stock-desc') return b.stock - a.stock
+        if (stockSort === 'value') return (b.stock * b.costPrice) - (a.stock * a.costPrice)
+        return a.name.localeCompare(b.name, 'vi')
+      })
+  }, [categoryFilter, inventory, searchValue, stockFilter, stockSort])
+
+  const filteredVouchers = useMemo(() => {
+    const keyword = searchValue.trim().toLocaleLowerCase('vi-VN')
+    const now = new Date()
+    const periodDays = voucherPeriod === '7days' ? 7 : voucherPeriod === '30days' ? 30 : null
+
+    return vouchers
+      .filter((voucher) => {
+        const productNames = voucher.items.map((item) => inventory.find((product) => product.id === item.productId)?.name ?? '')
+        const matchesSearch = !keyword || [voucher.code, voucher.partner, voucher.createdBy, ...productNames]
+          .some((value) => value.toLocaleLowerCase('vi-VN').includes(keyword))
+        const matchesType = voucherTypeFilter === 'all' || voucher.type === voucherTypeFilter
+        const ageInDays = (now.getTime() - new Date(voucher.createdAt).getTime()) / 86400000
+        const matchesPeriod = periodDays === null || ageInDays <= periodDays
+        return matchesSearch && matchesType && matchesPeriod
+      })
+      .sort((a, b) => {
+        if (voucherSort === 'oldest') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        if (voucherSort === 'quantity') {
+          const quantityA = a.items.reduce((total, item) => total + item.quantity, 0)
+          const quantityB = b.items.reduce((total, item) => total + item.quantity, 0)
+          return quantityB - quantityA
+        }
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      })
+  }, [inventory, searchValue, voucherPeriod, voucherSort, voucherTypeFilter, vouchers])
+
+  const totalStock = inventory.reduce((total, product) => total + product.stock, 0)
+  const replenishmentCount = inventory.filter((product) => product.stock <= product.minimumStock).length
+  const inventoryValue = inventory.reduce((total, product) => total + product.stock * product.costPrice, 0)
+
+  const openVoucherForm = (type: VoucherType) => {
+    const firstProduct = inventory[0]
+    setVoucherForm({ type, date: toDateInput(), partner: '', note: '', lines: [createVoucherLine(firstProduct)] })
+    setIsVoucherFormOpen(true)
+  }
+
+  const updateVoucherLine = (lineId: string, field: keyof Omit<VoucherLineForm, 'id'>, value: string) => {
+    setVoucherForm((current) => ({
+      ...current,
+      lines: current.lines.map((line) => {
+        if (line.id !== lineId) return line
+        if (field === 'productId') {
+          const product = inventory.find((item) => item.id === value)
+          return { ...line, productId: value, unitCost: String(product?.costPrice ?? 0) }
+        }
+        return { ...line, [field]: value }
+      }),
+    }))
+  }
+
+  const addVoucherLine = () => {
+    const availableProduct = inventory.find((product) => !voucherForm.lines.some((line) => line.productId === product.id)) ?? inventory[0]
+    setVoucherForm((current) => ({ ...current, lines: [...current.lines, createVoucherLine(availableProduct)] }))
+  }
+
+  const removeVoucherLine = (lineId: string) => {
+    setVoucherForm((current) => ({ ...current, lines: current.lines.filter((line) => line.id !== lineId) }))
+  }
+
+  const handleVoucherSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const parsedItems = voucherForm.lines.map((line) => ({
+      productId: line.productId,
+      quantity: Number(line.quantity),
+      unitCost: Number(line.unitCost),
+    }))
+    const uniqueIds = new Set(parsedItems.map((item) => item.productId))
+    if (uniqueIds.size !== parsedItems.length) {
+      setNotice('Mỗi sản phẩm chỉ được xuất hiện một lần trong phiếu')
+      return
+    }
+    if (voucherForm.type === 'out') {
+      const insufficientItem = parsedItems.find((item) => {
+        const product = inventory.find((entry) => entry.id === item.productId)
+        return !product || item.quantity > product.stock
+      })
+      if (insufficientItem) {
+        const product = inventory.find((entry) => entry.id === insufficientItem.productId)
+        setNotice(`${product?.name ?? 'Sản phẩm'} không đủ tồn kho để xuất`)
+        return
+      }
+    }
+
+    const prefix = voucherForm.type === 'in' ? 'PN' : 'PX'
+    const datePart = voucherForm.date.replace(/-/g, '').slice(2)
+    const sequence = vouchers
+      .filter((voucher) => voucher.code.startsWith(`${prefix}-${datePart}-`))
+      .reduce((highest, voucher) => Math.max(highest, Number(voucher.code.split('-').at(-1)) || 0), 0) + 1
+    const newVoucher: StockVoucher = {
+      id: `voucher-${Date.now()}`,
+      code: `${prefix}-${datePart}-${String(sequence).padStart(3, '0')}`,
+      type: voucherForm.type,
+      createdAt: `${voucherForm.date}T${new Date().toTimeString().slice(0, 8)}`,
+      partner: voucherForm.partner.trim(),
+      note: voucherForm.note.trim(),
+      createdBy: 'Quản trị viên',
+      items: parsedItems,
+    }
+
+    setInventory((current) => current.map((product) => {
+      const item = parsedItems.find((entry) => entry.productId === product.id)
+      if (!item) return product
+      const delta = voucherForm.type === 'in' ? item.quantity : -item.quantity
+      return { ...product, stock: product.stock + delta, costPrice: item.unitCost, updatedAt: newVoucher.createdAt }
+    }))
+    setVouchers((current) => [newVoucher, ...current])
+    setIsVoucherFormOpen(false)
+    setActiveView('vouchers')
+    setNotice(`Đã tạo ${voucherForm.type === 'in' ? 'phiếu nhập' : 'phiếu xuất'} ${newVoucher.code}`)
+  }
+
+  const voucherTotal = (voucher: StockVoucher) => voucher.items.reduce((total, item) => total + item.quantity * item.unitCost, 0)
+  const voucherQuantity = (voucher: StockVoucher) => voucher.items.reduce((total, item) => total + item.quantity, 0)
+
+  return (
+    <AdminLayout
+      activeItem="inventory"
+      searchValue={searchValue}
+      onSearchChange={setSearchValue}
+      searchPlaceholder={activeView === 'stock' ? 'Tìm tên sản phẩm, SKU, vị trí kho...' : 'Tìm mã phiếu, đối tác, người tạo...'}
+    >
+      <div className="admin-page-heading admin-inventory-heading">
+        <div><p>QUẢN LÝ VẬN HÀNH</p><h1>Quản lý kho</h1><span>Theo dõi tồn hàng và toàn bộ lịch sử nhập, xuất kho.</span></div>
+        <div className="admin-inventory-heading-actions">
+          <button type="button" className="admin-inventory-secondary-action" onClick={() => openVoucherForm('out')}><AdminIcon name="arrowUp" />Tạo phiếu xuất</button>
+          <button type="button" className="admin-inventory-primary-action" onClick={() => openVoucherForm('in')}><AdminIcon name="plus" />Tạo phiếu nhập</button>
+        </div>
+      </div>
+
+      <section className="admin-inventory-summary" aria-label="Tổng quan kho hàng">
+        <article><span className="is-red"><AdminIcon name="products" /></span><div><small>Tổng mã hàng</small><strong>{inventory.length}</strong></div></article>
+        <article><span className="is-blue"><AdminIcon name="box" /></span><div><small>Tổng sản phẩm tồn</small><strong>{totalStock}</strong></div></article>
+        <article><span className="is-orange"><AdminIcon name="bell" /></span><div><small>Cần nhập thêm</small><strong>{replenishmentCount}</strong></div></article>
+        <article><span className="is-green"><AdminIcon name="revenue" /></span><div><small>Giá trị tồn kho</small><strong>{formatPrice(inventoryValue)}</strong></div></article>
+      </section>
+
+      <section className="admin-inventory-panel">
+        <div className="admin-inventory-tabs" role="tablist" aria-label="Nội dung quản lý kho">
+          <button type="button" role="tab" aria-selected={activeView === 'stock'} className={activeView === 'stock' ? 'is-active' : ''} onClick={() => setActiveView('stock')}>Tồn kho <span>{inventory.length}</span></button>
+          <button type="button" role="tab" aria-selected={activeView === 'vouchers'} className={activeView === 'vouchers' ? 'is-active' : ''} onClick={() => setActiveView('vouchers')}>Phiếu nhập / xuất <span>{vouchers.length}</span></button>
+        </div>
+
+        {activeView === 'stock' ? (
+          <>
+            <div className="admin-inventory-toolbar">
+              <div>
+                <label><span>Danh mục</span><select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} aria-label="Lọc kho theo danh mục"><option value="all">Tất cả danh mục</option>{categories.filter((category) => category.slug !== 'tat-ca').map((category) => <option value={category.slug} key={category.slug}>{category.name}</option>)}</select></label>
+                <label><span>Tồn kho</span><select value={stockFilter} onChange={(event) => setStockFilter(event.target.value as 'all' | StockStatus)} aria-label="Lọc theo trạng thái tồn"><option value="all">Tất cả trạng thái</option><option value="good">Tồn ổn định</option><option value="low">Sắp hết</option><option value="out">Hết hàng</option></select></label>
+                <label><span>Sắp xếp</span><select value={stockSort} onChange={(event) => setStockSort(event.target.value as typeof stockSort)} aria-label="Sắp xếp tồn kho"><option value="stock-asc">Tồn ít nhất</option><option value="stock-desc">Tồn nhiều nhất</option><option value="value">Giá trị tồn cao nhất</option><option value="name">Tên sản phẩm</option></select></label>
+              </div>
+              <span>Hiển thị <strong>{filteredInventory.length}</strong> / {inventory.length} sản phẩm</span>
+            </div>
+            <div className="admin-inventory-table-wrap">
+              <table className="admin-inventory-stock-table">
+                <thead><tr><th>Sản phẩm</th><th>Vị trí</th><th>Giá vốn</th><th>Tồn hiện tại</th><th>Tồn tối thiểu</th><th>Giá trị tồn</th><th>Trạng thái</th></tr></thead>
+                <tbody>{filteredInventory.map((product) => {
+                  const status = stockStatusMeta[getStockStatus(product)]
+                  return <tr key={product.id}>
+                    <td><div className="admin-inventory-product"><img src={product.image} alt="" /><div><strong>{product.name}</strong><span>{product.sku} · {product.category}</span></div></div></td>
+                    <td><div className="admin-inventory-location"><strong>{product.location}</strong><span>Kho chính</span></div></td>
+                    <td>{formatPrice(product.costPrice)}</td>
+                    <td><strong className="admin-inventory-stock-number">{product.stock}</strong> {product.unit}</td>
+                    <td>{product.minimumStock} {product.unit}</td>
+                    <td><strong>{formatPrice(product.stock * product.costPrice)}</strong></td>
+                    <td><span className={`admin-inventory-status is-${status.tone}`}><i />{status.label}</span></td>
+                  </tr>
+                })}</tbody>
+              </table>
+              {filteredInventory.length === 0 ? <div className="admin-inventory-empty"><AdminIcon name="search" /><strong>Không tìm thấy sản phẩm</strong><span>Hãy thử từ khóa hoặc bộ lọc khác.</span></div> : null}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="admin-inventory-toolbar">
+              <div>
+                <label><span>Loại phiếu</span><select value={voucherTypeFilter} onChange={(event) => setVoucherTypeFilter(event.target.value as 'all' | VoucherType)} aria-label="Lọc loại phiếu kho"><option value="all">Tất cả phiếu</option><option value="in">Phiếu nhập</option><option value="out">Phiếu xuất</option></select></label>
+                <label><span>Thời gian</span><select value={voucherPeriod} onChange={(event) => setVoucherPeriod(event.target.value as VoucherPeriod)} aria-label="Lọc thời gian phiếu kho"><option value="all">Tất cả thời gian</option><option value="7days">7 ngày gần đây</option><option value="30days">30 ngày gần đây</option></select></label>
+                <label><span>Sắp xếp</span><select value={voucherSort} onChange={(event) => setVoucherSort(event.target.value as VoucherSort)} aria-label="Sắp xếp phiếu kho"><option value="newest">Mới nhất</option><option value="oldest">Cũ nhất</option><option value="quantity">Số lượng nhiều nhất</option></select></label>
+              </div>
+              <span>Hiển thị <strong>{filteredVouchers.length}</strong> / {vouchers.length} phiếu</span>
+            </div>
+            <div className="admin-inventory-table-wrap">
+              <table className="admin-inventory-voucher-table">
+                <thead><tr><th>Mã phiếu</th><th>Loại</th><th>Đối tác / Bộ phận</th><th>Sản phẩm</th><th>Số lượng</th><th>Giá trị</th><th>Người tạo</th><th>Thao tác</th></tr></thead>
+                <tbody>{filteredVouchers.map((voucher) => {
+                  const firstProduct = inventory.find((product) => product.id === voucher.items[0]?.productId)
+                  return <tr key={voucher.id}>
+                    <td><div className="admin-inventory-voucher-code"><strong>{voucher.code}</strong><span>{formatDateTime(voucher.createdAt)}</span></div></td>
+                    <td><span className={`admin-inventory-voucher-type is-${voucher.type}`}>{voucher.type === 'in' ? 'Phiếu nhập' : 'Phiếu xuất'}</span></td>
+                    <td><div className="admin-inventory-partner"><strong>{voucher.partner}</strong><span>{voucher.note || 'Không có ghi chú'}</span></div></td>
+                    <td><div className="admin-inventory-voucher-product"><img src={firstProduct?.image} alt="" /><div><strong>{firstProduct?.name}</strong><span>{voucher.items.length > 1 ? `+${voucher.items.length - 1} sản phẩm khác` : '1 sản phẩm'}</span></div></div></td>
+                    <td><strong>{voucherQuantity(voucher)}</strong></td>
+                    <td><strong>{formatPrice(voucherTotal(voucher))}</strong></td>
+                    <td>{voucher.createdBy}</td>
+                    <td><button type="button" className="admin-inventory-view-button" onClick={() => setSelectedVoucher(voucher)} aria-label={`Xem phiếu ${voucher.code}`} title="Xem chi tiết phiếu"><AdminIcon name="eye" /></button></td>
+                  </tr>
+                })}</tbody>
+              </table>
+              {filteredVouchers.length === 0 ? <div className="admin-inventory-empty"><AdminIcon name="search" /><strong>Không tìm thấy phiếu kho</strong><span>Hãy thử từ khóa hoặc bộ lọc khác.</span></div> : null}
+            </div>
+          </>
+        )}
+      </section>
+
+      {isVoucherFormOpen ? (
+        <div className="admin-inventory-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setIsVoucherFormOpen(false)}>
+          <section className="admin-inventory-voucher-modal" role="dialog" aria-modal="true" aria-labelledby="inventory-voucher-form-title">
+            <header><div><span>LẬP PHIẾU KHO</span><h2 id="inventory-voucher-form-title">{voucherForm.type === 'in' ? 'Tạo phiếu nhập kho' : 'Tạo phiếu xuất kho'}</h2></div><button type="button" onClick={() => setIsVoucherFormOpen(false)} aria-label="Đóng"><AdminIcon name="close" /></button></header>
+            <form onSubmit={handleVoucherSubmit}>
+              <div className="admin-inventory-voucher-form-head">
+                <div className="admin-inventory-type-switch"><button type="button" className={voucherForm.type === 'in' ? 'is-active' : ''} onClick={() => setVoucherForm((current) => ({ ...current, type: 'in' }))}>Phiếu nhập</button><button type="button" className={voucherForm.type === 'out' ? 'is-active' : ''} onClick={() => setVoucherForm((current) => ({ ...current, type: 'out' }))}>Phiếu xuất</button></div>
+                <label><span>Ngày lập phiếu *</span><input type="date" required value={voucherForm.date} onChange={(event) => setVoucherForm((current) => ({ ...current, date: event.target.value }))} /></label>
+                <label><span>{voucherForm.type === 'in' ? 'Nhà cung cấp / Nguồn nhập *' : 'Bộ phận / Mục đích xuất *'}</span><input required value={voucherForm.partner} placeholder={voucherForm.type === 'in' ? 'Ví dụ: Xưởng sản xuất Rubeanora' : 'Ví dụ: Đơn hàng RBB-26071401'} onChange={(event) => setVoucherForm((current) => ({ ...current, partner: event.target.value }))} /></label>
+                <label className="is-wide"><span>Ghi chú</span><input value={voucherForm.note} placeholder="Nội dung bổ sung cho phiếu kho" onChange={(event) => setVoucherForm((current) => ({ ...current, note: event.target.value }))} /></label>
+              </div>
+              <section className="admin-inventory-voucher-lines">
+                <header><div><h3>Sản phẩm trong phiếu</h3><span>{voucherForm.lines.length} dòng sản phẩm</span></div><button type="button" onClick={addVoucherLine}><AdminIcon name="plus" />Thêm sản phẩm</button></header>
+                <div>{voucherForm.lines.map((line) => {
+                  const selectedProduct = inventory.find((product) => product.id === line.productId)
+                  return <article key={line.id}>
+                    <label><span>Sản phẩm *</span><select value={line.productId} onChange={(event) => updateVoucherLine(line.id, 'productId', event.target.value)}>{inventory.map((product) => <option value={product.id} key={product.id}>{product.sku} - {product.name}</option>)}</select></label>
+                    <label><span>Số lượng *</span><input type="number" required min="1" value={line.quantity} onChange={(event) => updateVoucherLine(line.id, 'quantity', event.target.value)} /></label>
+                    <label><span>Đơn giá vốn *</span><input type="number" required min="0" value={line.unitCost} onChange={(event) => updateVoucherLine(line.id, 'unitCost', event.target.value)} /></label>
+                    <div><span>Tồn hiện tại</span><strong>{selectedProduct?.stock ?? 0} {selectedProduct?.unit}</strong></div>
+                    <button type="button" disabled={voucherForm.lines.length === 1} onClick={() => removeVoucherLine(line.id)} aria-label={`Xóa dòng ${selectedProduct?.name ?? ''}`}><AdminIcon name="trash" /></button>
+                  </article>
+                })}</div>
+              </section>
+              <footer><div><span>Tổng số lượng</span><strong>{voucherForm.lines.reduce((total, line) => total + (Number(line.quantity) || 0), 0)} sản phẩm</strong></div><button type="button" className="admin-inventory-cancel-button" onClick={() => setIsVoucherFormOpen(false)}>Hủy</button><button type="submit" className="admin-inventory-save-button">Lưu và cập nhật kho</button></footer>
+            </form>
+          </section>
+        </div>
+      ) : null}
+
+      {selectedVoucher ? (
+        <div className="admin-inventory-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setSelectedVoucher(null)}>
+          <section className="admin-inventory-detail-modal" role="dialog" aria-modal="true" aria-labelledby="inventory-voucher-detail-title">
+            <header><div><span>CHI TIẾT PHIẾU KHO</span><h2 id="inventory-voucher-detail-title">{selectedVoucher.code}</h2><small>{formatDateTime(selectedVoucher.createdAt)}</small></div><button type="button" onClick={() => setSelectedVoucher(null)} aria-label="Đóng"><AdminIcon name="close" /></button></header>
+            <div className="admin-inventory-detail-content">
+              <div className="admin-inventory-detail-meta"><p><span>Loại phiếu</span><strong className={`is-${selectedVoucher.type}`}>{selectedVoucher.type === 'in' ? 'Phiếu nhập kho' : 'Phiếu xuất kho'}</strong></p><p><span>Đối tác / Bộ phận</span><strong>{selectedVoucher.partner}</strong></p><p><span>Người tạo</span><strong>{selectedVoucher.createdBy}</strong></p><p><span>Ghi chú</span><strong>{selectedVoucher.note || 'Không có ghi chú'}</strong></p></div>
+              <section><h3>Danh sách sản phẩm</h3><div>{selectedVoucher.items.map((item) => {
+                const product = inventory.find((entry) => entry.id === item.productId)
+                return <article key={item.productId}><img src={product?.image} alt="" /><div><strong>{product?.name}</strong><span>{product?.sku} · {item.quantity} {product?.unit} x {formatPrice(item.unitCost)}</span></div><b>{formatPrice(item.quantity * item.unitCost)}</b></article>
+              })}</div></section>
+              <footer><span>Tổng cộng <strong>{voucherQuantity(selectedVoucher)} sản phẩm</strong></span><b>{formatPrice(voucherTotal(selectedVoucher))}</b></footer>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {notice ? <div className="admin-inventory-toast" role="status"><span>✓</span>{notice}</div> : null}
+    </AdminLayout>
+  )
+}
+
+export default AdminInventoryPage

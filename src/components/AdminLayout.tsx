@@ -1,6 +1,6 @@
 import { useState, type ReactNode, type SVGProps } from 'react'
 import { Link } from 'react-router-dom'
-import '../pages/AdminDashboardPage.css'
+import '../pages/admin/AdminDashboardPage.css'
 
 export type AdminIconName =
   | 'menu'
@@ -32,6 +32,7 @@ export type AdminIconName =
   | 'pause'
   | 'play'
   | 'calendar'
+  | 'eye'
 
 interface AdminIconProps extends SVGProps<SVGSVGElement> {
   name: AdminIconName
@@ -68,6 +69,7 @@ export const AdminIcon = ({ name, ...props }: AdminIconProps) => {
     pause: <><path d="M8 5v14M16 5v14" /></>,
     play: <path d="m8 5 11 7-11 7Z" />,
     calendar: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 10h18" /></>,
+    eye: <><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></>,
   }
 
   return (
@@ -77,7 +79,7 @@ export const AdminIcon = ({ name, ...props }: AdminIconProps) => {
   )
 }
 
-type AdminSection = 'dashboard' | 'products' | 'accounts' | 'promotions'
+type AdminSection = 'dashboard' | 'orders' | 'products' | 'inventory' | 'accounts' | 'promotions'
 
 interface AdminLayoutProps {
   activeItem: AdminSection
@@ -89,8 +91,9 @@ interface AdminLayoutProps {
 
 const navItems: Array<{ label: string; icon: AdminIconName; section?: AdminSection; to?: string; count?: number }> = [
   { label: 'Tổng quan', icon: 'dashboard', section: 'dashboard', to: '/admin' },
-  { label: 'Đơn hàng', icon: 'orders', count: 12 },
+  { label: 'Đơn hàng', icon: 'orders', section: 'orders', to: '/admin/don-hang', count: 12 },
   { label: 'Sản phẩm', icon: 'products', section: 'products', to: '/admin/san-pham' },
+  { label: 'Kho hàng', icon: 'box', section: 'inventory', to: '/admin/kho' },
   { label: 'Tài khoản', icon: 'customers', section: 'accounts', to: '/admin/tai-khoan' },
   { label: 'Khuyến mãi', icon: 'discount', section: 'promotions', to: '/admin/khuyen-mai' },
   { label: 'Bài viết', icon: 'news' },

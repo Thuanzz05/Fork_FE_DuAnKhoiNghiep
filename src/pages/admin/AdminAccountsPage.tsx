@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import AdminLayout, { AdminIcon } from '../components/AdminLayout'
-import { getRegisteredUsers, type AuthUser } from '../utils/auth'
-import { getOrders } from '../utils/orders'
-import { formatPrice } from '../data/products'
+import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
+import { getRegisteredUsers, type AuthUser } from '../../utils/auth'
+import { getOrders } from '../../utils/orders'
+import { formatPrice } from '../../data/products'
 import './AdminAccountsPage.css'
 
 type AccountRole = 'admin' | 'staff' | 'customer'

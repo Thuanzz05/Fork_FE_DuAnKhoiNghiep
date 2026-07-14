@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import AdminLayout, { AdminIcon } from '../components/AdminLayout'
-import { formatPrice } from '../data/products'
+import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
+import { formatPrice } from '../../data/products'
 import './AdminPromotionsPage.css'
 
 type PromotionType = 'percentage' | 'fixed' | 'shipping' | 'gift'

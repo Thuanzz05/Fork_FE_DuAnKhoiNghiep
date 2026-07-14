@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import AdminLayout, { AdminIcon } from '../components/AdminLayout'
-import { categories, formatPrice, products, type Product } from '../data/products'
+import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
+import { categories, formatPrice, products, type Product } from '../../data/products'
 import './AdminProductsPage.css'
 
 type ProductStatus = 'active' | 'low' | 'out'
