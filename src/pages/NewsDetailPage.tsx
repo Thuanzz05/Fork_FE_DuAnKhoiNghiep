@@ -9,7 +9,7 @@ function NewsDetailPage() {
   const article = getNewsArticle(Number(id))
   const [commentSent, setCommentSent] = useState(false)
 
-  if (!article) return <Navigate to="/tin-tuc" replace />
+  if (!article) return <Navigate to="/404" replace />
 
   const relatedArticles = newsArticles.filter((item) => item.id !== article.id).slice(0, 5)
 

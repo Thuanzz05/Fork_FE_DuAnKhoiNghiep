@@ -1,0 +1,125 @@
+.not-found-page {
+  display: grid;
+  min-height: 560px;
+  padding: 70px 20px 86px;
+  place-items: center;
+  background: #fffafa;
+  color: #3e2527;
+}
+
+.not-found-content {
+  width: min(100%, 660px);
+  text-align: center;
+}
+
+.not-found-code {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #b53740;
+  font-size: clamp(86px, 12vw, 148px);
+  font-weight: 800;
+  line-height: 0.9;
+}
+
+.not-found-code i {
+  display: grid;
+  width: 112px;
+  height: 112px;
+  margin: 0 8px;
+  place-items: center;
+  border-radius: 50%;
+  background: #f9e7e8;
+}
+
+.not-found-code svg {
+  width: 74px;
+  height: 74px;
+  fill: #b53740;
+  stroke: #fff;
+  stroke-linecap: round;
+  stroke-width: 4;
+}
+
+.not-found-eyebrow {
+  margin: 26px 0 6px;
+  color: #b53740;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.not-found-content h1 {
+  margin: 0;
+  font-size: 31px;
+}
+
+.not-found-description {
+  margin: 14px auto 28px;
+  color: #746769;
+  line-height: 1.65;
+}
+
+.not-found-description code {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #f7eded;
+  color: #9c3037;
+}
+
+.not-found-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.not-found-actions a {
+  min-width: 162px;
+  padding: 12px 22px;
+  border: 1px solid #b53740;
+  border-radius: 999px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.not-found-home {
+  background: #b53740;
+  color: #fff;
+}
+
+.not-found-products {
+  background: #fff;
+  color: #b53740;
+}
+
+.not-found-actions a:hover {
+  background: #942b33;
+  color: #fff;
+}
+
+@media (max-width: 520px) {
+  .not-found-page {
+    min-height: 480px;
+    padding: 50px 16px 64px;
+  }
+
+  .not-found-code i {
+    width: 78px;
+    height: 78px;
+  }
+
+  .not-found-code svg {
+    width: 54px;
+    height: 54px;
+  }
+
+  .not-found-content h1 {
+    font-size: 25px;
+  }
+
+  .not-found-actions {
+    display: grid;
+  }
+}

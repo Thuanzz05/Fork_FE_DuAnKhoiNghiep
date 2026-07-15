@@ -1,4 +1,5 @@
 import { getOrders, saveOrders } from './orders'
+import { seedProductReviews } from '../data/reviews'
 
 export type ReviewModerationStatus = 'pending' | 'approved' | 'hidden'
 
@@ -23,7 +24,7 @@ export const getReviews = (): ProductReview[] => {
   if (typeof window === 'undefined') return []
   try {
     const raw = localStorage.getItem(REVIEWS_STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as ProductReview[]) : []
+    return raw ? (JSON.parse(raw) as ProductReview[]) : seedProductReviews.map((review) => ({ ...review }))
   } catch {
     return []
   }
@@ -31,6 +32,7 @@ export const getReviews = (): ProductReview[] => {
 
 export const saveReviews = (reviews: ProductReview[]): void => {
   localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(reviews))
+  window.dispatchEvent(new CustomEvent('reviews-updated'))
 }
 
 export const getProductReviews = (productId: string): ProductReview[] => {

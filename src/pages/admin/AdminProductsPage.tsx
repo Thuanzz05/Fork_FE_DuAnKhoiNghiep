@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
+import Pagination from '../../components/Pagination'
 import { categories, formatPrice, products, type Product } from '../../data/products'
+import { usePagination } from '../../hooks/usePagination'
 import './AdminProductsPage.css'
 
 type ProductStatus = 'active' | 'low' | 'out'
@@ -132,6 +134,12 @@ function AdminProductsPage() {
       return matchesKeyword && matchesCategory && matchesStatus
     })
   }, [categoryFilter, productList, searchValue, statusFilter])
+
+  const { currentPage, totalPages, pageItems: paginatedProducts, setCurrentPage } = usePagination(
+    filteredProducts,
+    5,
+    `${searchValue}|${categoryFilter}|${statusFilter}`,
+  )
 
   const activeCount = productList.filter((product) => product.stock > 10).length
   const lowStockCount = productList.filter((product) => product.stock > 0 && product.stock <= 10).length
@@ -320,7 +328,7 @@ function AdminProductsPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredProducts.map((product) => {
+              {paginatedProducts.map((product) => {
                 const status = getProductStatus(product.stock)
                 return (
                   <tr key={product.id}>
@@ -353,6 +361,7 @@ function AdminProductsPage() {
             <div className="admin-products-empty"><AdminIcon name="search" /><strong>Không tìm thấy sản phẩm</strong><span>Hãy thử từ khóa hoặc bộ lọc khác.</span></div>
           ) : null}
         </div>
+        <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filteredProducts.length} pageSize={5} itemLabel="sản phẩm" onPageChange={setCurrentPage} />
       </section>
 
       {isFormOpen ? (

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
+import Pagination from '../../components/Pagination'
 import { newsArticles } from '../../data/news'
+import { usePagination } from '../../hooks/usePagination'
 import './AdminArticlesPage.css'
 
 type ArticleStatus = 'published' | 'draft' | 'scheduled'
@@ -181,6 +183,12 @@ function AdminArticlesPage() {
       })
   }, [articles, categoryFilter, searchValue, sortBy, statusFilter])
 
+  const { currentPage, totalPages, pageItems: paginatedArticles, setCurrentPage } = usePagination(
+    filteredArticles,
+    5,
+    `${searchValue}|${categoryFilter}|${statusFilter}|${sortBy}`,
+  )
+
   const publishedCount = articles.filter((article) => article.status === 'published').length
   const draftCount = articles.filter((article) => article.status === 'draft').length
   const scheduledCount = articles.filter((article) => article.status === 'scheduled').length
@@ -306,7 +314,7 @@ function AdminArticlesPage() {
         <div className="admin-articles-table-wrap">
           <table className="admin-articles-table">
             <thead><tr><th>Bài viết</th><th>Danh mục</th><th>Trạng thái</th><th>Ngày đăng</th><th>Lượt xem</th><th>Nổi bật</th><th>Thao tác</th></tr></thead>
-            <tbody>{filteredArticles.map((article) => {
+            <tbody>{paginatedArticles.map((article) => {
               const status = statusMeta[article.status]
               return <tr key={article.id}>
                 <td><div className="admin-article-cell"><img src={article.image} alt="" /><div><strong>{article.title}</strong><span>{article.excerpt}</span><small>Bởi {article.author} · Cập nhật {formatDateTime(article.updatedAt)}</small></div></div></td>
@@ -321,6 +329,7 @@ function AdminArticlesPage() {
           </table>
           {filteredArticles.length === 0 ? <div className="admin-articles-empty"><AdminIcon name="search" /><strong>Không tìm thấy bài viết</strong><span>Hãy thử từ khóa hoặc bộ lọc khác.</span></div> : null}
         </div>
+        <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filteredArticles.length} pageSize={5} itemLabel="bài viết" onPageChange={setCurrentPage} />
       </section>
 
       {isFormOpen ? (

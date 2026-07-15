@@ -5,6 +5,83 @@
   background: #faf5f5;
 }
 
+/* Data states */
+.skeleton-block {
+  display: block;
+  background: linear-gradient(90deg, #f1e9ea 25%, #faf6f6 50%, #f1e9ea 75%);
+  background-size: 200% 100%;
+  animation: content-skeleton 1.2s ease-in-out infinite;
+}
+
+.product-card-skeleton {
+  pointer-events: none;
+}
+
+.skeleton-product-image {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+}
+
+.skeleton-product-brand {
+  width: 38%;
+  height: 12px;
+  margin-bottom: 13px;
+  border-radius: 4px;
+}
+
+.skeleton-product-name {
+  width: 88%;
+  height: 18px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+}
+
+.skeleton-product-price {
+  width: 48%;
+  height: 17px;
+  border-radius: 4px;
+}
+
+.products-status {
+  padding: 54px 20px;
+  border: 1px dashed #dfc7c9;
+  border-radius: 8px;
+  background: #fffafa;
+  text-align: center;
+}
+
+.products-status strong {
+  display: block;
+  color: #4b2629;
+  font-size: 18px;
+}
+
+.products-status p {
+  margin: 8px 0 18px;
+  color: #75696a;
+}
+
+.products-status button {
+  padding: 10px 22px;
+  border: 0;
+  border-radius: 999px;
+  background: #b53740;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@keyframes content-skeleton {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-block {
+    animation: none;
+  }
+}
+
 .products-container {
   width: min(1200px, calc(100% - 40px));
   margin: 0 auto;

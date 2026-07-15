@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
+import Pagination from '../../components/Pagination'
 import { categories, products } from '../../data/products'
+import { usePagination } from '../../hooks/usePagination'
 import './AdminCategoriesPage.css'
 
 type CategoryStatus = 'active' | 'hidden'
@@ -123,6 +125,12 @@ function AdminCategoriesPage() {
       return first.displayOrder - second.displayOrder
     })
   }, [categoryList, searchValue, sortBy, statusFilter])
+
+  const { currentPage, totalPages, pageItems: paginatedCategories, setCurrentPage } = usePagination(
+    filteredCategories,
+    6,
+    `${searchValue}|${statusFilter}|${sortBy}`,
+  )
 
   const activeCount = categoryList.filter((category) => category.status === 'active').length
   const hiddenCount = categoryList.length - activeCount
@@ -278,7 +286,7 @@ function AdminCategoriesPage() {
         <div className="admin-categories-table-wrap">
           <table className="admin-categories-table">
             <thead><tr><th>Thứ tự</th><th>Danh mục</th><th>Đường dẫn</th><th>Sản phẩm</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead>
-            <tbody>{filteredCategories.map((category) => {
+            <tbody>{paginatedCategories.map((category) => {
               const productCount = getProductCount(category.slug)
               return <tr key={category.id}>
                 <td><span className="admin-category-order">{category.displayOrder}</span></td>
@@ -293,6 +301,7 @@ function AdminCategoriesPage() {
           </table>
           {filteredCategories.length === 0 ? <div className="admin-categories-empty"><AdminIcon name="search" /><strong>Không tìm thấy danh mục</strong><span>Hãy thử từ khóa hoặc bộ lọc khác.</span></div> : null}
         </div>
+        <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filteredCategories.length} pageSize={6} itemLabel="danh mục" onPageChange={setCurrentPage} />
       </section>
 
       {isFormOpen ? (

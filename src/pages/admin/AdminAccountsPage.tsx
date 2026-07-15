@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
+import Pagination from '../../components/Pagination'
 import { getRegisteredUsers, type AuthUser } from '../../utils/auth'
 import { getOrders } from '../../utils/orders'
 import { formatPrice } from '../../data/products'
+import { usePagination } from '../../hooks/usePagination'
 import './AdminAccountsPage.css'
 
 type AccountRole = 'admin' | 'staff' | 'customer'
@@ -178,6 +180,12 @@ function AdminAccountsPage() {
     })
   }, [accounts, roleFilter, searchValue, sortBy, statusFilter])
 
+  const { currentPage, totalPages, pageItems: paginatedAccounts, setCurrentPage } = usePagination(
+    filteredAccounts,
+    6,
+    `${searchValue}|${roleFilter}|${statusFilter}|${sortBy}`,
+  )
+
   const activeCount = accounts.filter((account) => account.status === 'active').length
   const lockedCount = accounts.filter((account) => account.status === 'locked').length
   const staffCount = accounts.filter((account) => account.role === 'staff' || account.role === 'admin').length
@@ -303,7 +311,7 @@ function AdminAccountsPage() {
           <table className="admin-accounts-table">
             <thead><tr><th>Tài khoản</th><th>Điện thoại</th><th>Vai trò</th><th>Đơn hàng</th><th>Địa chỉ</th><th>Ngày tham gia</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
             <tbody>
-              {filteredAccounts.map((account) => (
+              {paginatedAccounts.map((account) => (
                 <tr key={account.id}>
                   <td><div className="admin-account-cell"><span className={`admin-account-avatar is-${account.role}`}>{account.avatar ? <img src={account.avatar} alt="" /> : getInitials(account)}</span><div><strong>{getFullName(account)}</strong><span>{account.email}</span><small>Hoạt động: {account.lastActive}</small></div></div></td>
                   <td>{account.phone || <span className="admin-account-empty">Chưa cập nhật</span>}</td>
@@ -319,6 +327,7 @@ function AdminAccountsPage() {
           </table>
           {filteredAccounts.length === 0 ? <div className="admin-accounts-empty"><AdminIcon name="search" /><strong>Không tìm thấy tài khoản</strong><span>Hãy thử từ khóa hoặc bộ lọc khác.</span></div> : null}
         </div>
+        <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filteredAccounts.length} pageSize={6} itemLabel="tài khoản" onPageChange={setCurrentPage} />
       </section>
 
       {isFormOpen ? (

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
+import Pagination from '../../components/Pagination'
 import { categories, formatPrice, products } from '../../data/products'
+import { usePagination } from '../../hooks/usePagination'
 import './AdminInventoryPage.css'
 
 type InventoryView = 'stock' | 'vouchers'
@@ -251,6 +253,20 @@ function AdminInventoryPage() {
       })
   }, [inventory, searchValue, voucherPeriod, voucherSort, voucherTypeFilter, vouchers])
 
+  const {
+    currentPage: inventoryPage,
+    totalPages: inventoryTotalPages,
+    pageItems: paginatedInventory,
+    setCurrentPage: setInventoryPage,
+  } = usePagination(filteredInventory, 6, `${searchValue}|${categoryFilter}|${stockFilter}|${stockSort}`)
+
+  const {
+    currentPage: voucherPage,
+    totalPages: voucherTotalPages,
+    pageItems: paginatedVouchers,
+    setCurrentPage: setVoucherPage,
+  } = usePagination(filteredVouchers, 6, `${searchValue}|${voucherTypeFilter}|${voucherPeriod}|${voucherSort}`)
+
   const totalStock = inventory.reduce((total, product) => total + product.stock, 0)
   const replenishmentCount = inventory.filter((product) => product.stock <= product.minimumStock).length
   const inventoryValue = inventory.reduce((total, product) => total + product.stock * product.costPrice, 0)
@@ -380,7 +396,7 @@ function AdminInventoryPage() {
             <div className="admin-inventory-table-wrap">
               <table className="admin-inventory-stock-table">
                 <thead><tr><th>Sản phẩm</th><th>Vị trí</th><th>Giá vốn</th><th>Tồn hiện tại</th><th>Tồn tối thiểu</th><th>Giá trị tồn</th><th>Trạng thái</th></tr></thead>
-                <tbody>{filteredInventory.map((product) => {
+                <tbody>{paginatedInventory.map((product) => {
                   const status = stockStatusMeta[getStockStatus(product)]
                   return <tr key={product.id}>
                     <td><div className="admin-inventory-product"><img src={product.image} alt="" /><div><strong>{product.name}</strong><span>{product.sku} · {product.category}</span></div></div></td>
@@ -395,6 +411,7 @@ function AdminInventoryPage() {
               </table>
               {filteredInventory.length === 0 ? <div className="admin-inventory-empty"><AdminIcon name="search" /><strong>Không tìm thấy sản phẩm</strong><span>Hãy thử từ khóa hoặc bộ lọc khác.</span></div> : null}
             </div>
+            <Pagination currentPage={inventoryPage} totalPages={inventoryTotalPages} totalItems={filteredInventory.length} pageSize={6} itemLabel="sản phẩm" onPageChange={setInventoryPage} />
           </>
         ) : (
           <>
@@ -409,7 +426,7 @@ function AdminInventoryPage() {
             <div className="admin-inventory-table-wrap">
               <table className="admin-inventory-voucher-table">
                 <thead><tr><th>Mã phiếu</th><th>Loại</th><th>Đối tác / Bộ phận</th><th>Sản phẩm</th><th>Số lượng</th><th>Giá trị</th><th>Người tạo</th><th>Thao tác</th></tr></thead>
-                <tbody>{filteredVouchers.map((voucher) => {
+                <tbody>{paginatedVouchers.map((voucher) => {
                   const firstProduct = inventory.find((product) => product.id === voucher.items[0]?.productId)
                   return <tr key={voucher.id}>
                     <td><div className="admin-inventory-voucher-code"><strong>{voucher.code}</strong><span>{formatDateTime(voucher.createdAt)}</span></div></td>
@@ -425,6 +442,7 @@ function AdminInventoryPage() {
               </table>
               {filteredVouchers.length === 0 ? <div className="admin-inventory-empty"><AdminIcon name="search" /><strong>Không tìm thấy phiếu kho</strong><span>Hãy thử từ khóa hoặc bộ lọc khác.</span></div> : null}
             </div>
+            <Pagination currentPage={voucherPage} totalPages={voucherTotalPages} totalItems={filteredVouchers.length} pageSize={6} itemLabel="phiếu" onPageChange={setVoucherPage} />
           </>
         )}
       </section>

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
+import Pagination from '../../components/Pagination'
 import { formatPrice } from '../../data/products'
+import { usePagination } from '../../hooks/usePagination'
 import {
   getOrders,
   type Order,
@@ -175,6 +177,12 @@ function AdminOrdersPage() {
     })
   }, [orderStatusFilter, orders, paymentMethodFilter, paymentStatusFilter, periodFilter, searchValue, sortBy])
 
+  const { currentPage, totalPages, pageItems: paginatedOrders, setCurrentPage } = usePagination(
+    filteredOrders,
+    6,
+    `${searchValue}|${orderStatusFilter}|${paymentStatusFilter}|${paymentMethodFilter}|${periodFilter}|${sortBy}`,
+  )
+
   const pendingCount = orders.filter((order) => order.orderStatus === 'CHO_XAC_NHAN').length
   const processingCount = orders.filter((order) => ['DA_XAC_NHAN', 'DANG_DONG_GOI', 'DANG_GIAO_HANG'].includes(order.orderStatus)).length
   const deliveredRevenue = orders.filter((order) => order.orderStatus === 'DA_GIAO_HANG').reduce((total, order) => total + order.totalPayment, 0)
@@ -233,7 +241,7 @@ function AdminOrdersPage() {
           <table className="admin-orders-management-table">
             <thead><tr><th>Mã đơn hàng</th><th>Khách hàng</th><th>Sản phẩm</th><th>Thanh toán</th><th>Tổng tiền</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
             <tbody>
-              {filteredOrders.map((order) => {
+              {paginatedOrders.map((order) => {
                 const orderStatus = orderStatusMeta[order.orderStatus]
                 const paymentStatus = paymentStatusMeta[order.paymentStatus]
                 const totalQuantity = order.items.reduce((total, item) => total + item.quantity, 0)
@@ -253,6 +261,7 @@ function AdminOrdersPage() {
           </table>
           {filteredOrders.length === 0 ? <div className="admin-orders-management-empty"><AdminIcon name="search" /><strong>Không tìm thấy đơn hàng</strong><span>Hãy thử từ khóa hoặc bộ lọc khác.</span></div> : null}
         </div>
+        <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filteredOrders.length} pageSize={6} itemLabel="đơn hàng" onPageChange={setCurrentPage} />
       </section>
 
       {selectedOrder ? (

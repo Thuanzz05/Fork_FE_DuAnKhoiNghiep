@@ -31,6 +31,7 @@ import AdminArticlesPage from './pages/admin/AdminArticlesPage'
 import AdminCategoriesPage from './pages/admin/AdminCategoriesPage'
 import AdminReviewsPage from './pages/admin/AdminReviewsPage'
 import AdminSettingsPage from './pages/admin/AdminSettingsPage'
+import NotFoundPage from './pages/NotFoundPage'
 import { useStoreSettings } from './utils/storeSettings'
 
 function AppContent() {
@@ -77,6 +78,8 @@ function AppContent() {
         <Route path="/admin/bai-viet" element={<AdminArticlesPage />} />
         <Route path="/admin/danh-gia" element={<AdminReviewsPage />} />
         <Route path="/admin/cai-dat" element={<AdminSettingsPage />} />
+        <Route path="/404" element={<NotFoundPage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
 
       {!isAdminRoute && <Footer />}

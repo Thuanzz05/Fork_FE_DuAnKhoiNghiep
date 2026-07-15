@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
+import Pagination from '../../components/Pagination'
 import { formatPrice } from '../../data/products'
+import { usePagination } from '../../hooks/usePagination'
 import './AdminPromotionsPage.css'
 
 type PromotionType = 'percentage' | 'fixed' | 'shipping' | 'gift'
@@ -147,6 +149,12 @@ function AdminPromotionsPage() {
     })
   }, [promotions, searchValue, sortBy, statusFilter, typeFilter])
 
+  const { currentPage, totalPages, pageItems: paginatedPromotions, setCurrentPage } = usePagination(
+    filteredPromotions,
+    6,
+    `${searchValue}|${typeFilter}|${statusFilter}|${sortBy}`,
+  )
+
   const activeCount = promotions.filter((promotion) => getPromotionStatus(promotion) === 'active').length
   const scheduledCount = promotions.filter((promotion) => getPromotionStatus(promotion) === 'scheduled').length
   const totalUsage = promotions.reduce((total, promotion) => total + promotion.usedCount, 0)
@@ -259,7 +267,7 @@ function AdminPromotionsPage() {
           <table className="admin-promotions-table">
             <thead><tr><th>Chương trình</th><th>Loại giảm</th><th>Giá trị</th><th>Điều kiện</th><th>Thời gian</th><th>Lượt dùng</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
             <tbody>
-              {filteredPromotions.map((promotion) => {
+              {paginatedPromotions.map((promotion) => {
                 const status = getPromotionStatus(promotion)
                 const usagePercent = promotion.usageLimit > 0 ? Math.min(100, Math.round((promotion.usedCount / promotion.usageLimit) * 100)) : 0
                 return (
@@ -279,6 +287,7 @@ function AdminPromotionsPage() {
           </table>
           {filteredPromotions.length === 0 ? <div className="admin-promotions-empty"><AdminIcon name="search" /><strong>Không tìm thấy khuyến mãi</strong><span>Hãy thử từ khóa hoặc bộ lọc khác.</span></div> : null}
         </div>
+        <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filteredPromotions.length} pageSize={6} itemLabel="chương trình" onPageChange={setCurrentPage} />
       </section>
 
       {isFormOpen ? (

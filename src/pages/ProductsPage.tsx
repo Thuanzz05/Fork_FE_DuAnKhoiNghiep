@@ -4,6 +4,8 @@ import { categories, formatPrice, products } from '../data/products'
 import type { Product } from '../data/products'
 import { addCartItem } from '../utils/cart'
 import { getWishlistIds, toggleWishlistId } from '../utils/wishlist'
+import Pagination from '../components/Pagination'
+import { usePagination } from '../hooks/usePagination'
 import './ProductsPage.css'
 
 const promoCodes = [
@@ -78,6 +80,8 @@ function ProductsPage() {
   const [wishlistIds, setWishlistIds] = useState(() => getWishlistIds())
   const [wishlistToastOpen, setWishlistToastOpen] = useState(false)
   const [copiedPromoCode, setCopiedPromoCode] = useState<string | null>(null)
+  const [contentState, setContentState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [loadVersion, setLoadVersion] = useState(0)
 
   const activeCategory = categories.find((category) => category.slug === activeCategorySlug)
 
@@ -104,6 +108,22 @@ function ProductsPage() {
 
     return result
   }, [activeCategorySlug, sortBy])
+
+  const {
+    currentPage,
+    totalPages,
+    pageItems: paginatedProducts,
+    setCurrentPage,
+  } = usePagination(filteredProducts, 6, `${activeCategorySlug}|${sortBy}`)
+
+  useEffect(() => {
+    setContentState('loading')
+    const timerId = window.setTimeout(() => {
+      setContentState(Array.isArray(products) ? 'ready' : 'error')
+    }, 450)
+
+    return () => window.clearTimeout(timerId)
+  }, [loadVersion])
 
   const handleCategoryChange = (slug: string) => {
     if (slug === 'tat-ca') {
@@ -298,7 +318,19 @@ function ProductsPage() {
           </div>
 
           <div className="products-grid">
-            {filteredProducts.map((product) => (
+            {contentState === 'loading' &&
+              Array.from({ length: 6 }, (_, index) => (
+                <article className="product-card product-card-skeleton" key={`product-skeleton-${index}`} aria-hidden="true">
+                  <span className="skeleton-block skeleton-product-image" />
+                  <div className="product-info">
+                    <span className="skeleton-block skeleton-product-brand" />
+                    <span className="skeleton-block skeleton-product-name" />
+                    <span className="skeleton-block skeleton-product-price" />
+                  </div>
+                </article>
+              ))}
+
+            {contentState === 'ready' && paginatedProducts.map((product) => (
               <article key={product.id} className="product-card">
                 {product.discount && <span className="product-badge">- {product.discount}%</span>}
 
@@ -360,10 +392,29 @@ function ProductsPage() {
             ))}
           </div>
 
-          {filteredProducts.length === 0 && (
+          {contentState === 'error' && (
+            <div className="products-status products-error" role="alert">
+              <strong>Không thể tải danh sách sản phẩm</strong>
+              <p>Đã có lỗi xảy ra. Vui lòng thử tải lại dữ liệu.</p>
+              <button type="button" onClick={() => setLoadVersion((version) => version + 1)}>Thử lại</button>
+            </div>
+          )}
+
+          {contentState === 'ready' && filteredProducts.length === 0 && (
             <div className="products-empty">
               <p>Không tìm thấy sản phẩm trong danh mục này.</p>
             </div>
+          )}
+
+          {contentState === 'ready' && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredProducts.length}
+              pageSize={6}
+              itemLabel="sản phẩm"
+              onPageChange={setCurrentPage}
+            />
           )}
         </section>
       </div>

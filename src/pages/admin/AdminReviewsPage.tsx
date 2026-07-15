@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
+import Pagination from '../../components/Pagination'
 import { products, type Product } from '../../data/products'
+import { usePagination } from '../../hooks/usePagination'
 import {
   getReviews,
   saveReviews,
@@ -18,17 +20,6 @@ interface ManagedReview extends ProductReview {
   verifiedPurchase: boolean
 }
 
-const seedReviews: ManagedReview[] = [
-  { id: 'review-001', orderId: 'admin-order-8', productId: '1', userId: 'customer-007', userName: 'Đỗ Minh Thư', rating: 5, comment: 'Combo đóng gói rất đẹp, mùi nhẹ và dùng đủ ba bước da mềm hơn hẳn. Mình sẽ tiếp tục sử dụng.', createdAt: '2026-07-14T09:24:00+07:00', status: 'approved', verifiedPurchase: true, reply: 'Rubeanora cảm ơn bạn đã tin dùng bộ sản phẩm. Chúc bạn luôn có làn da khỏe đẹp!', replyAt: '2026-07-14T10:10:00+07:00' },
-  { id: 'review-002', orderId: 'admin-order-10', productId: '2', userId: 'customer-009', userName: 'Bùi Đức Long', rating: 4, comment: 'Sữa rửa mặt tạo bọt mịn, rửa xong không bị khô căng. Giao hàng hơi chậm một chút nhưng sản phẩm ổn.', createdAt: '2026-07-14T08:15:00+07:00', status: 'pending', verifiedPurchase: true },
-  { id: 'review-003', orderId: 'admin-order-5', productId: '3', userId: 'customer-003', userName: 'Phạm Quốc Bảo', rating: 5, comment: 'Mặt nạ có hạt mịn, tẩy tế bào chết khá dịu. Sau vài lần dùng da sáng và đều màu hơn.', createdAt: '2026-07-13T20:42:00+07:00', status: 'approved', verifiedPurchase: true, reply: 'Cảm ơn bạn đã chia sẻ trải nghiệm thực tế với mặt nạ đậu đỏ.', replyAt: '2026-07-14T07:30:00+07:00' },
-  { id: 'review-004', orderId: 'admin-order-4', productId: '4', userId: 'customer-004', userName: 'Vũ Ngọc Hà', rating: 3, comment: 'Toner cấp ẩm ổn nhưng phần nắp chai của mình hơi lỏng. Mong shop kiểm tra kỹ hơn trước khi gửi.', createdAt: '2026-07-13T15:05:00+07:00', status: 'pending', verifiedPurchase: true },
-  { id: 'review-005', orderId: 'admin-order-9', productId: '5', userId: 'customer-008', userName: 'Hoàng Mai Phương', rating: 2, comment: 'Nội dung chứa liên kết quảng cáo không liên quan đến sản phẩm.', createdAt: '2026-07-12T18:30:00+07:00', status: 'hidden', verifiedPurchase: false },
-  { id: 'review-006', orderId: 'admin-order-7', productId: '6', userId: 'customer-006', userName: 'Nguyễn Lan Anh', rating: 5, comment: 'Serum thấm nhanh, không bết dính. Dùng buổi tối khoảng hai tuần thấy da có độ bóng khỏe hơn.', createdAt: '2026-07-11T16:48:00+07:00', status: 'approved', verifiedPurchase: true },
-  { id: 'review-007', orderId: 'admin-order-9', productId: '7', userId: 'customer-008', userName: 'Hoàng Mai Phương', rating: 4, comment: 'Kem dưỡng mềm, hợp da khô. Mình thích thiết kế bao bì và mùi đậu đỏ rất nhẹ.', createdAt: '2026-07-10T11:22:00+07:00', status: 'pending', verifiedPurchase: true },
-  { id: 'review-008', orderId: 'admin-order-12', productId: '4', userId: 'customer-011', userName: 'Trịnh Khánh Linh', rating: 5, comment: 'Toner làm dịu da tốt, dùng sau khi rửa mặt rất dễ chịu. Chai chắc chắn và giao đủ số lượng.', createdAt: '2026-07-09T09:16:00+07:00', status: 'approved', verifiedPurchase: true },
-]
-
 const statusMeta: Record<ReviewModerationStatus, { label: string; tone: string }> = {
   pending: { label: 'Chờ duyệt', tone: 'pending' },
   approved: { label: 'Đã hiển thị', tone: 'approved' },
@@ -36,13 +27,11 @@ const statusMeta: Record<ReviewModerationStatus, { label: string; tone: string }
 }
 
 const buildInitialReviews = (): ManagedReview[] => {
-  const reviewMap = new Map(seedReviews.map((review) => [review.id, review]))
-  getReviews().forEach((review) => reviewMap.set(review.id, {
+  return getReviews().map((review) => ({
     ...review,
     status: review.status ?? 'pending',
     verifiedPurchase: review.verifiedPurchase ?? true,
   }))
-  return Array.from(reviewMap.values())
 }
 
 const getProduct = (productId: string): Product | undefined => products.find((product) => product.id === productId)
@@ -127,6 +116,12 @@ function AdminReviewsPage() {
     })
   }, [productFilter, ratingFilter, reviews, searchValue, sortBy, statusFilter])
 
+  const { currentPage, totalPages, pageItems: paginatedReviews, setCurrentPage } = usePagination(
+    filteredReviews,
+    5,
+    `${searchValue}|${statusFilter}|${ratingFilter}|${productFilter}|${sortBy}`,
+  )
+
   const pendingCount = reviews.filter((review) => review.status === 'pending').length
   const approvedCount = reviews.filter((review) => review.status === 'approved').length
   const averageRating = reviews.length ? reviews.reduce((total, review) => total + review.rating, 0) / reviews.length : 0
@@ -190,7 +185,7 @@ function AdminReviewsPage() {
         <div className="admin-reviews-table-wrap">
           <table className="admin-reviews-table">
             <thead><tr><th>Khách hàng & đánh giá</th><th>Sản phẩm</th><th>Số sao</th><th>Trạng thái</th><th>Ngày gửi</th><th>Phản hồi</th><th>Thao tác</th></tr></thead>
-            <tbody>{filteredReviews.map((review) => {
+            <tbody>{paginatedReviews.map((review) => {
               const product = getProduct(review.productId)
               const status = statusMeta[review.status]
               return <tr key={review.id}>
@@ -206,6 +201,7 @@ function AdminReviewsPage() {
           </table>
           {filteredReviews.length === 0 ? <div className="admin-reviews-empty"><AdminIcon name="search" /><strong>Không tìm thấy đánh giá</strong><span>Hãy thử từ khóa hoặc bộ lọc khác.</span></div> : null}
         </div>
+        <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filteredReviews.length} pageSize={5} itemLabel="đánh giá" onPageChange={setCurrentPage} />
       </section>
 
       {selectedReview ? (

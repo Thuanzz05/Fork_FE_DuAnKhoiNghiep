@@ -3,6 +3,8 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { formatPrice, products } from '../data/products'
 import { productGalleries } from '../data/productGalleries'
 import { addCartItem } from '../utils/cart'
+import { getProductReviews, type ProductReview } from '../utils/reviews'
+import { useStoreSettings } from '../utils/storeSettings'
 import { getWishlistIds, toggleWishlistId } from '../utils/wishlist'
 import './ProductDetailPage.css'
 
@@ -13,6 +15,28 @@ const detailVouchers = [
   { code: 'FREESHIP', description: 'Miễn phí vận chuyển đơn từ 300K', condition: 'Áp dụng phí vận chuyển toàn quốc cho đơn hàng có giá trị từ 300.000đ.' },
   { code: 'SKINCARE', description: 'Tặng mẫu thử khi mua từ 250K', condition: 'Quà tặng được gửi kèm đơn hàng từ 250.000đ trong thời gian chương trình còn hiệu lực.' },
 ]
+
+const getReviewerInitials = (name: string) => name
+  .trim()
+  .split(/\s+/)
+  .slice(-2)
+  .map((part) => part.charAt(0))
+  .join('')
+  .toLocaleUpperCase('vi-VN')
+
+const formatReviewDate = (value: string) => new Intl.DateTimeFormat('vi-VN', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+}).format(new Date(value))
+
+function ReviewStars({ rating }: { rating: number }) {
+  return (
+    <span className="detail-review-stars" aria-label={`${rating} trên 5 sao`}>
+      {[1, 2, 3, 4, 5].map((star) => <i className={star <= rating ? 'filled' : ''} key={star}>★</i>)}
+    </span>
+  )
+}
 
 function ProductDetailPage() {
   const { slug } = useParams()
@@ -25,6 +49,8 @@ function ProductDetailPage() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
   const [selectedVoucher, setSelectedVoucher] = useState<(typeof detailVouchers)[number] | null>(null)
   const [wishlistToastOpen, setWishlistToastOpen] = useState(false)
+  const [productReviews, setProductReviews] = useState<ProductReview[]>([])
+  const storeSettings = useStoreSettings()
 
   useEffect(() => {
     if (!product) return
@@ -45,12 +71,34 @@ function ProductDetailPage() {
     return () => window.clearTimeout(timer)
   }, [wishlistToastOpen])
 
-  if (!product) return <Navigate to="/san-pham" replace />
+  useEffect(() => {
+    if (!product) return
+
+    const loadReviews = () => {
+      const approvedReviews = getProductReviews(product.id)
+        .filter((review) => review.status === 'approved')
+        .sort((first, second) => new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime())
+      setProductReviews(approvedReviews)
+    }
+
+    loadReviews()
+    window.addEventListener('storage', loadReviews)
+    window.addEventListener('reviews-updated', loadReviews)
+    return () => {
+      window.removeEventListener('storage', loadReviews)
+      window.removeEventListener('reviews-updated', loadReviews)
+    }
+  }, [product])
+
+  if (!product) return <Navigate to="/404" replace />
 
   const gallery = productGalleries[product.id] || [product.image]
   const isFavorite = wishlistIds.includes(product.id)
   const similarProducts = products.filter((item) => item.id !== product.id).slice(0, 4)
   const savedAmount = product.originalPrice ? product.originalPrice - product.price : 0
+  const averageRating = productReviews.length
+    ? productReviews.reduce((total, review) => total + review.rating, 0) / productReviews.length
+    : 0
 
   const changeGalleryImage = (direction: 'previous' | 'next') => {
     const currentIndex = Math.max(0, gallery.indexOf(activeImage))
@@ -152,6 +200,16 @@ function ProductDetailPage() {
             <span>Xuất xứ: <strong>{product.origin}</strong></span>
           </div>
 
+          <button
+            className="product-rating-summary"
+            type="button"
+            onClick={() => document.getElementById('product-reviews')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          >
+            <ReviewStars rating={Math.round(averageRating)} />
+            <strong>{averageRating ? averageRating.toFixed(1) : '0.0'}</strong>
+            <span>{productReviews.length} đánh giá đã duyệt</span>
+          </button>
+
           <div className="product-detail-pricing">
             <strong>{formatPrice(product.price)}</strong>
             {product.originalPrice && <del>{formatPrice(product.originalPrice)}</del>}
@@ -249,6 +307,67 @@ function ProductDetailPage() {
               <Link className="detail-policy-link" to="/chinh-sach-doi-tra">Xem chính sách đổi trả đầy đủ</Link>
             </div>
           )}
+        </div>
+      </section>
+
+      <section className="product-detail-container product-reviews-section" id="product-reviews">
+        <header className="product-reviews-heading">
+          <p>Trải nghiệm khách hàng</p>
+          <h2>Đánh giá sản phẩm</h2>
+        </header>
+
+        <div className="product-reviews-layout">
+          <aside className="product-rating-overview" aria-label="Tổng quan đánh giá">
+            <strong>{averageRating ? averageRating.toFixed(1) : '0.0'}</strong>
+            <ReviewStars rating={Math.round(averageRating)} />
+            <span>{productReviews.length} đánh giá đã được duyệt</span>
+
+            <div className="rating-distribution">
+              {[5, 4, 3, 2, 1].map((rating) => {
+                const count = productReviews.filter((review) => review.rating === rating).length
+                const percentage = productReviews.length ? (count / productReviews.length) * 100 : 0
+                return (
+                  <div className="rating-distribution-row" key={rating}>
+                    <span>{rating} ★</span>
+                    <i><b style={{ width: `${percentage}%` }} /></i>
+                    <small>{count}</small>
+                  </div>
+                )
+              })}
+            </div>
+          </aside>
+
+          <div className="product-review-list">
+            {productReviews.length > 0 ? productReviews.map((review) => (
+              <article className="product-review-card" key={review.id}>
+                <div className="reviewer-avatar" aria-hidden="true">{getReviewerInitials(review.userName)}</div>
+                <div className="product-review-content">
+                  <div className="product-review-topline">
+                    <div>
+                      <strong>{review.userName}</strong>
+                      {review.verifiedPurchase ? <span>Đã mua hàng</span> : null}
+                    </div>
+                    <time dateTime={review.createdAt}>{formatReviewDate(review.createdAt)}</time>
+                  </div>
+                  <ReviewStars rating={review.rating} />
+                  <p>{review.comment}</p>
+
+                  {review.reply ? (
+                    <div className="store-review-reply">
+                      <strong>Phản hồi từ {storeSettings.storeName}</strong>
+                      <p>{review.reply}</p>
+                      {review.replyAt ? <time dateTime={review.replyAt}>{formatReviewDate(review.replyAt)}</time> : null}
+                    </div>
+                  ) : null}
+                </div>
+              </article>
+            )) : (
+              <div className="product-reviews-empty">
+                <strong>Chưa có đánh giá được duyệt</strong>
+                <p>Đánh giá từ khách hàng đã mua sản phẩm sẽ xuất hiện tại đây sau khi được cửa hàng xác nhận.</p>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
