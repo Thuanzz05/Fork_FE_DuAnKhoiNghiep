@@ -29,6 +29,7 @@ import AdminInventoryPage from './pages/admin/AdminInventoryPage'
 import AdminArticlesPage from './pages/admin/AdminArticlesPage'
 import AdminCategoriesPage from './pages/admin/AdminCategoriesPage'
 import AdminReviewsPage from './pages/admin/AdminReviewsPage'
+import AdminSettingsPage from './pages/admin/AdminSettingsPage'
 
 function AppContent() {
   const location = useLocation()
@@ -68,6 +69,7 @@ function AppContent() {
         <Route path="/admin/kho" element={<AdminInventoryPage />} />
         <Route path="/admin/bai-viet" element={<AdminArticlesPage />} />
         <Route path="/admin/danh-gia" element={<AdminReviewsPage />} />
+        <Route path="/admin/cai-dat" element={<AdminSettingsPage />} />
       </Routes>
 
       {!isAdminRoute && <Footer />}

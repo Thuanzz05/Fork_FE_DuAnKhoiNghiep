@@ -1,4 +1,4 @@
-
+import { getStoreSettings } from './storeSettings'
 export type OrderStatus =
   | 'CHO_XAC_NHAN'
   | 'DA_XAC_NHAN'
@@ -77,7 +77,7 @@ export const saveOrders = (orders: Order[]): Order[] => {
 
 export const createOrder = (orderData: Omit<Order, 'id' | 'orderCode' | 'createdAt'>): Order => {
   const allOrders = getOrders()
-  const orderCode = `RBB-${Math.floor(100000 + Math.random() * 900000)}`
+  const orderCode = `${getStoreSettings().orderPrefix}-${Math.floor(100000 + Math.random() * 900000)}`
   const newOrder: Order = {
     ...orderData,
     id: `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`,

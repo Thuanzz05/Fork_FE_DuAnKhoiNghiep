@@ -1,5 +1,6 @@
 import { useState, type ReactNode, type SVGProps } from 'react'
 import { Link } from 'react-router-dom'
+import { useStoreSettings } from '../utils/storeSettings'
 import '../pages/admin/AdminDashboardPage.css'
 
 export type AdminIconName =
@@ -83,7 +84,7 @@ export const AdminIcon = ({ name, ...props }: AdminIconProps) => {
   )
 }
 
-type AdminSection = 'dashboard' | 'orders' | 'products' | 'categories' | 'inventory' | 'accounts' | 'promotions' | 'articles' | 'reviews'
+type AdminSection = 'dashboard' | 'orders' | 'products' | 'categories' | 'inventory' | 'accounts' | 'promotions' | 'articles' | 'reviews' | 'settings'
 
 interface AdminLayoutProps {
   activeItem: AdminSection
@@ -113,6 +114,7 @@ function AdminLayout({
   searchPlaceholder = 'Tìm kiếm đơn hàng, sản phẩm...',
 }: AdminLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const storeSettings = useStoreSettings()
 
   const renderNavItem = (item: (typeof navItems)[number]) => {
     const className = `admin-nav-item${item.section === activeItem ? ' is-active' : ''}`
@@ -146,7 +148,7 @@ function AdminLayout({
 
       <aside className={`admin-sidebar${isSidebarOpen ? ' is-open' : ''}`}>
         <div className="admin-brand">
-          <img src="/images/logo1.png" alt="Rubeanora" className="admin-brand-logo" />
+          <img src={storeSettings.logo || '/images/logo1.png'} alt={storeSettings.storeName} className="admin-brand-logo" />
           <span className="admin-brand-admin">ADMIN CENTER</span>
           <button type="button" className="admin-sidebar-close" onClick={() => setIsSidebarOpen(false)} aria-label="Đóng menu">
             <AdminIcon name="close" />
@@ -158,7 +160,7 @@ function AdminLayout({
           {navItems.map(renderNavItem)}
           <p className="admin-nav-title admin-nav-title-spaced">HỆ THỐNG</p>
           <button type="button" className="admin-nav-item"><AdminIcon name="report" /><span>Báo cáo</span></button>
-          <button type="button" className="admin-nav-item"><AdminIcon name="settings" /><span>Cài đặt</span></button>
+          <Link to="/admin/cai-dat" className={`admin-nav-item${activeItem === 'settings' ? ' is-active' : ''}`} onClick={() => setIsSidebarOpen(false)}><AdminIcon name="settings" /><span>Cài đặt</span></Link>
         </nav>
 
         <div className="admin-sidebar-profile">

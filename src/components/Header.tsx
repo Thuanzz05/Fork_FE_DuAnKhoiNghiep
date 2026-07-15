@@ -4,6 +4,7 @@ import { categories } from '../data/products'
 import { getCartCount, getCartItems } from '../utils/cart'
 import { getWishlistIds } from '../utils/wishlist'
 import { getCurrentUser, getUserDisplayName, getUserInitial, logoutDemo } from '../utils/auth'
+import { useStoreSettings } from '../utils/storeSettings'
 import './Header.css'
 
 const menuItems = [
@@ -17,6 +18,7 @@ const menuItems = [
 function Header() {
   const location = useLocation()
   const navigate = useNavigate()
+  const storeSettings = useStoreSettings()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -105,8 +107,8 @@ function Header() {
           </span>
         </button>
 
-        <Link className="header-logo" to="/" aria-label="Red Bean Beauty">
-          <img src="/images/logo1.png" alt="Red Bean Beauty" className="logo-img" />
+        <Link className="header-logo" to="/" aria-label={storeSettings.storeName}>
+          <img src={storeSettings.logo || '/images/logo1.png'} alt={storeSettings.storeName} className="logo-img" />
         </Link>
 
         <form className="header-search" role="search">
@@ -127,7 +129,7 @@ function Header() {
             <span>
               <b>Hotline:</b>
               <br />
-              0986126955
+              {storeSettings.hotline}
             </span>
           </div>
 
@@ -139,7 +141,7 @@ function Header() {
             <span>
               <b>Email:</b>
               <br />
-              Hoangthingocmai2005@gmail.com
+              {storeSettings.contactEmail}
             </span>
           </div>
         </div>

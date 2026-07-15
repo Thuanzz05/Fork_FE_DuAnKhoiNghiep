@@ -4,10 +4,24 @@ import { getCurrentUser } from '../utils/auth'
 import { createOrder } from '../utils/orders'
 import { getCartItems, saveCartItems } from '../utils/cart'
 import { formatPrice, products } from '../data/products'
+import { getStoreSettings, type StoreSettings } from '../utils/storeSettings'
 import './CheckoutPage.css'
 
 interface LocationState {
   selectedIds?: string[]
+}
+
+type CheckoutPaymentMethod = 'COD' | 'CHUYEN_KHOAN' | 'MOMO' | 'VNPAY'
+
+const getPaymentOptions = (settings: StoreSettings) => {
+  const options: Array<{ id: CheckoutPaymentMethod; title: string; desc: string; icon: string; enabled: boolean }> = [
+    { id: 'COD', title: 'Thanh toán khi nhận hàng (COD)', desc: 'Thanh toán bằng tiền mặt trực tiếp cho shipper khi nhận được hàng.', icon: '💵', enabled: settings.codEnabled },
+    { id: 'CHUYEN_KHOAN', title: 'Chuyển khoản ngân hàng', desc: `Chuyển khoản trực tiếp tới số tài khoản ${settings.storeName} trước khi giao hàng.`, icon: '🏦', enabled: settings.bankTransferEnabled },
+    { id: 'MOMO', title: 'Ví điện tử MoMo', desc: 'Thanh toán trực tuyến an toàn, nhanh chóng qua ứng dụng Ví MoMo.', icon: '👛', enabled: settings.momoEnabled },
+    { id: 'VNPAY', title: 'Cổng thanh toán VNPAY', desc: 'Thanh toán qua tài khoản ngân hàng, ATM nội địa hoặc quét mã QR Code.', icon: '💳', enabled: settings.vnpayEnabled },
+  ]
+  const enabledOptions = options.filter((option) => option.enabled)
+  return enabledOptions.length ? enabledOptions : [options[0]]
 }
 
 function CheckoutPage() {
@@ -17,6 +31,8 @@ function CheckoutPage() {
   const selectedIds = useMemo(() => state?.selectedIds || [], [state])
 
   const [user] = useState(() => getCurrentUser())
+  const [storeSettings] = useState(() => getStoreSettings())
+  const paymentOptions = useMemo(() => getPaymentOptions(storeSettings), [storeSettings])
 
   // Form states
   const [selectedAddressId, setSelectedAddressId] = useState<string>('')
@@ -24,7 +40,7 @@ function CheckoutPage() {
   const [phone, setPhone] = useState('')
   const [shippingAddress, setShippingAddress] = useState('')
   const [useCustomAddress, setUseCustomAddress] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'CHUYEN_KHOAN' | 'MOMO' | 'VNPAY'>('COD')
+  const [paymentMethod, setPaymentMethod] = useState<CheckoutPaymentMethod>(() => getPaymentOptions(storeSettings)[0].id)
   const [customerNote, setCustomerNote] = useState('')
 
   // Voucher states
@@ -99,7 +115,9 @@ function CheckoutPage() {
     return checkoutItems.reduce((total, item) => total + item.product.price * item.quantity, 0)
   }, [checkoutItems])
 
-  const originalShippingFee = totalProductPrice >= 300000 ? 0 : 30000
+  const originalShippingFee = storeSettings.freeShippingEnabled && totalProductPrice >= storeSettings.freeShippingThreshold
+    ? 0
+    : storeSettings.standardShippingFee
 
   const shippingFee = useMemo(() => {
     if (appliedVoucher === 'FREESHIP') return 0
@@ -296,32 +314,7 @@ function CheckoutPage() {
             <section className="checkout-section">
               <h2>2. Phương thức thanh toán</h2>
               <div className="payment-options">
-                {[
-                  {
-                    id: 'COD',
-                    title: 'Thanh toán khi nhận hàng (COD)',
-                    desc: 'Thanh toán bằng tiền mặt trực tiếp cho shipper khi nhận được hàng.',
-                    icon: '💵',
-                  },
-                  {
-                    id: 'CHUYEN_KHOAN',
-                    title: 'Chuyển khoản ngân hàng',
-                    desc: 'Chuyển khoản trực tiếp tới số tài khoản Red Bean Beauty trước khi giao hàng.',
-                    icon: '🏦',
-                  },
-                  {
-                    id: 'MOMO',
-                    title: 'Ví điện tử MoMo',
-                    desc: 'Thanh toán trực tuyến an toàn, nhanh chóng qua ứng dụng Ví MoMo.',
-                    icon: '👛',
-                  },
-                  {
-                    id: 'VNPAY',
-                    title: 'Cổng thanh toán VNPAY',
-                    desc: 'Thanh toán qua tài khoản ngân hàng, ATM nội địa hoặc quét mã QR Code.',
-                    icon: '💳',
-                  },
-                ].map((option) => (
+                {paymentOptions.map((option) => (
                   <label
                     key={option.id}
                     className={`payment-option-card${paymentMethod === option.id ? ' selected' : ''}`}
@@ -330,7 +323,7 @@ function CheckoutPage() {
                       type="radio"
                       name="payment_method"
                       checked={paymentMethod === option.id}
-                      onChange={() => setPaymentMethod(option.id as any)}
+                      onChange={() => setPaymentMethod(option.id)}
                     />
                     <span className="payment-icon">{option.icon}</span>
                     <div className="payment-desc">
