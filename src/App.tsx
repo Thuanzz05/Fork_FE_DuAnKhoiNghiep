@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import CartToast from './components/CartToast'
 import Header from './components/Header'
@@ -30,10 +31,16 @@ import AdminArticlesPage from './pages/admin/AdminArticlesPage'
 import AdminCategoriesPage from './pages/admin/AdminCategoriesPage'
 import AdminReviewsPage from './pages/admin/AdminReviewsPage'
 import AdminSettingsPage from './pages/admin/AdminSettingsPage'
+import { useStoreSettings } from './utils/storeSettings'
 
 function AppContent() {
   const location = useLocation()
   const isAdminRoute = location.pathname.startsWith('/admin')
+  const storeSettings = useStoreSettings()
+
+  useEffect(() => {
+    document.title = isAdminRoute ? `Quản trị | ${storeSettings.storeName}` : storeSettings.storeName
+  }, [isAdminRoute, storeSettings.storeName])
 
   return (
     <>
