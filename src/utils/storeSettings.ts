@@ -33,11 +33,12 @@ export interface StoreSettings {
 
 const STORE_SETTINGS_KEY = 'rubeanora-store-settings'
 export const STORE_SETTINGS_EVENT = 'store-settings-updated'
+const LEGACY_STORE_DESCRIPTION = 'Mỹ phẩm chăm sóc da từ hạt đậu đỏ Việt Nam, dịu nhẹ và phù hợp với mọi loại da.'
 
 export const defaultStoreSettings: StoreSettings = {
   storeName: 'Rubeanora',
   legalName: 'Red Bean Beauty',
-  storeDescription: 'Mỹ phẩm chăm sóc da từ hạt đậu đỏ Việt Nam, dịu nhẹ và phù hợp với mọi loại da.',
+  storeDescription: 'Rubeanora phát triển các sản phẩm chăm sóc da từ hạt đậu đỏ Việt Nam, kết hợp cùng những thành phần thiên nhiên được chọn lọc. Công thức dịu nhẹ giúp làm sạch, cấp ẩm và nuôi dưỡng làn da sáng khỏe mỗi ngày. Sản phẩm không chứa Sulfate, Paraben hay Alcohol, phù hợp với nhiều loại da, kể cả làn da nhạy cảm.',
   logo: '/images/logo1.png',
   hotline: '0986126955',
   contactEmail: 'Hoangthingocmai2005@gmail.com',
@@ -69,7 +70,13 @@ export const getStoreSettings = (): StoreSettings => {
   if (typeof window === 'undefined') return defaultStoreSettings
   try {
     const raw = localStorage.getItem(STORE_SETTINGS_KEY)
-    return raw ? { ...defaultStoreSettings, ...(JSON.parse(raw) as Partial<StoreSettings>) } : defaultStoreSettings
+    if (!raw) return defaultStoreSettings
+    const savedSettings = JSON.parse(raw) as Partial<StoreSettings>
+    const mergedSettings = { ...defaultStoreSettings, ...savedSettings }
+    if (savedSettings.storeDescription === LEGACY_STORE_DESCRIPTION) {
+      mergedSettings.storeDescription = defaultStoreSettings.storeDescription
+    }
+    return mergedSettings
   } catch {
     return defaultStoreSettings
   }
