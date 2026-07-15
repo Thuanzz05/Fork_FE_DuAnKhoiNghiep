@@ -643,12 +643,6 @@
   transform: translateX(0);
 }
 
-.flash-sale {
-  gap: 6px;
-  padding-right: 0;
-  font-style: italic;
-}
-
 /* ====== Hamburger button (hidden on desktop) ====== */
 .hamburger-btn {
   display: none;
@@ -975,11 +969,6 @@
     font-weight: 400;
     color: #666;
     flex-shrink: 0;
-  }
-
-  /* Hide Flash Sale in mobile nav */
-  .header-nav .flash-sale {
-    display: none;
   }
 
   /* Disable hover-open on mobile — click only */

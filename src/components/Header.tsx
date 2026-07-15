@@ -304,12 +304,6 @@ function Header() {
             ))}
           </ul>
 
-          {location.pathname === '/' && (
-            <Link className="flash-sale" to="/flash-sale" onClick={() => setMobileMenuOpen(false)}>
-              <span aria-hidden="true">⚡</span>
-              Flash Sale
-            </Link>
-          )}
         </div>
       </nav>
     </header>
