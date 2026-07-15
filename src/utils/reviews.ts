@@ -1,5 +1,7 @@
 import { getOrders, saveOrders } from './orders'
 
+export type ReviewModerationStatus = 'pending' | 'approved' | 'hidden'
+
 export interface ProductReview {
   id: string
   orderId: string
@@ -9,6 +11,10 @@ export interface ProductReview {
   rating: number // 1-5
   comment: string
   createdAt: string
+  status?: ReviewModerationStatus
+  reply?: string
+  replyAt?: string
+  verifiedPurchase?: boolean
 }
 
 const REVIEWS_STORAGE_KEY = 'red-bean-beauty-reviews'
@@ -51,6 +57,8 @@ export const submitOrderReviews = (
     rating: item.rating,
     comment: item.comment,
     createdAt: new Date().toISOString(),
+    status: 'pending',
+    verifiedPurchase: true,
   }))
 
   saveReviews([...currentReviews, ...newReviews])
