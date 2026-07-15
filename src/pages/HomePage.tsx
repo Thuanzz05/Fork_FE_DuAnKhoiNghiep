@@ -71,28 +71,28 @@ function HomePage() {
     <main className="home-page">
       <section className="home-hero" aria-label="Combo Chăm Sóc Da Đậu Đỏ Hữu Cơ">
         <div className="hero-image-wrapper">
-          <img 
-            src="/images/banner1.png" 
-            alt="Combo Chăm Sóc Da Đậu Đỏ Hữu Cơ - Sạch mụn, trắng hồng, mướt mịn" 
-            className="hero-banner-image" 
+          <img
+            src="/images/banner1.png"
+            alt="Combo Chăm Sóc Da Đậu Đỏ Hữu Cơ - Sạch mụn, trắng hồng, mướt mịn"
+            className="hero-banner-image"
           />
           {/* Centered content container aligning left brand text with header 'Trang chủ' */}
           <div className="hero-content-container">
             {/* Left content overlay (Title, Pill, Italic Text, Features, Button) */}
             <div className="hero-content-left">
               <h1 className="hero-title">
-                COMBO CHẠM SÓC DA<br />
+                COMBO CHĂM SÓC DA<br />
                 TỪ ĐẬU ĐỎ HỮU CƠ
               </h1>
-              
+
               <div className="hero-badge-pill">
                 SẠCH MỤN - TRẮNG HỒNG - MƯỚT MỊN
               </div>
-              
+
               <div className="hero-subtext-italic">
                 AN TOÀN - LÀNH TÍNH - DỊU NHẸ
               </div>
-              
+
               <div className="hero-features-row">
                 <div className="hero-feature-item">
                   <svg className="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -233,8 +233,8 @@ function HomePage() {
                     <span className="price-red">480.000đ</span>
                     <span className="price-strike">565.000đ</span>
                   </div>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="large-card-btn-add"
                     onClick={() => handleAddToCart('1')}
                     aria-label="Thêm combo vào giỏ hàng"
@@ -308,7 +308,7 @@ function HomePage() {
                 {item.discountTag && (
                   <span className="card-badge-discount">{item.discountTag}</span>
                 )}
-                
+
                 <div className="card-image-wrapper-new">
                   <Link to={`/san-pham/${item.slug}`}>
                     <img src={item.image} alt={item.name} loading="lazy" />
@@ -319,7 +319,7 @@ function HomePage() {
                   <Link to={`/san-pham/${item.slug}`} className="card-name-link-new">
                     <h3 className="card-title-text-new">{item.name}</h3>
                   </Link>
-                  
+
                   {item.subtitle && (
                     <span className="card-subtitle-text-new">{item.subtitle}</span>
                   )}
@@ -342,9 +342,9 @@ function HomePage() {
                         <span className="card-price-strike-new">{formatPrice(item.originalPrice)}</span>
                       )}
                     </div>
-                    <button 
-                      type="button" 
-                      className="card-cart-btn-new" 
+                    <button
+                      type="button"
+                      className="card-cart-btn-new"
                       onClick={() => handleAddToCart(item.id)}
                       aria-label="Thêm vào giỏ hàng"
                     >
@@ -366,7 +366,7 @@ function HomePage() {
       <section className="home-brand-story" aria-labelledby="brand-title">
         <div className="brand-image-wrapper">
           <img src="/images/thuong_hieu1.png" alt="Về thương hiệu Red Bean Beauty" className="brand-bg-image" />
-          
+
           <div className="brand-content-overlay">
             {/* Top Brand Story Overlay */}
             <div className="brand-overlay-inner">
@@ -474,10 +474,10 @@ function HomePage() {
               {/* Testimonial Card 1 */}
               <div className="testimonial-card">
                 <div className="testimonial-user-info">
-                  <img 
-                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&h=100&q=80" 
-                    alt="Khách hàng Minh Anh" 
-                    className="testimonial-avatar" 
+                  <img
+                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&h=100&q=80"
+                    alt="Khách hàng Minh Anh"
+                    className="testimonial-avatar"
                   />
                   <div className="testimonial-user-meta">
                     <strong className="user-name">Minh Anh</strong>
@@ -505,10 +505,10 @@ function HomePage() {
               {/* Testimonial Card 2 */}
               <div className="testimonial-card">
                 <div className="testimonial-user-info">
-                  <img 
-                    src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=100&h=100&q=80" 
-                    alt="Khách hàng Thu Trang" 
-                    className="testimonial-avatar" 
+                  <img
+                    src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=100&h=100&q=80"
+                    alt="Khách hàng Thu Trang"
+                    className="testimonial-avatar"
                   />
                   <div className="testimonial-user-meta">
                     <strong className="user-name">Thu Trang</strong>
@@ -536,10 +536,10 @@ function HomePage() {
               {/* Testimonial Card 3 */}
               <div className="testimonial-card">
                 <div className="testimonial-user-info">
-                  <img 
-                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&h=100&q=80" 
-                    alt="Khách hàng Hoàng Nam" 
-                    className="testimonial-avatar" 
+                  <img
+                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&h=100&q=80"
+                    alt="Khách hàng Hoàng Nam"
+                    className="testimonial-avatar"
                   />
                   <div className="testimonial-user-meta">
                     <strong className="user-name">Hoàng Nam</strong>
@@ -591,9 +591,9 @@ function HomePage() {
               <article className="news-card" key={article.id}>
                 <div className="news-card-image-box">
                   <Link to={`/tin-tuc/${article.id}`} aria-label={article.title}>
-                    <img 
-                      src={article.image} 
-                      alt={article.title} 
+                    <img
+                      src={article.image}
+                      alt={article.title}
                       className="news-card-image"
                     />
                   </Link>
