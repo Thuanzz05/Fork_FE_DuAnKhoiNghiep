@@ -36,6 +36,8 @@ export type AdminIconName =
   | 'play'
   | 'calendar'
   | 'eye'
+  | 'download'
+  | 'print'
 
 interface AdminIconProps extends SVGProps<SVGSVGElement> {
   name: AdminIconName
@@ -75,6 +77,8 @@ export const AdminIcon = ({ name, ...props }: AdminIconProps) => {
     play: <path d="m8 5 11 7-11 7Z" />,
     calendar: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 10h18" /></>,
     eye: <><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></>,
+    download: <><path d="M12 3v12M7 10l5 5 5-5" /><path d="M5 21h14a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2" /></>,
+    print: <><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="7" /><path d="M18 12h.01" /></>,
   }
 
   return (
@@ -84,7 +88,7 @@ export const AdminIcon = ({ name, ...props }: AdminIconProps) => {
   )
 }
 
-type AdminSection = 'dashboard' | 'orders' | 'products' | 'categories' | 'inventory' | 'accounts' | 'promotions' | 'articles' | 'reviews' | 'settings'
+type AdminSection = 'dashboard' | 'orders' | 'products' | 'categories' | 'inventory' | 'accounts' | 'promotions' | 'articles' | 'reviews' | 'reports' | 'settings'
 
 interface AdminLayoutProps {
   activeItem: AdminSection
@@ -159,7 +163,7 @@ function AdminLayout({
           <p className="admin-nav-title">QUẢN LÝ</p>
           {navItems.map(renderNavItem)}
           <p className="admin-nav-title admin-nav-title-spaced">HỆ THỐNG</p>
-          <button type="button" className="admin-nav-item"><AdminIcon name="report" /><span>Báo cáo</span></button>
+          <Link to="/admin/bao-cao" className={`admin-nav-item${activeItem === 'reports' ? ' is-active' : ''}`} onClick={() => setIsSidebarOpen(false)}><AdminIcon name="report" /><span>Báo cáo</span></Link>
           <Link to="/admin/cai-dat" className={`admin-nav-item${activeItem === 'settings' ? ' is-active' : ''}`} onClick={() => setIsSidebarOpen(false)}><AdminIcon name="settings" /><span>Cài đặt</span></Link>
         </nav>
 
