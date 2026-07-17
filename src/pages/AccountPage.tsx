@@ -53,7 +53,7 @@ function AccountPage() {
           return
         }
 
-        await registerDemo(
+        const user = await registerDemo(
           {
             email,
             firstName: String(formData.get('firstName') || '').trim(),
@@ -62,10 +62,11 @@ function AccountPage() {
           },
           password,
         )
+        navigate(user.role === 'ADMIN' ? '/admin' : '/')
       } else {
-        await loginDemo(email, password)
+        const user = await loginDemo(email, password)
+        navigate(user.role === 'ADMIN' ? '/admin' : '/')
       }
-      navigate('/tai-khoan/thong-tin')
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Không thể đăng nhập. Vui lòng thử lại.')
     }
@@ -74,14 +75,16 @@ function AccountPage() {
   const handleSocialLogin = async (provider: 'Google' | 'Facebook') => {
     try {
       setNotice('Đang kết nối máy chủ...')
-      await loginSocial(provider.toLowerCase() as 'google' | 'facebook')
-      navigate('/tai-khoan/thong-tin')
+      const user = await loginSocial(provider.toLowerCase() as 'google' | 'facebook')
+      navigate(user.role === 'ADMIN' ? '/admin' : '/')
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Không thể đăng nhập mạng xã hội.')
     }
   }
 
-  if (existingUser) return <Navigate to="/tai-khoan/thong-tin" replace />
+  if (existingUser) {
+    return <Navigate to={existingUser.role === 'ADMIN' ? '/admin' : '/'} replace />
+  }
 
   return (
     <main className="account-page">
