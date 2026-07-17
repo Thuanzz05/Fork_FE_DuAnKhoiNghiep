@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import AdminLayout, { AdminIcon, type AdminIconName } from '../../components/AdminLayout'
+import { api } from '../../services/api'
 import './AdminDashboardPage.css'
 
 type RevenuePeriod = 'week' | 'month' | 'quarter' | 'year'
@@ -116,7 +117,7 @@ const revenueDatasets: Record<RevenuePeriod, RevenueChartData> = {
   },
 }
 
-const recentOrders = [
+const fallbackRecentOrders = [
   { code: 'RBB-26071301', customer: 'Nguyễn Minh Anh', initials: 'MA', date: '13/07/2026, 14:35', total: '780.000đ', status: 'Chờ xác nhận', statusKey: 'pending' },
   { code: 'RBB-26071302', customer: 'Trần Quang Huy', initials: 'QH', date: '13/07/2026, 13:10', total: '450.000đ', status: 'Đã xác nhận', statusKey: 'confirmed' },
   { code: 'RBB-26071303', customer: 'Lê Thu Trang', initials: 'TT', date: '13/07/2026, 11:42', total: '690.000đ', status: 'Đang giao hàng', statusKey: 'shipping' },
@@ -154,10 +155,34 @@ const plotWidth = chartWidth - chartPadding.left - chartPadding.right
 const plotHeight = chartHeight - chartPadding.top - chartPadding.bottom
 
 function AdminDashboardPage() {
+  const [dashboard, setDashboard] = useState<{
+    summary: Record<string, number>
+    recentOrders: Array<Record<string, unknown>>
+  } | null>(null)
   const [dashboardPeriod, setDashboardPeriod] = useState<RevenuePeriod>('month')
   const [hoveredRevenueIndex, setHoveredRevenueIndex] = useState<number | null>(null)
   const periodMeta = dashboardPeriodMeta[dashboardPeriod]
-  const stats = statsByPeriod[dashboardPeriod]
+  useEffect(() => {
+    api.get<{ summary: Record<string, number>; recentOrders: Array<Record<string, unknown>> }>('/admin/dashboard')
+      .then(setDashboard)
+      .catch(() => undefined)
+  }, [])
+
+  const stats = dashboard ? [
+    { label: 'Tổng doanh thu', value: `${Number(dashboard.summary.monthly_revenue || 0).toLocaleString('vi-VN')}đ`, change: '', note: 'Tháng hiện tại', icon: 'revenue', tone: 'red' },
+    { label: 'Tổng đơn hàng', value: String(dashboard.summary.total_orders || 0), change: '', note: 'Tất cả đơn', icon: 'cart', tone: 'blue' },
+    { label: 'Khách hàng', value: String(dashboard.summary.customers || 0), change: '', note: 'Tài khoản khách hàng', icon: 'userPlus', tone: 'green' },
+    { label: 'Sắp hết hàng', value: String(dashboard.summary.low_stock_products || 0), change: '', note: 'Cần nhập thêm', icon: 'box', tone: 'orange' },
+  ] as DashboardStat[] : statsByPeriod[dashboardPeriod]
+  const recentOrders = dashboard?.recentOrders.length ? dashboard.recentOrders.map((item) => ({
+    code: String(item.orderCode || ''),
+    initials: String(item.recipientName || 'KH').slice(0, 2).toLocaleUpperCase('vi-VN'),
+    customer: String(item.customerName || item.recipientName || 'Khách hàng'),
+    date: new Date(String(item.createdAt)).toLocaleString('vi-VN'),
+    total: `${Number(item.total || 0).toLocaleString('vi-VN')}đ`,
+    status: String(item.orderStatus || ''),
+    statusKey: String(item.orderStatus || '').toLocaleLowerCase('vi-VN'),
+  })) : fallbackRecentOrders
   const orderStatus = orderStatusByPeriod[dashboardPeriod]
   const completedOrderCount = Math.round((orderStatus.total * orderStatus.completed) / 100)
   const processingOrderCount = Math.round((orderStatus.total * orderStatus.processing) / 100)

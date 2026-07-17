@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { categories, formatPrice, products } from '../data/products'
+import { formatPrice } from '../data/products'
 import type { Product } from '../data/products'
+import { useCatalog } from '../hooks/useCatalog'
 import { addCartItem } from '../utils/cart'
 import { getWishlistIds, toggleWishlistId } from '../utils/wishlist'
 import Pagination from '../components/Pagination'
@@ -69,6 +70,7 @@ const productGalleries: Record<string, string[]> = {
 }
 
 function ProductsPage() {
+  const { categories, products } = useCatalog()
   const [searchParams, setSearchParams] = useSearchParams()
   const activeCategorySlug = searchParams.get('danh-muc') || 'tat-ca'
   const [sortBy, setSortBy] = useState('default')
@@ -107,7 +109,7 @@ function ProductsPage() {
     }
 
     return result
-  }, [activeCategorySlug, sortBy])
+  }, [activeCategorySlug, products, sortBy])
 
   const {
     currentPage,
@@ -123,7 +125,7 @@ function ProductsPage() {
     }, 450)
 
     return () => window.clearTimeout(timerId)
-  }, [loadVersion])
+  }, [loadVersion, products])
 
   const handleCategoryChange = (slug: string) => {
     if (slug === 'tat-ca') {

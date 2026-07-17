@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
-import { getCurrentUser, loginDemo, registerDemo } from '../utils/auth'
+import { getCurrentUser, loginDemo, loginSocial, registerDemo } from '../utils/auth'
 import './AccountPage.css'
 
 type AccountMode = 'login' | 'register'
@@ -38,38 +38,47 @@ function AccountPage() {
     setNotice('')
   }, [requestedMode])
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const form = event.currentTarget
     const formData = new FormData(form)
     const email = String(formData.get('email') || '')
     const password = String(formData.get('password') || '')
 
-    if (mode === 'register') {
-      if (formData.get('password') !== formData.get('confirmPassword')) {
-        setNotice('Mật khẩu xác nhận chưa trùng khớp.')
-        return
+    try {
+      setNotice('Đang kết nối máy chủ...')
+      if (mode === 'register') {
+        if (formData.get('password') !== formData.get('confirmPassword')) {
+          setNotice('Mật khẩu xác nhận chưa trùng khớp.')
+          return
+        }
+
+        await registerDemo(
+          {
+            email,
+            firstName: String(formData.get('firstName') || '').trim(),
+            lastName: String(formData.get('lastName') || '').trim(),
+            phone: String(formData.get('phone') || '').trim(),
+          },
+          password,
+        )
+      } else {
+        await loginDemo(email, password)
       }
-
-      registerDemo(
-        {
-          email,
-          firstName: String(formData.get('firstName') || '').trim(),
-          lastName: String(formData.get('lastName') || '').trim(),
-          phone: String(formData.get('phone') || '').trim(),
-        },
-        password,
-      )
-    } else {
-      loginDemo(email, password)
+      navigate('/tai-khoan/thong-tin')
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Không thể đăng nhập. Vui lòng thử lại.')
     }
-
-    navigate('/tai-khoan/thong-tin')
   }
 
-  const handleSocialLogin = (provider: 'Google' | 'Facebook') => {
-    loginDemo(`${provider.toLowerCase()}.user@redbeanbeauty.vn`, `${provider.toLowerCase()}-demo`)
-    navigate('/tai-khoan/thong-tin')
+  const handleSocialLogin = async (provider: 'Google' | 'Facebook') => {
+    try {
+      setNotice('Đang kết nối máy chủ...')
+      await loginSocial(provider.toLowerCase() as 'google' | 'facebook')
+      navigate('/tai-khoan/thong-tin')
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Không thể đăng nhập mạng xã hội.')
+    }
   }
 
   if (existingUser) return <Navigate to="/tai-khoan/thong-tin" replace />

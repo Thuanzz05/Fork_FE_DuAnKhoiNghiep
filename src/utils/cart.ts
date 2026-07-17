@@ -1,3 +1,5 @@
+import { api, getAccessToken } from '../services/api'
+
 export interface CartItem {
   productId: string
   quantity: number
@@ -67,6 +69,25 @@ export const saveCartItems = (items: CartItem[]) => {
   return normalizedItems
 }
 
+type ApiCartItem = CartItem & { product?: unknown }
+
+const syncApiItems = (items: ApiCartItem[]) => saveCartItems(items.map(({ productId, quantity }) => ({ productId, quantity })))
+
+export const syncCartFromApi = async () => {
+  if (!getAccessToken()) return getCartItems()
+  const localItems = getCartItems()
+  let remoteItems = await api.get<ApiCartItem[]>('/customers/me/cart')
+  for (const localItem of localItems) {
+    const remoteItem = remoteItems.find((item) => item.productId === localItem.productId)
+    if (!remoteItem) {
+      remoteItems = await api.post<ApiCartItem[]>('/customers/me/cart/items', localItem)
+    } else if (localItem.quantity > remoteItem.quantity) {
+      remoteItems = await api.patch<ApiCartItem[]>(`/customers/me/cart/items/${localItem.productId}`, { quantity: localItem.quantity })
+    }
+  }
+  return syncApiItems(remoteItems)
+}
+
 export const addCartItem = (productId: string, quantity = 1) => {
   const currentItems = getCartItems()
   const existingItem = currentItems.find((item) => item.productId === productId)
@@ -83,20 +104,37 @@ export const addCartItem = (productId: string, quantity = 1) => {
 
   const savedItems = saveCartItems(nextItems)
   emitCartToast({ productId, quantity: addedQuantity })
+  if (getAccessToken()) {
+    void api.post<ApiCartItem[]>('/customers/me/cart/items', { productId, quantity: addedQuantity })
+      .then(syncApiItems)
+      .catch(() => undefined)
+  }
 
   return savedItems
 }
 
 export const updateCartItemQuantity = (productId: string, quantity: number) => {
-  return saveCartItems(
+  const items = saveCartItems(
     getCartItems().map((item) =>
       item.productId === productId ? { ...item, quantity: Math.max(1, Math.floor(quantity)) } : item,
     ),
   )
+  if (getAccessToken()) {
+    void api.patch<ApiCartItem[]>(`/customers/me/cart/items/${productId}`, { quantity })
+      .then(syncApiItems)
+      .catch(() => undefined)
+  }
+  return items
 }
 
 export const removeCartItem = (productId: string) => {
-  return saveCartItems(getCartItems().filter((item) => item.productId !== productId))
+  const items = saveCartItems(getCartItems().filter((item) => item.productId !== productId))
+  if (getAccessToken()) {
+    void api.delete<ApiCartItem[]>(`/customers/me/cart/items/${productId}`)
+      .then(syncApiItems)
+      .catch(() => undefined)
+  }
+  return items
 }
 
 export const getCartCount = () => {

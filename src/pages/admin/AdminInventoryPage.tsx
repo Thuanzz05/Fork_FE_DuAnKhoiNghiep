@@ -3,6 +3,7 @@ import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
 import Pagination from '../../components/Pagination'
 import { categories, formatPrice, products } from '../../data/products'
 import { usePagination } from '../../hooks/usePagination'
+import { api } from '../../services/api'
 import './AdminInventoryPage.css'
 
 type InventoryView = 'stock' | 'vouchers'
@@ -183,9 +184,39 @@ function AdminInventoryPage() {
   const [isVoucherFormOpen, setIsVoucherFormOpen] = useState(false)
   const [selectedVoucher, setSelectedVoucher] = useState<StockVoucher | null>(null)
   const [notice, setNotice] = useState('')
+  const [suppliers, setSuppliers] = useState<Array<{ id: string; code: string; name: string }>>([])
   const [voucherForm, setVoucherForm] = useState<VoucherFormState>(() => ({
     type: 'in', date: toDateInput(), partner: '', note: '', lines: [createVoucherLine(inventorySeed[0])],
   }))
+
+  const loadInventory = async () => {
+    try {
+      const data = await api.get<{
+        products: Array<Record<string, any>>; suppliers: Array<{ id: string; code: string; name: string }>
+        imports: Array<Record<string, any>>; exports: Array<Record<string, any>>
+      }>('/admin/inventory')
+      if (data.products.length) setInventory(data.products.map((item) => ({
+        id: String(item.id), sku: String(item.sku), name: String(item.name), image: String(item.image || ''),
+        category: '', categorySlug: '', unit: 'Sản phẩm', stock: Number(item.stock),
+        minimumStock: Number(item.minimumStock), costPrice: Number(item.costPrice), location: 'Kho chính',
+        updatedAt: new Date().toISOString(),
+      })))
+      setSuppliers(data.suppliers)
+      const imports = data.imports.map((item) => ({
+        id: String(item.id), code: String(item.code), type: 'in' as const, createdAt: String(item.date),
+        partner: String(item.supplierName || ''), note: String(item.note || ''), createdBy: String(item.createdBy || ''), items: [],
+      }))
+      const exports = data.exports.map((item) => ({
+        id: String(item.id), code: String(item.code), type: 'out' as const, createdAt: String(item.date),
+        partner: String(item.recipient || ''), note: String(item.note || ''), createdBy: String(item.createdBy || ''), items: [],
+      }))
+      if (imports.length || exports.length) setVouchers([...imports, ...exports])
+    } catch {
+      // Giữ dữ liệu dự phòng.
+    }
+  }
+
+  useEffect(() => { void loadInventory() }, [])
 
   useEffect(() => {
     if (!notice) return
@@ -300,7 +331,7 @@ function AdminInventoryPage() {
     setVoucherForm((current) => ({ ...current, lines: current.lines.filter((line) => line.id !== lineId) }))
   }
 
-  const handleVoucherSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleVoucherSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const parsedItems = voucherForm.lines.map((line) => ({
       productId: line.productId,
@@ -340,16 +371,34 @@ function AdminInventoryPage() {
       items: parsedItems,
     }
 
-    setInventory((current) => current.map((product) => {
-      const item = parsedItems.find((entry) => entry.productId === product.id)
-      if (!item) return product
-      const delta = voucherForm.type === 'in' ? item.quantity : -item.quantity
-      return { ...product, stock: product.stock + delta, costPrice: item.unitCost, updatedAt: newVoucher.createdAt }
-    }))
-    setVouchers((current) => [newVoucher, ...current])
-    setIsVoucherFormOpen(false)
-    setActiveView('vouchers')
-    setNotice(`Đã tạo ${voucherForm.type === 'in' ? 'phiếu nhập' : 'phiếu xuất'} ${newVoucher.code}`)
+    try {
+      if (voucherForm.type === 'in') {
+        let supplier = suppliers.find((item) => item.name.toLocaleLowerCase('vi-VN') === voucherForm.partner.trim().toLocaleLowerCase('vi-VN'))
+        if (!supplier) {
+          const created = await api.post<{ id: string }>('/admin/suppliers', {
+            code: `NCC-${Date.now().toString().slice(-8)}`, name: voucherForm.partner.trim(),
+          })
+          supplier = { id: created.id, code: '', name: voucherForm.partner.trim() }
+        }
+        await api.post('/admin/imports', {
+          code: newVoucher.code, supplierId: supplier.id, date: voucherForm.date,
+          note: voucherForm.note.trim(),
+          items: parsedItems.map((item) => ({ productId: item.productId, quantity: item.quantity, unitPrice: item.unitCost })),
+        })
+      } else {
+        await api.post('/admin/exports', {
+          code: newVoucher.code, type: 'XUAT_KHAC', date: voucherForm.date,
+          recipient: voucherForm.partner.trim(), note: voucherForm.note.trim(),
+          items: parsedItems.map((item) => ({ productId: item.productId, quantity: item.quantity, unitPrice: item.unitCost })),
+        })
+      }
+      await loadInventory()
+      setIsVoucherFormOpen(false)
+      setActiveView('vouchers')
+      setNotice(`Đã tạo ${voucherForm.type === 'in' ? 'phiếu nhập' : 'phiếu xuất'} ${newVoucher.code}`)
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Không thể tạo phiếu kho')
+    }
   }
 
   const voucherTotal = (voucher: StockVoucher) => voucher.items.reduce((total, item) => total + item.quantity * item.unitCost, 0)

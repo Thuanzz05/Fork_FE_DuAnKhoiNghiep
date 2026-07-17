@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { getCurrentUser } from '../utils/auth'
-import { createOrder } from '../utils/orders'
 import { getCartItems, saveCartItems } from '../utils/cart'
-import { formatPrice, products } from '../data/products'
+import { formatPrice } from '../data/products'
+import { useCatalog } from '../hooks/useCatalog'
+import { api } from '../services/api'
 import { getStoreSettings, type StoreSettings } from '../utils/storeSettings'
 import './CheckoutPage.css'
 
@@ -25,6 +26,7 @@ const getPaymentOptions = (settings: StoreSettings) => {
 }
 
 function CheckoutPage() {
+  const { products } = useCatalog()
   const location = useLocation()
   const navigate = useNavigate()
   const state = location.state as LocationState | null
@@ -108,7 +110,7 @@ function CheckoutPage() {
         return product ? { product, quantity: cartItem?.quantity || 1 } : null
       })
       .filter((item): item is { product: typeof products[0]; quantity: number } => Boolean(item))
-  }, [selectedIds])
+  }, [products, selectedIds])
 
   // Billing calculations
   const totalProductPrice = useMemo(() => {
@@ -130,39 +132,26 @@ function CheckoutPage() {
   }, [totalProductPrice, shippingFee, voucherDiscount])
 
   // Voucher apply handler
-  const handleApplyVoucher = () => {
+  const handleApplyVoucher = async () => {
     const code = voucherCode.trim().toUpperCase()
     if (!code) return
-
-    if (code === 'REDBEAN50') {
-      if (totalProductPrice < 200000) {
-        setVoucherNotice({
-          message: 'Mã REDBEAN50 chỉ áp dụng cho đơn hàng từ 200.000đ.',
-          type: 'error',
-        })
-        return
-      }
-      setAppliedVoucher('REDBEAN50')
-      setVoucherDiscount(50000)
-      setVoucherNotice({ message: 'Áp dụng mã giảm 50.000đ thành công!', type: 'success' })
-    } else if (code === 'FREESHIP') {
-      if (originalShippingFee === 0) {
-        setVoucherNotice({
-          message: 'Đơn hàng của bạn đã được miễn phí vận chuyển sẵn.',
-          type: 'error',
-        })
-        return
-      }
-      setAppliedVoucher('FREESHIP')
-      setVoucherDiscount(0) // Free shipping reduces shipping fee to 0, handled in shippingFee useMemo
-      setVoucherNotice({ message: 'Miễn phí vận chuyển thành công!', type: 'success' })
-    } else {
-      setVoucherNotice({ message: 'Mã giảm giá không tồn tại hoặc đã hết hạn.', type: 'error' })
+    try {
+      const quote = await api.post<{ discountAmount: number; shippingFee: number }>('/customers/me/checkout/quote', {
+        productIds: selectedIds,
+        promotionCode: code,
+      })
+      setAppliedVoucher(code)
+      setVoucherDiscount(Number(quote.discountAmount))
+      setVoucherNotice({ message: `Áp dụng mã ${code} thành công!`, type: 'success' })
+    } catch (error) {
+      setAppliedVoucher(null)
+      setVoucherDiscount(0)
+      setVoucherNotice({ message: error instanceof Error ? error.message : 'Không thể áp dụng mã.', type: 'error' })
     }
   }
 
   // Handle Order Submit
-  const handlePlaceOrder = (e: React.FormEvent) => {
+  const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!user) return
@@ -173,38 +162,24 @@ function CheckoutPage() {
       return
     }
 
-    const orderItems = checkoutItems.map(({ product, quantity }) => ({
-      productId: product.id,
-      productName: product.name,
-      productImage: product.image,
-      price: product.price,
-      quantity,
-      weight: product.weight,
-    }))
-
-    createOrder({
-      userId: user.id,
-      recipientName: recipientName.trim(),
-      phone: phone.trim(),
-      shippingAddress: shippingAddress.trim(),
-      customerNote: customerNote.trim() || undefined,
-      totalProductPrice,
-      discountAmount: voucherDiscount + (appliedVoucher === 'FREESHIP' ? originalShippingFee : 0),
-      shippingFee,
-      totalPayment,
-      paymentMethod,
-      orderStatus: 'CHO_XAC_NHAN',
-      paymentStatus: 'CHUA_THANH_TOAN',
-      items: orderItems,
-    })
-
-    // Remove purchased products from cart
-    const cartItems = getCartItems()
-    const remainingCartItems = cartItems.filter((item) => !selectedIds.includes(item.productId))
-    saveCartItems(remainingCartItems)
-
-    // Redirect to orders page
-    navigate('/tai-khoan/don-hang', { replace: true })
+    try {
+      await api.post('/customers/me/orders', {
+        productIds: selectedIds,
+        addressId: !useCustomAddress ? selectedAddressId || undefined : undefined,
+        recipientName: recipientName.trim(),
+        phone: phone.trim(),
+        email: user.email,
+        shippingAddress: shippingAddress.trim(),
+        customerNote: customerNote.trim() || undefined,
+        paymentMethod,
+        promotionCode: appliedVoucher || undefined,
+      })
+      const cartItems = getCartItems()
+      saveCartItems(cartItems.filter((item) => !selectedIds.includes(item.productId)))
+      navigate('/tai-khoan/don-hang', { replace: true })
+    } catch (error) {
+      setVoucherNotice({ message: error instanceof Error ? error.message : 'Không thể tạo đơn hàng.', type: 'error' })
+    }
   }
 
   return (

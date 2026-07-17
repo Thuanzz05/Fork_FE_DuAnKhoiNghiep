@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Pagination from '../components/Pagination'
 import { newsArticles } from '../data/news'
+import type { NewsArticle } from '../data/news'
 import { usePagination } from '../hooks/usePagination'
+import { api } from '../services/api'
 import './NewsPage.css'
 
 function UserIcon() {
@@ -24,17 +26,22 @@ function CalendarIcon() {
 }
 
 function NewsPage() {
+  const [articles, setArticles] = useState<NewsArticle[]>(newsArticles)
   const [contentState, setContentState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [loadVersion, setLoadVersion] = useState(0)
-  const { currentPage, totalPages, pageItems, setCurrentPage } = usePagination(newsArticles, 3)
+  const { currentPage, totalPages, pageItems, setCurrentPage } = usePagination(articles, 3)
 
   useEffect(() => {
     setContentState('loading')
-    const timerId = window.setTimeout(() => {
-      setContentState(Array.isArray(newsArticles) ? 'ready' : 'error')
-    }, 450)
-
-    return () => window.clearTimeout(timerId)
+    let active = true
+    api.get<Array<Partial<NewsArticle> & Pick<NewsArticle, 'id' | 'title' | 'excerpt' | 'image' | 'date'>>>('/news')
+      .then((rows) => {
+        if (!active) return
+        if (rows.length) setArticles(rows.map((item) => ({ ...item, lead: '', body: [] })))
+        setContentState('ready')
+      })
+      .catch(() => active && setContentState(newsArticles.length ? 'ready' : 'error'))
+    return () => { active = false }
   }, [loadVersion])
 
   return (
@@ -89,7 +96,7 @@ function NewsPage() {
           </div>
         ) : null}
 
-        {contentState === 'ready' && newsArticles.length === 0 ? (
+        {contentState === 'ready' && articles.length === 0 ? (
           <div className="news-status news-empty">
             <strong>Chưa có bài viết</strong>
             <p>Các nội dung chăm sóc da mới sẽ sớm được cập nhật.</p>
@@ -100,7 +107,7 @@ function NewsPage() {
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
-            totalItems={newsArticles.length}
+            totalItems={articles.length}
             pageSize={3}
             itemLabel="bài viết"
             onPageChange={setCurrentPage}

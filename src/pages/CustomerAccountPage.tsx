@@ -3,7 +3,14 @@ import type { ChangeEvent, FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import CustomerAccountSidebar from '../components/CustomerAccountSidebar'
 import type { AuthUser, CustomerAddress } from '../utils/auth'
-import { getCurrentUser, getUserInitial, updateCurrentUser } from '../utils/auth'
+import {
+  addUserAddress,
+  getCurrentUser,
+  getUserInitial,
+  makeUserAddressDefault,
+  removeUserAddress,
+  updateProfile,
+} from '../utils/auth'
 import './CustomerAccountPage.css'
 
 type AdministrativeUnit = {
@@ -83,22 +90,22 @@ function CustomerAccountPage() {
 
   if (!user) return <Navigate to="/tai-khoan?che-do=dang-nhap" replace />
 
-  const saveUser = (updater: (currentUser: AuthUser) => AuthUser) => {
-    const nextUser = updateCurrentUser(updater)
-    if (nextUser) setUser(nextUser)
-  }
-
-  const handleProfileSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleProfileSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
-    saveUser((currentUser) => ({
-      ...currentUser,
-      lastName: String(formData.get('lastName') || '').trim(),
-      firstName: String(formData.get('firstName') || '').trim(),
-      phone: String(formData.get('phone') || '').trim(),
-      email: String(formData.get('email') || '').trim().toLowerCase(),
-    }))
-    setProfileNotice('Thông tin tài khoản đã được cập nhật.')
+    try {
+      const nextUser = await updateProfile({
+        lastName: String(formData.get('lastName') || '').trim(),
+        firstName: String(formData.get('firstName') || '').trim(),
+        phone: String(formData.get('phone') || '').trim(),
+        email: String(formData.get('email') || '').trim().toLowerCase(),
+        avatar: user.avatar,
+      })
+      setUser(nextUser)
+      setProfileNotice('Thông tin tài khoản đã được cập nhật.')
+    } catch (error) {
+      setProfileNotice(error instanceof Error ? error.message : 'Không thể cập nhật tài khoản.')
+    }
   }
 
   const handleAvatarChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -110,16 +117,21 @@ function CustomerAccountPage() {
     }
 
     const reader = new FileReader()
-    reader.onload = () => {
+    reader.onload = async () => {
       if (typeof reader.result !== 'string') return
-      saveUser((currentUser) => ({ ...currentUser, avatar: reader.result as string }))
-      setProfileNotice('Ảnh đại diện đã được cập nhật.')
+      try {
+        const nextUser = await updateProfile({ ...user, avatar: reader.result })
+        setUser(nextUser)
+        setProfileNotice('Ảnh đại diện đã được cập nhật.')
+      } catch (error) {
+        setProfileNotice(error instanceof Error ? error.message : 'Không thể cập nhật ảnh đại diện.')
+      }
     }
     reader.readAsDataURL(file)
     event.target.value = ''
   }
 
-  const handleAddressSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleAddressSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
     const province = provinces.find((item) => item.code === provinceCode)
@@ -131,8 +143,7 @@ function CustomerAccountPage() {
 
     const isFirstAddress = user.addresses.length === 0
     const makeDefault = isFirstAddress || formData.get('isDefault') === 'on'
-    const address: CustomerAddress = {
-      id: `address-${Date.now()}`,
+    const address: Omit<CustomerAddress, 'id'> = {
       recipientName: String(formData.get('recipientName') || '').trim(),
       phone: String(formData.get('addressPhone') || '').trim(),
       provinceCode,
@@ -143,13 +154,12 @@ function CustomerAccountPage() {
       isDefault: makeDefault,
     }
 
-    saveUser((currentUser) => ({
-      ...currentUser,
-      addresses: [
-        ...currentUser.addresses.map((item) => ({ ...item, isDefault: makeDefault ? false : item.isDefault })),
-        address,
-      ],
-    }))
+    try {
+      setUser(await addUserAddress(address))
+    } catch (error) {
+      setAddressNotice(error instanceof Error ? error.message : 'Không thể thêm địa chỉ.')
+      return
+    }
     event.currentTarget.reset()
     setProvinceCode('')
     setWardCode('')
@@ -157,24 +167,32 @@ function CustomerAccountPage() {
     setAddressNotice('Địa chỉ mới đã được thêm vào sổ địa chỉ.')
   }
 
-  const setDefaultAddress = (addressId: string) => {
-    saveUser((currentUser) => ({
-      ...currentUser,
-      addresses: currentUser.addresses.map((item) => ({ ...item, isDefault: item.id === addressId })),
-    }))
-    setAddressNotice('Đã đặt làm địa chỉ giao hàng mặc định.')
+  const setDefaultAddress = async (addressId: string) => {
+    try {
+      setUser(await makeUserAddressDefault(addressId))
+      setAddressNotice('Đã đặt làm địa chỉ giao hàng mặc định.')
+    } catch (error) {
+      setAddressNotice(error instanceof Error ? error.message : 'Không thể cập nhật địa chỉ.')
+    }
   }
 
-  const deleteAddress = (addressId: string) => {
-    saveUser((currentUser) => {
-      const removedAddress = currentUser.addresses.find((item) => item.id === addressId)
-      const remainingAddresses = currentUser.addresses.filter((item) => item.id !== addressId)
-      const nextAddresses = removedAddress?.isDefault
-        ? remainingAddresses.map((item, index) => ({ ...item, isDefault: index === 0 }))
-        : remainingAddresses
-      return { ...currentUser, addresses: nextAddresses }
-    })
-    setAddressNotice('Địa chỉ đã được xóa.')
+  const deleteAddress = async (addressId: string) => {
+    try {
+      setUser(await removeUserAddress(addressId))
+      setAddressNotice('Địa chỉ đã được xóa.')
+    } catch (error) {
+      setAddressNotice(error instanceof Error ? error.message : 'Không thể xóa địa chỉ.')
+    }
+  }
+
+  const removeAvatar = async () => {
+    try {
+      const nextUser = await updateProfile({ ...user, avatar: '' })
+      setUser(nextUser)
+      setProfileNotice('Đã dùng ảnh đại diện mặc định.')
+    } catch (error) {
+      setProfileNotice(error instanceof Error ? error.message : 'Không thể cập nhật ảnh đại diện.')
+    }
   }
 
   return (
@@ -200,7 +218,7 @@ function CustomerAccountPage() {
                   Thay ảnh đại diện
                   <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleAvatarChange} />
                 </label>
-                {user.avatar && <button type="button" onClick={() => saveUser((currentUser) => ({ ...currentUser, avatar: undefined }))}>Dùng avatar mặc định</button>}
+                {user.avatar && <button type="button" onClick={() => void removeAvatar()}>Dùng avatar mặc định</button>}
                 <small>Ảnh JPG, PNG hoặc WEBP, tối đa 1,5 MB.</small>
               </div>
 

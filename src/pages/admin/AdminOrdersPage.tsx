@@ -3,6 +3,7 @@ import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
 import Pagination from '../../components/Pagination'
 import { formatPrice } from '../../data/products'
 import { usePagination } from '../../hooks/usePagination'
+import { api } from '../../services/api'
 import {
   getOrders,
   type Order,
@@ -123,6 +124,36 @@ const formatDateTime = (value: string) => new Date(value).toLocaleString('vi-VN'
 
 function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>(buildInitialOrders)
+
+  const mapOrderStatus = (status: string): OrderStatus => ({
+    DANG_CHUAN_BI: 'DANG_DONG_GOI', DANG_GIAO: 'DANG_GIAO_HANG', DA_GIAO: 'DA_GIAO_HANG',
+  }[status] as OrderStatus || status as OrderStatus)
+  const toBackendStatus = (status: OrderStatus) => ({
+    DANG_DONG_GOI: 'DANG_CHUAN_BI', DANG_GIAO_HANG: 'DANG_GIAO', DA_GIAO_HANG: 'DA_GIAO',
+  } as Record<string, string>)[status] || status
+
+  const loadOrders = async () => {
+    try {
+      const list = await api.get<{ items: Array<{ id: string }>; pagination: unknown }>('/admin/orders?limit=100')
+      const details = await Promise.all(list.items.map((item) => api.get<Record<string, any>>(`/admin/orders/${item.id}`)))
+      setOrders(details.map((item) => ({
+        id: String(item.id), orderCode: String(item.orderCode), userId: String(item.customerId),
+        recipientName: String(item.recipientName), phone: String(item.phone), shippingAddress: String(item.shippingAddress),
+        customerNote: item.customerNote, totalProductPrice: Number(item.subtotal), discountAmount: Number(item.discount),
+        shippingFee: Number(item.shippingFee), totalPayment: Number(item.total), paymentMethod: item.paymentMethod as PaymentMethod,
+        orderStatus: mapOrderStatus(String(item.orderStatus)), paymentStatus: item.paymentStatus as PaymentStatus,
+        createdAt: String(item.createdAt), cancelReason: item.cancelReason,
+        items: (item.items || []).map((line: Record<string, any>) => ({
+          productId: String(line.productId), productName: String(line.name), productImage: String(line.image || ''),
+          price: Number(line.unitPrice), quantity: Number(line.quantity), weight: '',
+        })),
+      })))
+    } catch {
+      // Giữ dữ liệu dự phòng nếu chưa có quyền quản trị.
+    }
+  }
+
+  useEffect(() => { void loadOrders() }, [])
   const [searchValue, setSearchValue] = useState('')
   const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | OrderStatus>('all')
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<'all' | PaymentStatus>('all')
@@ -193,7 +224,7 @@ function AdminOrdersPage() {
     setDraftPaymentStatus(order.paymentStatus)
   }
 
-  const saveOrderUpdate = () => {
+  const saveOrderUpdate = async () => {
     if (!selectedOrder) return
     const updatedOrder: Order = {
       ...selectedOrder,
@@ -201,13 +232,21 @@ function AdminOrdersPage() {
       paymentStatus: draftPaymentStatus,
       cancelReason: draftOrderStatus === 'DA_HUY' ? selectedOrder.cancelReason || 'Quản trị viên hủy đơn hàng.' : selectedOrder.cancelReason,
     }
-    setOrders((current) => current.map((order) => order.id === selectedOrder.id ? updatedOrder : order))
-    setSelectedOrder(updatedOrder)
-    setNotice(`Đã cập nhật đơn ${selectedOrder.orderCode}`)
+    try {
+      await api.patch(`/admin/orders/${selectedOrder.id}`, {
+        orderStatus: toBackendStatus(draftOrderStatus), paymentStatus: draftPaymentStatus,
+        cancelReason: draftOrderStatus === 'DA_HUY' ? updatedOrder.cancelReason : undefined,
+      })
+      await loadOrders()
+      setSelectedOrder(updatedOrder)
+      setNotice(`Đã cập nhật đơn ${selectedOrder.orderCode}`)
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Không thể cập nhật đơn hàng')
+    }
   }
 
   const refreshOrders = () => {
-    setOrders(buildInitialOrders())
+    void loadOrders()
     setNotice('Đã làm mới danh sách đơn hàng')
   }
 

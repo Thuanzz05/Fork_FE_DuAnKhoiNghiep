@@ -3,6 +3,7 @@ import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
 import Pagination from '../../components/Pagination'
 import { formatPrice } from '../../data/products'
 import { usePagination } from '../../hooks/usePagination'
+import { api } from '../../services/api'
 import './AdminPromotionsPage.css'
 
 type PromotionType = 'percentage' | 'fixed' | 'shipping' | 'gift'
@@ -108,6 +109,25 @@ function AdminPromotionsPage() {
   const [form, setForm] = useState<PromotionFormState>(emptyForm)
   const [notice, setNotice] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
 
+  const loadPromotions = async () => {
+    try {
+      const rows = await api.get<Array<Record<string, any>>>('/admin/promotions')
+      if (rows.length) setPromotions(rows.map((item) => ({
+        id: String(item.id), code: String(item.code), name: String(item.name), description: String(item.description || ''),
+        type: item.type === 'PHAN_TRAM' ? 'percentage' : item.type === 'MIEN_PHI_VAN_CHUYEN' ? 'shipping' : 'fixed',
+        value: Number(item.value), minimumOrder: Number(item.minimumOrder),
+        maximumDiscount: item.maximumDiscount == null ? undefined : Number(item.maximumDiscount),
+        usageLimit: Number(item.maximumUses || 0), usedCount: Number(item.usedCount || 0),
+        startDate: String(item.startsAt).slice(0, 10), endDate: String(item.endsAt).slice(0, 10),
+        enabled: item.status === 'HOAT_DONG',
+      })))
+    } catch {
+      // Giữ dữ liệu dự phòng.
+    }
+  }
+
+  useEffect(() => { void loadPromotions() }, [])
+
   useEffect(() => {
     if (!notice) return
     const timer = window.setTimeout(() => setNotice(null), 2800)
@@ -187,7 +207,7 @@ function AdminPromotionsPage() {
     setForm((current) => ({ ...current, [field]: value }))
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const normalizedCode = form.code.trim().toLocaleUpperCase('vi-VN')
     const duplicateCode = promotions.some((promotion) => promotion.code === normalizedCode && promotion.id !== editingPromotion?.id)
@@ -216,27 +236,46 @@ function AdminPromotionsPage() {
       enabled: form.enabled,
     }
 
-    if (editingPromotion) {
-      setPromotions((current) => current.map((promotion) => promotion.id === editingPromotion.id ? { ...promotion, ...promotionData } : promotion))
-      setNotice({ text: `Đã cập nhật mã ${normalizedCode}`, type: 'success' })
-    } else {
-      setPromotions((current) => [{ id: `promotion-${Date.now()}`, usedCount: 0, ...promotionData }, ...current])
-      setNotice({ text: `Đã tạo mã ${normalizedCode}`, type: 'success' })
+    try {
+      const payload = {
+        code: promotionData.code, name: promotionData.name, description: promotionData.description,
+        type: promotionData.type === 'percentage' ? 'PHAN_TRAM' : promotionData.type === 'shipping' ? 'MIEN_PHI_VAN_CHUYEN' : 'SO_TIEN',
+        value: promotionData.value, minimumOrder: promotionData.minimumOrder,
+        maximumDiscount: promotionData.maximumDiscount, maximumUses: promotionData.usageLimit || null,
+        startsAt: `${promotionData.startDate} 00:00:00`, endsAt: `${promotionData.endDate} 23:59:59`,
+        status: promotionData.enabled ? 'HOAT_DONG' : 'TAM_DUNG', productIds: [],
+      }
+      if (editingPromotion) await api.put(`/admin/promotions/${editingPromotion.id}`, payload)
+      else await api.post('/admin/promotions', payload)
+      await loadPromotions()
+      setNotice({ text: editingPromotion ? `Đã cập nhật mã ${normalizedCode}` : `Đã tạo mã ${normalizedCode}`, type: 'success' })
+      setIsFormOpen(false)
+    } catch (error) {
+      setNotice({ text: error instanceof Error ? error.message : 'Không thể lưu khuyến mãi', type: 'error' })
     }
-    setIsFormOpen(false)
   }
 
-  const togglePromotion = (promotion: Promotion) => {
+  const togglePromotion = async (promotion: Promotion) => {
     const nextEnabled = !promotion.enabled
-    setPromotions((current) => current.map((item) => item.id === promotion.id ? { ...item, enabled: nextEnabled } : item))
-    setNotice({ text: `${nextEnabled ? 'Đã bật' : 'Đã tắt'} mã ${promotion.code}`, type: 'success' })
+    try {
+      await api.put(`/admin/promotions/${promotion.id}`, { status: nextEnabled ? 'HOAT_DONG' : 'TAM_DUNG' })
+      await loadPromotions()
+      setNotice({ text: `${nextEnabled ? 'Đã bật' : 'Đã tắt'} mã ${promotion.code}`, type: 'success' })
+    } catch (error) {
+      setNotice({ text: error instanceof Error ? error.message : 'Không thể cập nhật khuyến mãi', type: 'error' })
+    }
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deletingPromotion) return
-    setPromotions((current) => current.filter((promotion) => promotion.id !== deletingPromotion.id))
-    setNotice({ text: `Đã xóa mã ${deletingPromotion.code}`, type: 'success' })
-    setDeletingPromotion(null)
+    try {
+      await api.put(`/admin/promotions/${deletingPromotion.id}`, { status: 'HET_HAN' })
+      await loadPromotions()
+      setNotice({ text: `Đã kết thúc mã ${deletingPromotion.code}`, type: 'success' })
+      setDeletingPromotion(null)
+    } catch (error) {
+      setNotice({ text: error instanceof Error ? error.message : 'Không thể cập nhật khuyến mãi', type: 'error' })
+    }
   }
 
   return (

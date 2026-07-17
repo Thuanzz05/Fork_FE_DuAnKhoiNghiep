@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import { formatPrice, products } from '../data/products'
+import { formatPrice } from '../data/products'
 import { productGalleries } from '../data/productGalleries'
+import { useCatalog } from '../hooks/useCatalog'
+import { api } from '../services/api'
 import { addCartItem } from '../utils/cart'
 import { getProductReviews, type ProductReview } from '../utils/reviews'
 import { useStoreSettings } from '../utils/storeSettings'
@@ -39,6 +41,7 @@ function ReviewStars({ rating }: { rating: number }) {
 }
 
 function ProductDetailPage() {
+  const { products } = useCatalog()
   const { slug } = useParams()
   const navigate = useNavigate()
   const product = products.find((item) => item.slug === slug)
@@ -82,6 +85,9 @@ function ProductDetailPage() {
     }
 
     loadReviews()
+    api.get<{ reviews: Array<Omit<ProductReview, 'orderId'>> }>(`/products/${product.slug}`)
+      .then((data) => setProductReviews(data.reviews.map((review) => ({ ...review, orderId: '' }))))
+      .catch(() => undefined)
     window.addEventListener('storage', loadReviews)
     window.addEventListener('reviews-updated', loadReviews)
     return () => {
@@ -92,7 +98,9 @@ function ProductDetailPage() {
 
   if (!product) return <Navigate to="/404" replace />
 
-  const gallery = productGalleries[product.id] || [product.image]
+  const gallery = ('gallery' in product && Array.isArray(product.gallery) && product.gallery.length)
+    ? product.gallery
+    : productGalleries[product.id] || [product.image]
   const isFavorite = wishlistIds.includes(product.id)
   const similarProducts = products.filter((item) => item.id !== product.id).slice(0, 4)
   const savedAmount = product.originalPrice ? product.originalPrice - product.price : 0

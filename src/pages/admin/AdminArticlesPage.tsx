@@ -3,6 +3,7 @@ import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
 import Pagination from '../../components/Pagination'
 import { newsArticles } from '../../data/news'
 import { usePagination } from '../../hooks/usePagination'
+import { api } from '../../services/api'
 import './AdminArticlesPage.css'
 
 type ArticleStatus = 'published' | 'draft' | 'scheduled'
@@ -131,6 +132,24 @@ const formatDateTime = (value: string) => new Intl.DateTimeFormat('vi-VN', {
 
 function AdminArticlesPage() {
   const [articles, setArticles] = useState<ManagedArticle[]>(articleSeed)
+
+  const loadArticles = async () => {
+    try {
+      const rows = await api.get<Array<Record<string, any>>>('/admin/articles')
+      if (rows.length) setArticles(rows.map((item) => ({
+        id: Number(item.id), title: String(item.title), category: String(item.category || articleCategories[0]),
+        excerpt: String(item.summary || ''), lead: '', content: String(item.content || ''),
+        image: String(item.imageUrl || ''), author: String(item.authorName || 'Rubeanora'),
+        status: item.status === 'DA_DANG' ? 'published' : item.status === 'DANG_AN' ? 'scheduled' : 'draft',
+        publishedAt: String(item.publishedAt || item.createdAt), updatedAt: String(item.updatedAt),
+        views: Number(item.views || 0), featured: Boolean(item.featured),
+      })))
+    } catch {
+      // Giữ dữ liệu dự phòng.
+    }
+  }
+
+  useEffect(() => { void loadArticles() }, [])
   const [searchValue, setSearchValue] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<'all' | ArticleStatus>('all')
@@ -245,46 +264,39 @@ function AdminArticlesPage() {
     reader.readAsDataURL(file)
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const now = new Date().toISOString()
-    if (editingArticle) {
-      setArticles((current) => current.map((article) => article.id === editingArticle.id ? {
-        ...article,
-        ...form,
-        title: form.title.trim(),
-        excerpt: form.excerpt.trim(),
-        lead: form.lead.trim(),
-        content: form.content.trim(),
-        image: form.image.trim(),
-        author: form.author.trim(),
-        updatedAt: now,
-      } : article))
-      setNotice(`Đã cập nhật bài viết “${form.title.trim()}”`)
-    } else {
-      const newArticle: ManagedArticle = {
-        id: Math.max(0, ...articles.map((article) => article.id)) + 1,
-        ...form,
-        title: form.title.trim(),
-        excerpt: form.excerpt.trim(),
-        lead: form.lead.trim(),
-        content: form.content.trim(),
-        image: form.image.trim(),
-        author: form.author.trim(),
-        updatedAt: now,
-        views: 0,
+    try {
+      const payload = {
+        title: form.title.trim(), category: form.category, summary: form.excerpt.trim(),
+        content: JSON.stringify({
+          lead: form.lead.trim(),
+          sections: [{ paragraphs: form.content.split(/\n\s*\n/).map((item) => item.trim()).filter(Boolean) }],
+        }),
+        imageUrl: form.image.trim(), featured: form.featured,
+        status: form.status === 'published' ? 'DA_DANG' : form.status === 'scheduled' ? 'DANG_AN' : 'NHAP',
+        publishedAt: form.publishedAt || undefined,
       }
-      setArticles((current) => [newArticle, ...current])
-      setNotice(`Đã tạo bài viết “${newArticle.title}”`)
+      if (editingArticle) await api.put(`/admin/articles/${editingArticle.id}`, payload)
+      else await api.post('/admin/articles', payload)
+      await loadArticles()
+      setNotice(editingArticle ? `Đã cập nhật bài viết “${form.title.trim()}”` : `Đã tạo bài viết “${form.title.trim()}”`)
+      setIsFormOpen(false)
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Không thể lưu bài viết')
     }
-    setIsFormOpen(false)
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deletingArticle) return
-    setArticles((current) => current.filter((article) => article.id !== deletingArticle.id))
-    setNotice(`Đã xóa bài viết “${deletingArticle.title}”`)
-    setDeletingArticle(null)
+    try {
+      await api.put(`/admin/articles/${deletingArticle.id}`, { status: 'DANG_AN' })
+      await loadArticles()
+      setNotice(`Đã ẩn bài viết “${deletingArticle.title}”`)
+      setDeletingArticle(null)
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Không thể cập nhật bài viết')
+    }
   }
 
   return (

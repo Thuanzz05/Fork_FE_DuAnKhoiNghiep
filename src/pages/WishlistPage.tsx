@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { formatPrice, products } from '../data/products'
+import { formatPrice } from '../data/products'
 import type { Product } from '../data/products'
+import { useCatalog } from '../hooks/useCatalog'
 import { addCartItem } from '../utils/cart'
-import { getWishlistIds, removeWishlistId } from '../utils/wishlist'
+import { getWishlistIds, removeWishlistId, syncWishlistFromApi } from '../utils/wishlist'
 import ProductQuickViewModal from '../components/ProductQuickViewModal'
 import './WishlistPage.css'
 
 function WishlistPage() {
+  const { products } = useCatalog()
   const [wishlistIds, setWishlistIds] = useState(() => getWishlistIds())
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null)
 
   useEffect(() => {
+    void syncWishlistFromApi().then(setWishlistIds).catch(() => undefined)
     const syncWishlist = () => setWishlistIds(getWishlistIds())
     const handleWishlistUpdated = (event: Event) => {
       const customEvent = event as CustomEvent<string[]>
@@ -31,7 +34,7 @@ function WishlistPage() {
     return wishlistIds
       .map((id) => products.find((product) => product.id === id))
       .filter((product): product is (typeof products)[number] => Boolean(product))
-  }, [wishlistIds])
+  }, [products, wishlistIds])
 
   const handleRemove = (productId: string) => {
     setWishlistIds(removeWishlistId(productId))

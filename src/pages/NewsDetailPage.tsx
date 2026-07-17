@@ -1,22 +1,46 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { getNewsArticle, newsArticles } from '../data/news'
+import type { NewsArticle } from '../data/news'
+import { api } from '../services/api'
 import './NewsDetailPage.css'
 
 function NewsDetailPage() {
   const { id } = useParams()
-  const article = getNewsArticle(Number(id))
+  const [article, setArticle] = useState<NewsArticle | undefined>(() => getNewsArticle(Number(id)))
+  const [relatedArticles, setRelatedArticles] = useState<NewsArticle[]>(() => newsArticles.filter((item) => item.id !== Number(id)).slice(0, 5))
+  const [loading, setLoading] = useState(true)
   const [commentSent, setCommentSent] = useState(false)
 
+  useEffect(() => {
+    setLoading(true)
+    api.get<{ article: NewsArticle; relatedArticles: NewsArticle[] }>(`/news/${id}`)
+      .then((data) => {
+        setArticle(data.article)
+        setRelatedArticles(data.relatedArticles)
+      })
+      .catch(() => setArticle(getNewsArticle(Number(id))))
+      .finally(() => setLoading(false))
+  }, [id])
+
+  if (!article && loading) return null
   if (!article) return <Navigate to="/404" replace />
 
-  const relatedArticles = newsArticles.filter((item) => item.id !== article.id).slice(0, 5)
-
-  const handleComment = (event: FormEvent<HTMLFormElement>) => {
+  const handleComment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    event.currentTarget.reset()
-    setCommentSent(true)
+    const form = event.currentTarget
+    const formData = new FormData(form)
+    try {
+      await api.post(`/news/${article.id}/comments`, {
+        name: String(formData.get('name') || ''), email: String(formData.get('email') || ''),
+        content: String(formData.get('content') || ''),
+      })
+      form.reset()
+      setCommentSent(true)
+    } catch {
+      setCommentSent(false)
+    }
   }
 
   return (

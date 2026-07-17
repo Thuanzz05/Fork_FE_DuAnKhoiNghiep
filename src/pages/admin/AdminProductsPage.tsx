@@ -3,6 +3,7 @@ import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
 import Pagination from '../../components/Pagination'
 import { categories, formatPrice, products, type Product } from '../../data/products'
 import { usePagination } from '../../hooks/usePagination'
+import { api } from '../../services/api'
 import './AdminProductsPage.css'
 
 type ProductStatus = 'active' | 'low' | 'out'
@@ -11,6 +12,25 @@ interface ManagedProduct extends Product {
   sku: string
   stock: number
 }
+
+type AdminProductRow = {
+  id: string; categoryId: string; categoryName: string; productCode: string; sku: string
+  name: string; slug: string; productType: 'DON' | 'COMBO'; mainImage: string
+  listPrice: number; salePrice: number; stock: number; description?: string
+  ingredients?: string; benefits?: string; specification?: string; origin?: string
+}
+
+type AdminCategoryRow = { id: string; name: string; slug: string }
+
+const mapAdminProduct = (item: AdminProductRow): ManagedProduct => ({
+  id: item.id, sku: item.sku, slug: item.slug, name: item.name, nameEn: item.productCode,
+  category: item.categoryName, categorySlug: '', image: item.mainImage || '', price: item.salePrice,
+  originalPrice: item.listPrice > item.salePrice ? item.listPrice : undefined,
+  discount: item.listPrice > item.salePrice ? Math.round((item.listPrice - item.salePrice) * 100 / item.listPrice) : undefined,
+  weight: item.specification || '', origin: item.origin || '', stock: item.stock,
+  description: item.description || '', mainIngredients: item.ingredients?.split(',').filter(Boolean) || [],
+  tags: item.benefits?.split(',').filter(Boolean) || [], isCombo: item.productType === 'COMBO',
+})
 
 interface ProductFormState {
   name: string
@@ -75,8 +95,6 @@ const statusMeta: Record<ProductStatus, { label: string }> = {
   out: { label: 'Hết hàng' },
 }
 
-const splitCommaList = (value: string) => value.split(',').map((item) => item.trim()).filter(Boolean)
-
 const makeSlug = (value: string) => value
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
@@ -88,6 +106,7 @@ const makeSlug = (value: string) => value
 
 function AdminProductsPage() {
   const [productList, setProductList] = useState<ManagedProduct[]>(managedProducts)
+  const [apiCategories, setApiCategories] = useState<AdminCategoryRow[]>([])
   const [searchValue, setSearchValue] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<'all' | ProductStatus>('all')
@@ -98,6 +117,27 @@ function AdminProductsPage() {
   const [toast, setToast] = useState('')
   const [selectedImageName, setSelectedImageName] = useState('')
   const imageFileInputRef = useRef<HTMLInputElement>(null)
+  const availableCategories = apiCategories.length ? apiCategories : productCategories
+
+  const loadAdminProducts = async () => {
+    try {
+      const [productRows, categoryRows] = await Promise.all([
+        api.get<AdminProductRow[]>('/admin/products'),
+        api.get<AdminCategoryRow[]>('/admin/categories'),
+      ])
+      if (productRows.length) {
+        setProductList(productRows.map((item) => ({
+          ...mapAdminProduct(item),
+          categorySlug: categoryRows.find((category) => category.id === item.categoryId)?.slug || '',
+        })))
+      }
+      setApiCategories(categoryRows)
+    } catch {
+      // Giữ dữ liệu giao diện dự phòng khi chưa đăng nhập admin hoặc DB chưa có dữ liệu.
+    }
+  }
+
+  useEffect(() => { void loadAdminProducts() }, [])
 
   useEffect(() => {
     if (!toast) return
@@ -196,73 +236,53 @@ function AdminProductsPage() {
     reader.readAsDataURL(file)
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const selectedCategory = productCategories.find((category) => category.slug === form.categorySlug)
+    const selectedCategory = availableCategories.find((category) => category.slug === form.categorySlug)
     if (!selectedCategory) return
 
     const price = Number(form.price)
     const originalPrice = Number(form.originalPrice) || undefined
-    const discount = originalPrice && originalPrice > price
-      ? Math.round(((originalPrice - price) / originalPrice) * 100)
-      : undefined
-
-    if (editingProduct) {
-      const updatedProduct: ManagedProduct = {
-        ...editingProduct,
-        name: form.name.trim(),
-        nameEn: form.nameEn.trim(),
-        slug: makeSlug(form.name),
-        category: selectedCategory.name,
-        categorySlug: selectedCategory.slug,
-        image: form.image.trim(),
-        price,
-        originalPrice,
-        discount,
-        weight: form.weight.trim(),
-        origin: form.origin.trim(),
-        stock: Math.max(0, Number(form.stock)),
-        description: form.description.trim(),
-        mainIngredients: splitCommaList(form.mainIngredients),
-        tags: splitCommaList(form.tags),
-        isCombo: form.isCombo || undefined,
-      }
-      setProductList((current) => current.map((product) => product.id === editingProduct.id ? updatedProduct : product))
-      setToast('Đã cập nhật sản phẩm thành công')
-    } else {
-      const nextId = String(Math.max(0, ...productList.map((product) => Number(product.id) || 0)) + 1)
-      const newProduct: ManagedProduct = {
-        id: nextId,
-        sku: `RBN-${nextId.padStart(3, '0')}`,
-        slug: `${makeSlug(form.name)}-${nextId}`,
-        name: form.name.trim(),
-        nameEn: form.nameEn.trim(),
-        category: selectedCategory.name,
-        categorySlug: selectedCategory.slug,
-        image: form.image.trim(),
-        price,
-        originalPrice,
-        discount,
-        weight: form.weight.trim(),
-        origin: form.origin.trim(),
-        stock: Math.max(0, Number(form.stock)),
-        description: form.description.trim(),
-        mainIngredients: splitCommaList(form.mainIngredients),
-        tags: splitCommaList(form.tags),
-        isCombo: form.isCombo || undefined,
-      }
-      setProductList((current) => [newProduct, ...current])
-      setToast('Đã thêm sản phẩm mới')
+    const sku = editingProduct?.sku || `RBN-${Date.now().toString().slice(-8)}`
+    const payload = {
+      categoryId: 'id' in selectedCategory ? Number(selectedCategory.id) : Number.NaN,
+      productCode: editingProduct?.nameEn || sku,
+      sku, name: form.name.trim(), slug: makeSlug(form.name),
+      productType: form.isCombo ? 'COMBO' : 'DON', mainImage: form.image.trim(),
+      listPrice: originalPrice || price, salePrice: price, costPrice: Math.round(price * 0.6),
+      stock: Math.max(0, Number(form.stock)), minimumStock: 5,
+      description: form.description.trim(), ingredients: form.mainIngredients,
+      benefits: form.tags, specification: form.weight.trim(), origin: form.origin.trim(),
+      status: Number(form.stock) > 0 ? 'DANG_BAN' : 'NHAP',
     }
 
-    setIsFormOpen(false)
+    if (!Number.isFinite(payload.categoryId)) {
+      setToast('Danh mục chưa được đồng bộ với backend')
+      return
+    }
+
+    try {
+      if (editingProduct) await api.put(`/admin/products/${editingProduct.id}`, payload)
+      else await api.post('/admin/products', payload)
+      await loadAdminProducts()
+      setToast(editingProduct ? 'Đã cập nhật sản phẩm thành công' : 'Đã thêm sản phẩm mới')
+      setIsFormOpen(false)
+      return
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : 'Không thể lưu sản phẩm')
+    }
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deletingProduct) return
-    setProductList((current) => current.filter((product) => product.id !== deletingProduct.id))
-    setToast(`Đã xóa ${deletingProduct.name}`)
-    setDeletingProduct(null)
+    try {
+      await api.delete(`/admin/products/${deletingProduct.id}`)
+      await loadAdminProducts()
+      setToast(`Đã ngừng bán ${deletingProduct.name}`)
+      setDeletingProduct(null)
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : 'Không thể cập nhật sản phẩm')
+    }
   }
 
   return (
@@ -298,7 +318,7 @@ function AdminProductsPage() {
               <span>Danh mục</span>
               <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} aria-label="Lọc theo danh mục">
                 <option value="all">Tất cả danh mục</option>
-                {productCategories.map((category) => <option value={category.slug} key={category.slug}>{category.name}</option>)}
+                {availableCategories.map((category) => <option value={category.slug} key={category.slug}>{category.name}</option>)}
               </select>
             </label>
             <label>
@@ -376,7 +396,7 @@ function AdminProductsPage() {
               <div className="admin-product-form-grid">
                 <label className="is-wide"><span>Tên sản phẩm *</span><input required value={form.name} onChange={(event) => updateField('name', event.target.value)} /></label>
                 <label><span>Tên tiếng Anh *</span><input required value={form.nameEn} onChange={(event) => updateField('nameEn', event.target.value)} /></label>
-                <label><span>Danh mục *</span><select required value={form.categorySlug} onChange={(event) => updateField('categorySlug', event.target.value)}>{productCategories.map((category) => <option value={category.slug} key={category.slug}>{category.name}</option>)}</select></label>
+                <label><span>Danh mục *</span><select required value={form.categorySlug} onChange={(event) => updateField('categorySlug', event.target.value)}>{availableCategories.map((category) => <option value={category.slug} key={category.slug}>{category.name}</option>)}</select></label>
                 <label className="is-wide">
                   <span>Hình ảnh sản phẩm *</span>
                   <div className="admin-image-field">

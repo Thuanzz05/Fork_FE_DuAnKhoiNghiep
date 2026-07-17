@@ -5,6 +5,7 @@ import { getRegisteredUsers, type AuthUser } from '../../utils/auth'
 import { getOrders } from '../../utils/orders'
 import { formatPrice } from '../../data/products'
 import { usePagination } from '../../hooks/usePagination'
+import { api } from '../../services/api'
 import './AdminAccountsPage.css'
 
 type AccountRole = 'admin' | 'staff' | 'customer'
@@ -131,6 +132,30 @@ const buildInitialAccounts = (): ManagedAccount[] => {
 
 function AdminAccountsPage() {
   const [accounts, setAccounts] = useState<ManagedAccount[]>(buildInitialAccounts)
+
+  const loadAccounts = async () => {
+    try {
+      const data = await api.get<{ items: Array<{
+        id: string; fullName: string; email: string; phone?: string; avatar?: string
+        role: 'ADMIN' | 'KHACH_HANG'; status: 'HOAT_DONG' | 'BI_KHOA'
+        orderCount: number; spending: number; createdAt: string
+      }> }>('/admin/users?limit=100')
+      if (data.items.length) setAccounts(data.items.map((item) => {
+        const names = item.fullName.trim().split(/\s+/)
+        return {
+          id: item.id, firstName: names.pop() || '', lastName: names.join(' '), email: item.email,
+          phone: item.phone || '', avatar: item.avatar, addressCount: 0,
+          role: item.role === 'ADMIN' ? 'admin' : 'customer',
+          status: item.status === 'HOAT_DONG' ? 'active' : 'locked',
+          orderCount: item.orderCount, totalSpent: item.spending, joinedAt: item.createdAt, lastActive: 'Gần đây',
+        }
+      }))
+    } catch {
+      // Giữ dữ liệu dự phòng.
+    }
+  }
+
+  useEffect(() => { void loadAccounts() }, [])
   const [searchValue, setSearchValue] = useState('')
   const [roleFilter, setRoleFilter] = useState<'all' | AccountRole>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | AccountStatus>('all')
@@ -215,7 +240,7 @@ function AdminAccountsPage() {
     setForm((current) => ({ ...current, [field]: value }))
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const normalizedEmail = form.email.trim().toLocaleLowerCase('vi-VN')
     const duplicatedEmail = accounts.some((account) => account.email.toLocaleLowerCase('vi-VN') === normalizedEmail && account.id !== editingAccount?.id)
@@ -225,52 +250,38 @@ function AdminAccountsPage() {
       return
     }
 
-    if (editingAccount) {
-      setAccounts((current) => current.map((account) => account.id === editingAccount.id ? {
-        ...account,
-        firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
-        email: normalizedEmail,
-        phone: form.phone.trim(),
-        role: form.role,
-        status: form.status,
-        avatar: form.avatar.trim() || undefined,
-      } : account))
-      setNotice({ text: 'Đã cập nhật thông tin tài khoản', type: 'success' })
-    } else {
-      const newAccount: ManagedAccount = {
-        id: `user-${Date.now()}`,
-        firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
-        email: normalizedEmail,
-        phone: form.phone.trim(),
-        avatar: form.avatar.trim() || undefined,
-        addressCount: 0,
-        role: form.role,
-        status: form.status,
-        orderCount: 0,
-        totalSpent: 0,
-        joinedAt: new Date().toISOString(),
-        lastActive: 'Chưa đăng nhập',
-      }
-      setAccounts((current) => [newAccount, ...current])
-      setNotice({ text: 'Đã tạo tài khoản mới', type: 'success' })
+    if (!editingAccount) {
+      setNotice({ text: 'Backend hiện chưa hỗ trợ admin tạo tài khoản trực tiếp', type: 'error' })
+      return
     }
-
-    setIsFormOpen(false)
+    try {
+      await api.patch(`/admin/users/${editingAccount.id}`, {
+        role: form.role === 'admin' ? 'ADMIN' : 'KHACH_HANG',
+        status: form.status === 'active' ? 'HOAT_DONG' : 'BI_KHOA',
+      })
+      await loadAccounts()
+      setNotice({ text: 'Đã cập nhật quyền và trạng thái tài khoản', type: 'success' })
+      setIsFormOpen(false)
+    } catch (error) {
+      setNotice({ text: error instanceof Error ? error.message : 'Không thể cập nhật tài khoản', type: 'error' })
+    }
   }
 
-  const toggleAccountStatus = (account: ManagedAccount) => {
+  const toggleAccountStatus = async (account: ManagedAccount) => {
     if (account.role === 'admin') return
     const nextStatus: AccountStatus = account.status === 'active' ? 'locked' : 'active'
-    setAccounts((current) => current.map((item) => item.id === account.id ? { ...item, status: nextStatus } : item))
-    setNotice({ text: nextStatus === 'locked' ? `Đã khóa tài khoản ${getFullName(account)}` : `Đã mở khóa tài khoản ${getFullName(account)}`, type: 'success' })
+    try {
+      await api.patch(`/admin/users/${account.id}`, { status: nextStatus === 'locked' ? 'BI_KHOA' : 'HOAT_DONG' })
+      await loadAccounts()
+      setNotice({ text: nextStatus === 'locked' ? `Đã khóa tài khoản ${getFullName(account)}` : `Đã mở khóa tài khoản ${getFullName(account)}`, type: 'success' })
+    } catch (error) {
+      setNotice({ text: error instanceof Error ? error.message : 'Không thể cập nhật tài khoản', type: 'error' })
+    }
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deletingAccount || deletingAccount.role === 'admin') return
-    setAccounts((current) => current.filter((account) => account.id !== deletingAccount.id))
-    setNotice({ text: `Đã xóa tài khoản ${getFullName(deletingAccount)}`, type: 'success' })
+    await toggleAccountStatus(deletingAccount)
     setDeletingAccount(null)
   }
 

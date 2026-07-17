@@ -1,15 +1,33 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { api } from '../services/api'
 import { useStoreSettings } from '../utils/storeSettings'
 import './ContactPage.css'
 
 function ContactPage() {
   const storeSettings = useStoreSettings()
   const [submitted, setSubmitted] = useState(false)
+  const [notice, setNotice] = useState('')
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setSubmitted(true)
+    const form = event.currentTarget
+    const formData = new FormData(form)
+    try {
+      setNotice('Đang gửi thông tin...')
+      await api.post('/contact', {
+        fullName: String(formData.get('name') || ''),
+        email: String(formData.get('email') || ''),
+        phone: String(formData.get('phone') || ''),
+        message: String(formData.get('message') || ''),
+      })
+      setSubmitted(true)
+      setNotice('')
+      form.reset()
+    } catch (error) {
+      setSubmitted(false)
+      setNotice(error instanceof Error ? error.message : 'Không thể gửi liên hệ.')
+    }
   }
 
   return (
@@ -76,6 +94,7 @@ function ContactPage() {
           </form>
 
           {submitted && <p className="contact-success">Cảm ơn bạn, {storeSettings.storeName} đã nhận được thông tin liên hệ.</p>}
+          {notice && <p className="contact-success">{notice}</p>}
         </div>
       </section>
 
