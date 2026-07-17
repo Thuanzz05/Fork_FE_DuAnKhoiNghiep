@@ -1,5 +1,6 @@
-import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
+import { BrowserRouter, Navigate, Routes, Route, useLocation } from 'react-router-dom'
 import CartToast from './components/CartToast'
 import Header from './components/Header'
 import Footer from './components/Footer'
@@ -34,8 +35,15 @@ import AdminSettingsPage from './pages/admin/AdminSettingsPage'
 import AdminReportsPage from './pages/admin/AdminReportsPage'
 import NotFoundPage from './pages/NotFoundPage'
 import { useStoreSettings } from './utils/storeSettings'
+import { getCurrentUser } from './utils/auth'
+
+function AdminGuard({ children }: { children: ReactNode }) {
+  const user = getCurrentUser()
+  return user?.role === 'ADMIN' ? children : <Navigate to="/tai-khoan?che-do=dang-nhap" replace />
+}
 
 function AppContent() {
+  const [, setAuthVersion] = useState(0)
   const location = useLocation()
   const isAdminRoute = location.pathname.startsWith('/admin')
   const storeSettings = useStoreSettings()
@@ -43,6 +51,12 @@ function AppContent() {
   useEffect(() => {
     document.title = isAdminRoute ? `Quản trị | ${storeSettings.storeName}` : storeSettings.storeName
   }, [isAdminRoute, storeSettings.storeName])
+
+  useEffect(() => {
+    const updateAuth = () => setAuthVersion((version) => version + 1)
+    window.addEventListener('auth-updated', updateAuth)
+    return () => window.removeEventListener('auth-updated', updateAuth)
+  }, [])
 
   return (
     <>
@@ -68,18 +82,18 @@ function AppContent() {
         <Route path="/tai-khoan/doi-mat-khau" element={<ChangePasswordPage />} />
         <Route path="/tai-khoan/don-hang" element={<CustomerOrdersPage />} />
         <Route path="/thanh-toan" element={<CheckoutPage />} />
-        <Route path="/admin" element={<AdminDashboardPage />} />
-        <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-        <Route path="/admin/san-pham" element={<AdminProductsPage />} />
-        <Route path="/admin/danh-muc" element={<AdminCategoriesPage />} />
-        <Route path="/admin/tai-khoan" element={<AdminAccountsPage />} />
-        <Route path="/admin/khuyen-mai" element={<AdminPromotionsPage />} />
-        <Route path="/admin/don-hang" element={<AdminOrdersPage />} />
-        <Route path="/admin/kho" element={<AdminInventoryPage />} />
-        <Route path="/admin/bai-viet" element={<AdminArticlesPage />} />
-        <Route path="/admin/danh-gia" element={<AdminReviewsPage />} />
-        <Route path="/admin/bao-cao" element={<AdminReportsPage />} />
-        <Route path="/admin/cai-dat" element={<AdminSettingsPage />} />
+        <Route path="/admin" element={<AdminGuard><AdminDashboardPage /></AdminGuard>} />
+        <Route path="/admin/dashboard" element={<AdminGuard><AdminDashboardPage /></AdminGuard>} />
+        <Route path="/admin/san-pham" element={<AdminGuard><AdminProductsPage /></AdminGuard>} />
+        <Route path="/admin/danh-muc" element={<AdminGuard><AdminCategoriesPage /></AdminGuard>} />
+        <Route path="/admin/tai-khoan" element={<AdminGuard><AdminAccountsPage /></AdminGuard>} />
+        <Route path="/admin/khuyen-mai" element={<AdminGuard><AdminPromotionsPage /></AdminGuard>} />
+        <Route path="/admin/don-hang" element={<AdminGuard><AdminOrdersPage /></AdminGuard>} />
+        <Route path="/admin/kho" element={<AdminGuard><AdminInventoryPage /></AdminGuard>} />
+        <Route path="/admin/bai-viet" element={<AdminGuard><AdminArticlesPage /></AdminGuard>} />
+        <Route path="/admin/danh-gia" element={<AdminGuard><AdminReviewsPage /></AdminGuard>} />
+        <Route path="/admin/bao-cao" element={<AdminGuard><AdminReportsPage /></AdminGuard>} />
+        <Route path="/admin/cai-dat" element={<AdminGuard><AdminSettingsPage /></AdminGuard>} />
         <Route path="/404" element={<NotFoundPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

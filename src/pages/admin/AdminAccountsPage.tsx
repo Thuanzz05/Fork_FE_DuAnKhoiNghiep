@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
 import Pagination from '../../components/Pagination'
-import { getRegisteredUsers, type AuthUser } from '../../utils/auth'
-import { getOrders } from '../../utils/orders'
 import { formatPrice } from '../../data/products'
 import { usePagination } from '../../hooks/usePagination'
+import { api } from '../../services/api'
 import './AdminAccountsPage.css'
 
 type AccountRole = 'admin' | 'staff' | 'customer'
@@ -49,17 +48,6 @@ const statusMeta: Record<AccountStatus, { label: string }> = {
   locked: { label: 'Đã khóa' },
 }
 
-const seedAccounts: ManagedAccount[] = [
-  { id: 'admin-001', firstName: 'Trị viên', lastName: 'Quản', email: 'admin@rubeanora.vn', phone: '0986126955', addressCount: 0, role: 'admin', status: 'active', orderCount: 0, totalSpent: 0, joinedAt: '2026-01-08T08:00:00.000Z', lastActive: 'Vừa xong' },
-  { id: 'user-quang-demo', firstName: 'Quang', lastName: 'Lê Văn', email: 'quang@gmail.com', phone: '0987654321', addressCount: 1, role: 'customer', status: 'active', orderCount: 3, totalSpent: 1340000, joinedAt: '2026-06-18T09:15:00.000Z', lastActive: '12 phút trước' },
-  { id: 'staff-001', firstName: 'Hương', lastName: 'Nguyễn Thu', email: 'huong@rubeanora.vn', phone: '0974286315', addressCount: 0, role: 'staff', status: 'active', orderCount: 0, totalSpent: 0, joinedAt: '2026-03-12T03:20:00.000Z', lastActive: '1 giờ trước' },
-  { id: 'customer-001', firstName: 'Anh', lastName: 'Nguyễn Minh', email: 'minhanh@gmail.com', phone: '0912456780', addressCount: 2, role: 'customer', status: 'active', orderCount: 8, totalSpent: 3280000, joinedAt: '2026-07-10T02:40:00.000Z', lastActive: 'Hôm nay, 14:35' },
-  { id: 'customer-002', firstName: 'Trang', lastName: 'Lê Thu', email: 'thutrang@gmail.com', phone: '0386921754', addressCount: 1, role: 'customer', status: 'active', orderCount: 5, totalSpent: 2150000, joinedAt: '2026-07-04T10:05:00.000Z', lastActive: 'Hôm qua, 20:18' },
-  { id: 'customer-003', firstName: 'Bảo', lastName: 'Phạm Quốc', email: 'quocbao@gmail.com', phone: '0963847120', addressCount: 1, role: 'customer', status: 'locked', orderCount: 2, totalSpent: 700000, joinedAt: '2026-05-22T07:50:00.000Z', lastActive: '05/07/2026' },
-  { id: 'customer-004', firstName: 'Hà', lastName: 'Vũ Ngọc', email: 'ngocha@gmail.com', phone: '0325678419', addressCount: 3, role: 'customer', status: 'active', orderCount: 11, totalSpent: 4960000, joinedAt: '2026-04-16T13:25:00.000Z', lastActive: 'Hôm nay, 09:42' },
-  { id: 'customer-005', firstName: 'Huy', lastName: 'Trần Quang', email: 'quanghuy@gmail.com', phone: '0903147258', addressCount: 1, role: 'customer', status: 'active', orderCount: 4, totalSpent: 1810000, joinedAt: '2026-07-12T04:12:00.000Z', lastActive: 'Hôm nay, 13:10' },
-]
-
 const emptyForm: AccountFormState = {
   firstName: '',
   lastName: '',
@@ -79,58 +67,42 @@ const getInitials = (account: Pick<ManagedAccount, 'firstName' | 'lastName' | 'e
   return `${words[0].charAt(0)}${words.at(-1)?.charAt(0) ?? ''}`.toLocaleUpperCase('vi-VN')
 }
 
-const getJoinedAtFromUser = (user: AuthUser) => {
-  const timestamp = Number(user.id.match(/\d{12,}/)?.[0])
-  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : '2026-06-01T08:00:00.000Z'
-}
-
-const buildInitialAccounts = (): ManagedAccount[] => {
-  const accounts = seedAccounts.map((account) => ({ ...account }))
-  const orders = getOrders()
-
-  getRegisteredUsers().forEach((user) => {
-    const userOrders = orders.filter((order) => order.userId === user.id)
-    const orderCount = userOrders.length
-    const totalSpent = userOrders.reduce((total, order) => total + order.totalPayment, 0)
-    const existingIndex = accounts.findIndex((account) => account.email.toLocaleLowerCase('vi-VN') === user.email.toLocaleLowerCase('vi-VN'))
-
-    if (existingIndex >= 0) {
-      accounts[existingIndex] = {
-        ...accounts[existingIndex],
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        phone: user.phone,
-        avatar: user.avatar,
-        addressCount: user.addresses.length,
-        orderCount: orderCount || accounts[existingIndex].orderCount,
-        totalSpent: totalSpent || accounts[existingIndex].totalSpent,
-      }
-      return
-    }
-
-    accounts.push({
-      id: user.id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      phone: user.phone,
-      avatar: user.avatar,
-      addressCount: user.addresses.length,
-      role: 'customer',
-      status: 'active',
-      orderCount,
-      totalSpent,
-      joinedAt: getJoinedAtFromUser(user),
-      lastActive: 'Gần đây',
-    })
-  })
-
-  return accounts
-}
-
 function AdminAccountsPage() {
-  const [accounts, setAccounts] = useState<ManagedAccount[]>(buildInitialAccounts)
+  const [accounts, setAccounts] = useState<ManagedAccount[]>([])
+
+  const loadAccounts = async () => {
+    try {
+      type AdminUserRow = {
+        id: string; fullName: string; email: string; phone?: string; avatar?: string
+        role: 'ADMIN' | 'KHACH_HANG'; status: 'HOAT_DONG' | 'BI_KHOA'
+        orderCount: number; spending: number; createdAt: string
+      }
+      type AdminUsersResponse = {
+        items: AdminUserRow[]
+        pagination: { totalPages: number }
+      }
+      const firstPage = await api.get<AdminUsersResponse>('/admin/users?page=1&limit=100')
+      const otherPages = await Promise.all(Array.from(
+        { length: Math.max(firstPage.pagination.totalPages - 1, 0) },
+        (_, index) => api.get<AdminUsersResponse>(`/admin/users?page=${index + 2}&limit=100`),
+      ))
+      const items = [firstPage, ...otherPages].flatMap((page) => page.items)
+      setAccounts(items.map((item) => {
+        const names = item.fullName.trim().split(/\s+/)
+        return {
+          id: item.id, firstName: names.pop() || '', lastName: names.join(' '), email: item.email,
+          phone: item.phone || '', avatar: item.avatar, addressCount: 0,
+          role: item.role === 'ADMIN' ? 'admin' : 'customer',
+          status: item.status === 'HOAT_DONG' ? 'active' : 'locked',
+          orderCount: item.orderCount, totalSpent: item.spending, joinedAt: item.createdAt, lastActive: 'Gần đây',
+        }
+      }))
+    } catch {
+      setAccounts([])
+    }
+  }
+
+  useEffect(() => { void loadAccounts() }, [])
   const [searchValue, setSearchValue] = useState('')
   const [roleFilter, setRoleFilter] = useState<'all' | AccountRole>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | AccountStatus>('all')
@@ -215,7 +187,7 @@ function AdminAccountsPage() {
     setForm((current) => ({ ...current, [field]: value }))
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const normalizedEmail = form.email.trim().toLocaleLowerCase('vi-VN')
     const duplicatedEmail = accounts.some((account) => account.email.toLocaleLowerCase('vi-VN') === normalizedEmail && account.id !== editingAccount?.id)
@@ -225,52 +197,38 @@ function AdminAccountsPage() {
       return
     }
 
-    if (editingAccount) {
-      setAccounts((current) => current.map((account) => account.id === editingAccount.id ? {
-        ...account,
-        firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
-        email: normalizedEmail,
-        phone: form.phone.trim(),
-        role: form.role,
-        status: form.status,
-        avatar: form.avatar.trim() || undefined,
-      } : account))
-      setNotice({ text: 'Đã cập nhật thông tin tài khoản', type: 'success' })
-    } else {
-      const newAccount: ManagedAccount = {
-        id: `user-${Date.now()}`,
-        firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
-        email: normalizedEmail,
-        phone: form.phone.trim(),
-        avatar: form.avatar.trim() || undefined,
-        addressCount: 0,
-        role: form.role,
-        status: form.status,
-        orderCount: 0,
-        totalSpent: 0,
-        joinedAt: new Date().toISOString(),
-        lastActive: 'Chưa đăng nhập',
-      }
-      setAccounts((current) => [newAccount, ...current])
-      setNotice({ text: 'Đã tạo tài khoản mới', type: 'success' })
+    if (!editingAccount) {
+      setNotice({ text: 'Backend hiện chưa hỗ trợ admin tạo tài khoản trực tiếp', type: 'error' })
+      return
     }
-
-    setIsFormOpen(false)
+    try {
+      await api.patch(`/admin/users/${editingAccount.id}`, {
+        role: form.role === 'admin' ? 'ADMIN' : 'KHACH_HANG',
+        status: form.status === 'active' ? 'HOAT_DONG' : 'BI_KHOA',
+      })
+      await loadAccounts()
+      setNotice({ text: 'Đã cập nhật quyền và trạng thái tài khoản', type: 'success' })
+      setIsFormOpen(false)
+    } catch (error) {
+      setNotice({ text: error instanceof Error ? error.message : 'Không thể cập nhật tài khoản', type: 'error' })
+    }
   }
 
-  const toggleAccountStatus = (account: ManagedAccount) => {
+  const toggleAccountStatus = async (account: ManagedAccount) => {
     if (account.role === 'admin') return
     const nextStatus: AccountStatus = account.status === 'active' ? 'locked' : 'active'
-    setAccounts((current) => current.map((item) => item.id === account.id ? { ...item, status: nextStatus } : item))
-    setNotice({ text: nextStatus === 'locked' ? `Đã khóa tài khoản ${getFullName(account)}` : `Đã mở khóa tài khoản ${getFullName(account)}`, type: 'success' })
+    try {
+      await api.patch(`/admin/users/${account.id}`, { status: nextStatus === 'locked' ? 'BI_KHOA' : 'HOAT_DONG' })
+      await loadAccounts()
+      setNotice({ text: nextStatus === 'locked' ? `Đã khóa tài khoản ${getFullName(account)}` : `Đã mở khóa tài khoản ${getFullName(account)}`, type: 'success' })
+    } catch (error) {
+      setNotice({ text: error instanceof Error ? error.message : 'Không thể cập nhật tài khoản', type: 'error' })
+    }
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deletingAccount || deletingAccount.role === 'admin') return
-    setAccounts((current) => current.filter((account) => account.id !== deletingAccount.id))
-    setNotice({ text: `Đã xóa tài khoản ${getFullName(deletingAccount)}`, type: 'success' })
+    await toggleAccountStatus(deletingAccount)
     setDeletingAccount(null)
   }
 

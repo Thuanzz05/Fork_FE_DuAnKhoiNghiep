@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { categories } from '../data/products'
-import { getCartCount, getCartItems } from '../utils/cart'
-import { getWishlistIds } from '../utils/wishlist'
+import { useCatalog } from '../hooks/useCatalog'
+import { getCartCount, getCartItems, syncCartFromApi } from '../utils/cart'
+import { getWishlistIds, syncWishlistFromApi } from '../utils/wishlist'
 import { getCurrentUser, getUserDisplayName, getUserInitial, logoutDemo } from '../utils/auth'
 import { useStoreSettings } from '../utils/storeSettings'
 import './Header.css'
@@ -16,6 +16,7 @@ const menuItems = [
 ]
 
 function Header() {
+  const { categories } = useCatalog()
   const location = useLocation()
   const navigate = useNavigate()
   const storeSettings = useStoreSettings()
@@ -28,6 +29,10 @@ function Header() {
 
   useEffect(() => {
     const syncAuth = () => setAuthUser(getCurrentUser())
+    if (getCurrentUser()) {
+      void syncCartFromApi().catch(() => undefined)
+      void syncWishlistFromApi().catch(() => undefined)
+    }
     window.addEventListener('storage', syncAuth)
     window.addEventListener('auth-updated', syncAuth)
     return () => {

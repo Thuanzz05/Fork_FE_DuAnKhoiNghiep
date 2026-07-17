@@ -7,6 +7,7 @@ import {
   saveStoreSettings,
   type StoreSettings,
 } from '../../utils/storeSettings'
+import { api } from '../../services/api'
 import './AdminSettingsPage.css'
 
 type SettingsSection = 'general' | 'contact' | 'sales' | 'notifications' | 'social'
@@ -42,6 +43,25 @@ function AdminSettingsPage() {
   const isDirty = JSON.stringify(settings) !== JSON.stringify(savedSettings)
 
   useEffect(() => {
+    api.get<{
+      storeName: string; logoUrl?: string; description?: string; hotline?: string; email?: string
+      address?: string; workingHours?: string; shippingFee: number; freeShippingThreshold: number
+      facebookUrl?: string; instagramUrl?: string; tiktokUrl?: string
+    }>('/admin/settings').then((data) => {
+      const next = {
+        ...getStoreSettings(), storeName: data.storeName, logo: data.logoUrl || '',
+        storeDescription: data.description || '', hotline: data.hotline || '',
+        contactEmail: data.email || '', address: data.address || '', businessHours: data.workingHours || '',
+        standardShippingFee: data.shippingFee, freeShippingThreshold: data.freeShippingThreshold,
+        facebookUrl: data.facebookUrl || '', instagramUrl: data.instagramUrl || '', tiktokUrl: data.tiktokUrl || '',
+      }
+      setSettings(next)
+      setSavedSettings(next)
+      saveStoreSettings(next)
+    }).catch(() => undefined)
+  }, [])
+
+  useEffect(() => {
     if (!notice) return
     const timer = window.setTimeout(() => setNotice(null), 2800)
     return () => window.clearTimeout(timer)
@@ -73,7 +93,7 @@ function AdminSettingsPage() {
     reader.readAsDataURL(file)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!settings.storeName.trim() || !settings.hotline.trim() || !settings.contactEmail.trim()) {
       setNotice({ message: 'Vui lòng nhập tên cửa hàng, hotline và email liên hệ', type: 'error' })
       return
@@ -100,10 +120,24 @@ function AdminSettingsPage() {
       standardShippingFee: Math.max(0, Number(settings.standardShippingFee) || 0),
       freeShippingThreshold: Math.max(0, Number(settings.freeShippingThreshold) || 0),
     }
-    saveStoreSettings(normalizedSettings)
-    setSettings(normalizedSettings)
-    setSavedSettings(normalizedSettings)
-    setNotice({ message: 'Đã lưu và đồng bộ cài đặt cửa hàng', type: 'success' })
+    try {
+      await api.put('/admin/settings', {
+        storeName: normalizedSettings.storeName, logoUrl: normalizedSettings.logo,
+        description: normalizedSettings.storeDescription, hotline: normalizedSettings.hotline,
+        email: normalizedSettings.contactEmail, address: normalizedSettings.address,
+        workingHours: normalizedSettings.businessHours,
+        shippingFee: normalizedSettings.standardShippingFee,
+        freeShippingThreshold: normalizedSettings.freeShippingThreshold,
+        facebookUrl: normalizedSettings.facebookUrl, instagramUrl: normalizedSettings.instagramUrl,
+        tiktokUrl: normalizedSettings.tiktokUrl,
+      })
+      saveStoreSettings(normalizedSettings)
+      setSettings(normalizedSettings)
+      setSavedSettings(normalizedSettings)
+      setNotice({ message: 'Đã lưu và đồng bộ cài đặt cửa hàng', type: 'success' })
+    } catch (error) {
+      setNotice({ message: error instanceof Error ? error.message : 'Không thể lưu cài đặt', type: 'error' })
+    }
   }
 
   const handleReset = () => {

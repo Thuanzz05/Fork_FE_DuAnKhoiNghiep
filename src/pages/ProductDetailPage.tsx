@@ -1,20 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import { formatPrice, products } from '../data/products'
-import { productGalleries } from '../data/productGalleries'
+import { formatPrice } from '../data/products'
+import { useCatalog, type CatalogPromotion } from '../hooks/useCatalog'
+import { api } from '../services/api'
 import { addCartItem } from '../utils/cart'
-import { getProductReviews, type ProductReview } from '../utils/reviews'
+import type { ProductReview } from '../utils/reviews'
 import { useStoreSettings } from '../utils/storeSettings'
 import { getWishlistIds, toggleWishlistId } from '../utils/wishlist'
 import './ProductDetailPage.css'
 
 type DetailTab = 'details' | 'brand' | 'returns'
-
-const detailVouchers = [
-  { code: 'REDBEAN', description: 'Giảm 10% cho đơn hàng đầu tiên', condition: 'Áp dụng cho khách hàng mua lần đầu với đơn hàng từ 200.000đ.' },
-  { code: 'FREESHIP', description: 'Miễn phí vận chuyển đơn từ 300K', condition: 'Áp dụng phí vận chuyển toàn quốc cho đơn hàng có giá trị từ 300.000đ.' },
-  { code: 'SKINCARE', description: 'Tặng mẫu thử khi mua từ 250K', condition: 'Quà tặng được gửi kèm đơn hàng từ 250.000đ trong thời gian chương trình còn hiệu lực.' },
-]
 
 const getReviewerInitials = (name: string) => name
   .trim()
@@ -39,6 +34,7 @@ function ReviewStars({ rating }: { rating: number }) {
 }
 
 function ProductDetailPage() {
+  const { products, loading } = useCatalog()
   const { slug } = useParams()
   const navigate = useNavigate()
   const product = products.find((item) => item.slug === slug)
@@ -47,14 +43,15 @@ function ProductDetailPage() {
   const [activeTab, setActiveTab] = useState<DetailTab>('details')
   const [wishlistIds, setWishlistIds] = useState(() => getWishlistIds())
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
-  const [selectedVoucher, setSelectedVoucher] = useState<(typeof detailVouchers)[number] | null>(null)
+  const [selectedVoucher, setSelectedVoucher] = useState<CatalogPromotion | null>(null)
+  const [detailPromotions, setDetailPromotions] = useState<CatalogPromotion[]>([])
   const [wishlistToastOpen, setWishlistToastOpen] = useState(false)
   const [productReviews, setProductReviews] = useState<ProductReview[]>([])
   const storeSettings = useStoreSettings()
 
   useEffect(() => {
     if (!product) return
-    setActiveImage(productGalleries[product.id]?.[0] || product.image)
+    setActiveImage(product.gallery?.[0] || product.image)
     setQuantity(1)
     setActiveTab('details')
   }, [product])
@@ -74,25 +71,23 @@ function ProductDetailPage() {
   useEffect(() => {
     if (!product) return
 
-    const loadReviews = () => {
-      const approvedReviews = getProductReviews(product.id)
-        .filter((review) => review.status === 'approved')
-        .sort((first, second) => new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime())
-      setProductReviews(approvedReviews)
-    }
-
-    loadReviews()
-    window.addEventListener('storage', loadReviews)
-    window.addEventListener('reviews-updated', loadReviews)
-    return () => {
-      window.removeEventListener('storage', loadReviews)
-      window.removeEventListener('reviews-updated', loadReviews)
-    }
+    api.get<{ reviews: Array<Omit<ProductReview, 'orderId'>>; promotions: CatalogPromotion[] }>(`/products/${product.slug}`)
+      .then((data) => {
+        setProductReviews(data.reviews.map((review) => ({ ...review, orderId: '' })))
+        setDetailPromotions(data.promotions)
+      })
+      .catch(() => {
+        setProductReviews([])
+        setDetailPromotions([])
+      })
   }, [product])
 
+  if (loading) return null
   if (!product) return <Navigate to="/404" replace />
 
-  const gallery = productGalleries[product.id] || [product.image]
+  const gallery = ('gallery' in product && Array.isArray(product.gallery) && product.gallery.length)
+    ? product.gallery
+    : [product.image]
   const isFavorite = wishlistIds.includes(product.id)
   const similarProducts = products.filter((item) => item.id !== product.id).slice(0, 4)
   const savedAmount = product.originalPrice ? product.originalPrice - product.price : 0
@@ -254,7 +249,7 @@ function ProductDetailPage() {
 
         <aside className="detail-vouchers" aria-label="Mã ưu đãi">
           <h2>Ưu đãi dành cho bạn</h2>
-          {detailVouchers.map((voucher) => (
+          {detailPromotions.map((voucher) => (
             <article className="detail-voucher-card" key={voucher.code}>
               <strong>NHẬP MÃ: {voucher.code}</strong>
               <p>{voucher.description}</p>
@@ -410,7 +405,7 @@ function ProductDetailPage() {
           <div className="detail-voucher-modal" role="dialog" aria-modal="true" aria-labelledby="detail-voucher-title" onClick={(event) => event.stopPropagation()}>
             <button className="detail-voucher-close" type="button" aria-label="Đóng" onClick={() => setSelectedVoucher(null)}>×</button>
             <h2 id="detail-voucher-title">NHẬP MÃ: {selectedVoucher.code}</h2>
-            <p>{selectedVoucher.condition}</p>
+            <p>{selectedVoucher.conditions.join(' ')}</p>
             <button className="detail-voucher-copy" type="button" onClick={() => void copyVoucher(selectedVoucher.code)}>{copiedCode === selectedVoucher.code ? 'Đã sao chép' : 'Sao chép mã'}</button>
           </div>
         </div>

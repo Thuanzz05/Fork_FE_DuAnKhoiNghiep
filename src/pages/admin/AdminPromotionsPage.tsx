@@ -3,6 +3,7 @@ import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
 import Pagination from '../../components/Pagination'
 import { formatPrice } from '../../data/products'
 import { usePagination } from '../../hooks/usePagination'
+import { api } from '../../services/api'
 import './AdminPromotionsPage.css'
 
 type PromotionType = 'percentage' | 'fixed' | 'shipping' | 'gift'
@@ -53,15 +54,7 @@ const promotionStatuses: Record<PromotionStatus, { label: string }> = {
   disabled: { label: 'Đã tắt' },
 }
 
-const initialPromotions: Promotion[] = [
-  { id: 'promotion-001', code: 'REDBEAN', name: 'Ưu đãi khách hàng mới', description: 'Áp dụng cho khách hàng mua lần đầu với đơn hàng từ 200.000đ.', type: 'percentage', value: 10, minimumOrder: 200000, maximumDiscount: 100000, usageLimit: 500, usedCount: 186, startDate: '2026-07-01', endDate: '2026-12-31', enabled: true },
-  { id: 'promotion-002', code: 'COMBO20', name: 'Ưu đãi Combo 3 món', description: 'Giảm 20% cho combo chăm sóc da đậu đỏ 3 món.', type: 'percentage', value: 20, minimumOrder: 400000, maximumDiscount: 150000, usageLimit: 250, usedCount: 92, startDate: '2026-07-01', endDate: '2026-08-31', enabled: true },
-  { id: 'promotion-003', code: 'FREESHIP', name: 'Miễn phí giao hàng toàn quốc', description: 'Miễn phí vận chuyển cho đơn hàng có giá trị từ 300.000đ.', type: 'shipping', value: 30000, minimumOrder: 300000, usageLimit: 800, usedCount: 347, startDate: '2026-01-01', endDate: '2026-12-31', enabled: true },
-  { id: 'promotion-004', code: 'SKINCARE', name: 'Tặng mẫu thử chăm sóc da', description: 'Tặng mẫu thử đậu đỏ khi đơn hàng đạt từ 250.000đ.', type: 'gift', value: 0, minimumOrder: 250000, usageLimit: 300, usedCount: 0, startDate: '2026-07-15', endDate: '2026-09-30', enabled: true },
-  { id: 'promotion-005', code: 'REDBEAN50', name: 'Giảm 50K đơn hàng đầu tiên', description: 'Giảm trực tiếp 50.000đ cho đơn hàng từ 200.000đ.', type: 'fixed', value: 50000, minimumOrder: 200000, usageLimit: 400, usedCount: 128, startDate: '2026-06-01', endDate: '2026-09-30', enabled: true },
-  { id: 'promotion-006', code: 'WELCOME15', name: 'Chào hè cùng Red Bean Beauty', description: 'Giảm 15% cho toàn bộ sản phẩm trong chương trình chào hè.', type: 'percentage', value: 15, minimumOrder: 250000, maximumDiscount: 120000, usageLimit: 200, usedCount: 200, startDate: '2026-05-01', endDate: '2026-06-30', enabled: true },
-  { id: 'promotion-007', code: 'MEMBER10', name: 'Ưu đãi thành viên thân thiết', description: 'Mã thử nghiệm dành cho khách hàng thành viên.', type: 'percentage', value: 10, minimumOrder: 300000, maximumDiscount: 80000, usageLimit: 300, usedCount: 46, startDate: '2026-07-01', endDate: '2026-12-31', enabled: false },
-]
+const emptyPromotions: Promotion[] = []
 
 const today = new Date().toISOString().slice(0, 10)
 
@@ -97,7 +90,7 @@ const formatPromotionValue = (promotion: Pick<Promotion, 'type' | 'value'>) => {
 const formatDate = (date: string) => new Date(`${date}T00:00:00`).toLocaleDateString('vi-VN')
 
 function AdminPromotionsPage() {
-  const [promotions, setPromotions] = useState<Promotion[]>(initialPromotions)
+  const [promotions, setPromotions] = useState<Promotion[]>(emptyPromotions)
   const [searchValue, setSearchValue] = useState('')
   const [typeFilter, setTypeFilter] = useState<'all' | PromotionType>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | PromotionStatus>('all')
@@ -107,6 +100,25 @@ function AdminPromotionsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [form, setForm] = useState<PromotionFormState>(emptyForm)
   const [notice, setNotice] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
+
+  const loadPromotions = async () => {
+    try {
+      const rows = await api.get<Array<Record<string, any>>>('/admin/promotions')
+      setPromotions(rows.map((item) => ({
+        id: String(item.id), code: String(item.code), name: String(item.name), description: String(item.description || ''),
+        type: item.type === 'PHAN_TRAM' ? 'percentage' : item.type === 'MIEN_PHI_VAN_CHUYEN' ? 'shipping' : 'fixed',
+        value: Number(item.value), minimumOrder: Number(item.minimumOrder),
+        maximumDiscount: item.maximumDiscount == null ? undefined : Number(item.maximumDiscount),
+        usageLimit: Number(item.maximumUses || 0), usedCount: Number(item.usedCount || 0),
+        startDate: String(item.startsAt).slice(0, 10), endDate: String(item.endsAt).slice(0, 10),
+        enabled: item.status === 'HOAT_DONG',
+      })))
+    } catch {
+      setPromotions([])
+    }
+  }
+
+  useEffect(() => { void loadPromotions() }, [])
 
   useEffect(() => {
     if (!notice) return
@@ -187,7 +199,7 @@ function AdminPromotionsPage() {
     setForm((current) => ({ ...current, [field]: value }))
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const normalizedCode = form.code.trim().toLocaleUpperCase('vi-VN')
     const duplicateCode = promotions.some((promotion) => promotion.code === normalizedCode && promotion.id !== editingPromotion?.id)
@@ -216,27 +228,46 @@ function AdminPromotionsPage() {
       enabled: form.enabled,
     }
 
-    if (editingPromotion) {
-      setPromotions((current) => current.map((promotion) => promotion.id === editingPromotion.id ? { ...promotion, ...promotionData } : promotion))
-      setNotice({ text: `Đã cập nhật mã ${normalizedCode}`, type: 'success' })
-    } else {
-      setPromotions((current) => [{ id: `promotion-${Date.now()}`, usedCount: 0, ...promotionData }, ...current])
-      setNotice({ text: `Đã tạo mã ${normalizedCode}`, type: 'success' })
+    try {
+      const payload = {
+        code: promotionData.code, name: promotionData.name, description: promotionData.description,
+        type: promotionData.type === 'percentage' ? 'PHAN_TRAM' : promotionData.type === 'shipping' ? 'MIEN_PHI_VAN_CHUYEN' : 'SO_TIEN',
+        value: promotionData.value, minimumOrder: promotionData.minimumOrder,
+        maximumDiscount: promotionData.maximumDiscount, maximumUses: promotionData.usageLimit || null,
+        startsAt: `${promotionData.startDate} 00:00:00`, endsAt: `${promotionData.endDate} 23:59:59`,
+        status: promotionData.enabled ? 'HOAT_DONG' : 'TAM_DUNG', productIds: [],
+      }
+      if (editingPromotion) await api.put(`/admin/promotions/${editingPromotion.id}`, payload)
+      else await api.post('/admin/promotions', payload)
+      await loadPromotions()
+      setNotice({ text: editingPromotion ? `Đã cập nhật mã ${normalizedCode}` : `Đã tạo mã ${normalizedCode}`, type: 'success' })
+      setIsFormOpen(false)
+    } catch (error) {
+      setNotice({ text: error instanceof Error ? error.message : 'Không thể lưu khuyến mãi', type: 'error' })
     }
-    setIsFormOpen(false)
   }
 
-  const togglePromotion = (promotion: Promotion) => {
+  const togglePromotion = async (promotion: Promotion) => {
     const nextEnabled = !promotion.enabled
-    setPromotions((current) => current.map((item) => item.id === promotion.id ? { ...item, enabled: nextEnabled } : item))
-    setNotice({ text: `${nextEnabled ? 'Đã bật' : 'Đã tắt'} mã ${promotion.code}`, type: 'success' })
+    try {
+      await api.put(`/admin/promotions/${promotion.id}`, { status: nextEnabled ? 'HOAT_DONG' : 'TAM_DUNG' })
+      await loadPromotions()
+      setNotice({ text: `${nextEnabled ? 'Đã bật' : 'Đã tắt'} mã ${promotion.code}`, type: 'success' })
+    } catch (error) {
+      setNotice({ text: error instanceof Error ? error.message : 'Không thể cập nhật khuyến mãi', type: 'error' })
+    }
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deletingPromotion) return
-    setPromotions((current) => current.filter((promotion) => promotion.id !== deletingPromotion.id))
-    setNotice({ text: `Đã xóa mã ${deletingPromotion.code}`, type: 'success' })
-    setDeletingPromotion(null)
+    try {
+      await api.put(`/admin/promotions/${deletingPromotion.id}`, { status: 'HET_HAN' })
+      await loadPromotions()
+      setNotice({ text: `Đã kết thúc mã ${deletingPromotion.code}`, type: 'success' })
+      setDeletingPromotion(null)
+    } catch (error) {
+      setNotice({ text: error instanceof Error ? error.message : 'Không thể cập nhật khuyến mãi', type: 'error' })
+    }
   }
 
   return (

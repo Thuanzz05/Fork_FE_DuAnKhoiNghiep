@@ -1,68 +1,24 @@
 import './HomePage.css'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { addCartItem } from '../utils/cart'
 import { formatPrice } from '../data/products'
-import { newsArticles } from '../data/news'
-
-// Define the best-selling products list on the homepage
-const bestSellers = [
-  {
-    id: '2',
-    slug: 'sua-rua-mat-tao-bot-dau-do-150g',
-    name: 'Sữa rửa mặt tạo bọt đậu đỏ',
-    image: '/images/products/sua-rua-mat-tao-bot4.png',
-    price: 220000,
-    rating: 5,
-    ratingNum: '4.9',
-    reviews: 128,
-  },
-  {
-    id: '3',
-    slug: 'mat-na-tay-te-bao-chet-dau-do-150g',
-    name: 'Mặt nạ tẩy tế bào chết đậu đỏ 150g',
-    image: '/images/products/mat-na-tay-te-bao-chet4.png',
-    price: 250000,
-    rating: 5,
-    ratingNum: '4.9',
-    reviews: 98,
-  },
-  {
-    id: '4',
-    slug: 'toner-duong-da-dau-do',
-    name: 'Toner dưỡng da đậu đỏ',
-    image: '/images/products/toner-duong-da6.png',
-    price: 220000,
-    rating: 5,
-    ratingNum: '4.9',
-    reviews: 76,
-  },
-  {
-    id: '1',
-    slug: 'combo-cham-soc-da-toan-dien-dau-do-3-mon-150g',
-    name: 'Combo chăm sóc da toàn diện đậu đỏ',
-    subtitle: 'Combo 3 món 150g',
-    image: '/images/products/combo_ref1.png',
-    price: 480000,
-    originalPrice: 565000,
-    discountTag: 'TIẾT KIỆM 15%',
-    rating: 5,
-    ratingNum: '4.9',
-    reviews: 128,
-  },
-  {
-    id: '5',
-    slug: 'combo-duong-da-dau-do-mini',
-    name: 'Bộ combo dưỡng da đậu đỏ mini',
-    image: '/images/products/combo-duong-da-mini4.png',
-    price: 290000,
-    discountTag: 'TIỆN LỢI - DU LỊCH',
-    rating: 5,
-    ratingNum: '4.9',
-    reviews: 54,
-  },
-]
+import type { NewsArticle } from '../data/news'
+import { useCatalog } from '../hooks/useCatalog'
+import { api } from '../services/api'
 
 function HomePage() {
+  const { products } = useCatalog()
+  const [articles, setArticles] = useState<NewsArticle[]>([])
+  const bestSellers = products.slice(0, 5)
+  const featuredCombo = products.find((product) => product.isCombo)
+
+  useEffect(() => {
+    api.get<{ articles: NewsArticle[] }>('/news')
+      .then((data) => setArticles(data.articles))
+      .catch(() => setArticles([]))
+  }, [])
+
   const handleAddToCart = (productId: string) => {
     addCartItem(productId, 1)
   }
@@ -217,33 +173,35 @@ function HomePage() {
 
           <div className="featured-collection-layout">
             {/* Large card on the left */}
-            <div className="featured-large-card">
-              <span className="large-card-badge">TIẾT KIỆM 15%</span>
-              <div className="large-card-content">
-                <div className="large-card-image-box">
-                  <img src="/images/products/combo_ref1.png" alt="Combo chăm sóc da toàn diện đậu đỏ" />
-                </div>
-                <div className="large-card-info-box">
-                  <h3 className="large-card-title">Combo chăm sóc da toàn diện đậu đỏ</h3>
-                  <span className="large-card-subtitle">Combo 3 món 150g</span>
-                  <ul className="large-card-bullets">
-                    <li>Làm sạch sâu – Tẩy tế bào chết – Cấp ẩm & cân bằng da</li>
-                  </ul>
-                  <div className="large-card-pricing">
-                    <span className="price-red">480.000đ</span>
-                    <span className="price-strike">565.000đ</span>
+            {featuredCombo ? (
+              <div className="featured-large-card">
+                {featuredCombo.discount ? <span className="large-card-badge">TIẾT KIỆM {featuredCombo.discount}%</span> : null}
+                <div className="large-card-content">
+                  <div className="large-card-image-box">
+                    <img src={featuredCombo.image} alt={featuredCombo.name} />
                   </div>
-                  <button
-                    type="button"
-                    className="large-card-btn-add"
-                    onClick={() => handleAddToCart('1')}
-                    aria-label="Thêm combo vào giỏ hàng"
-                  >
-                    +
-                  </button>
+                  <div className="large-card-info-box">
+                    <h3 className="large-card-title">{featuredCombo.name}</h3>
+                    {featuredCombo.weight ? <span className="large-card-subtitle">{featuredCombo.weight}</span> : null}
+                    {featuredCombo.description ? <ul className="large-card-bullets"><li>{featuredCombo.description}</li></ul> : null}
+                    <div className="large-card-pricing">
+                      <span className="price-red">{formatPrice(featuredCombo.price)}</span>
+                      {featuredCombo.originalPrice ? <span className="price-strike">{formatPrice(featuredCombo.originalPrice)}</span> : null}
+                    </div>
+                    <button
+                      type="button"
+                      className="large-card-btn-add"
+                      onClick={() => handleAddToCart(featuredCombo.id)}
+                      aria-label={`Thêm ${featuredCombo.name} vào giỏ hàng`}
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="featured-large-card">Chưa có sản phẩm combo.</div>
+            )}
 
             {/* Three smaller columns on the right */}
             <div className="featured-side-columns">
@@ -305,9 +263,7 @@ function HomePage() {
           <div className="best-sellers-grid-5">
             {bestSellers.map((item) => (
               <article className="best-seller-card-new" key={item.id}>
-                {item.discountTag && (
-                  <span className="card-badge-discount">{item.discountTag}</span>
-                )}
+                {item.discount ? <span className="card-badge-discount">TIẾT KIỆM {item.discount}%</span> : null}
 
                 <div className="card-image-wrapper-new">
                   <Link to={`/san-pham/${item.slug}`}>
@@ -320,20 +276,7 @@ function HomePage() {
                     <h3 className="card-title-text-new">{item.name}</h3>
                   </Link>
 
-                  {item.subtitle && (
-                    <span className="card-subtitle-text-new">{item.subtitle}</span>
-                  )}
-
-                  <div className="card-rating-new">
-                    <div className="rating-stars-new" aria-label="5 out of 5 stars">
-                      {Array.from({ length: item.rating }).map((_, i) => (
-                        <svg className="star-icon-new" viewBox="0 0 24 24" fill="currentColor" key={i}>
-                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                        </svg>
-                      ))}
-                    </div>
-                    <span className="rating-reviews-new">{item.ratingNum} ({item.reviews})</span>
-                  </div>
+                  {item.weight ? <span className="card-subtitle-text-new">{item.weight}</span> : null}
 
                   <div className="card-pricing-row-new">
                     <div className="price-container-new">
@@ -358,6 +301,7 @@ function HomePage() {
                 </div>
               </article>
             ))}
+            {bestSellers.length === 0 ? <p>Chưa có sản phẩm.</p> : null}
           </div>
         </div>
       </section>
@@ -587,7 +531,7 @@ function HomePage() {
           </div>
 
           <div className="news-grid-4">
-            {newsArticles.slice(0, 4).map((article) => (
+            {articles.slice(0, 4).map((article) => (
               <article className="news-card" key={article.id}>
                 <div className="news-card-image-box">
                   <Link to={`/tin-tuc/${article.id}`} aria-label={article.title}>
@@ -611,6 +555,7 @@ function HomePage() {
                 </div>
               </article>
             ))}
+            {articles.length === 0 ? <p>Chưa có bài viết.</p> : null}
           </div>
         </div>
       </section>

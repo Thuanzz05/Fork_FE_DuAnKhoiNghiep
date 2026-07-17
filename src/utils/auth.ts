@@ -1,4 +1,4 @@
-import { seedMockOrders } from './orders'
+import { api, setAccessToken } from '../services/api'
 
 export type CustomerAddress = {
   id: string
@@ -19,6 +19,7 @@ export type AuthUser = {
   lastName: string
   phone: string
   avatar?: string
+  role?: 'ADMIN' | 'KHACH_HANG'
   addresses: CustomerAddress[]
 }
 
@@ -52,42 +53,6 @@ const getStoredAccounts = (): Record<string, AuthSession> => {
   }
 }
 
-const seedQuangUser = () => {
-  if (typeof window === 'undefined') return
-  try {
-    const accounts = getStoredAccounts()
-    const email = 'quang@gmail.com'
-    if (!accounts[email]) {
-      const user: AuthUser = {
-        id: 'user-quang-demo',
-        email,
-        firstName: 'Quang',
-        lastName: 'Lê Văn',
-        phone: '0987654321',
-        addresses: [
-          {
-            id: 'address-quang-default',
-            recipientName: 'Lê Văn Quang',
-            phone: '0987654321',
-            provinceCode: '79',
-            provinceName: 'Thành phố Hồ Chí Minh',
-            wardCode: '26734',
-            wardName: 'Phường Bến Thành',
-            detail: 'Số 15, Đường Trần Hưng Đạo',
-            isDefault: true,
-          },
-        ],
-      }
-      accounts[email] = { user, password: '123456' }
-      localStorage.setItem(AUTH_USERS_KEY, JSON.stringify(accounts))
-    }
-  } catch (e) {
-    console.error('Error seeding demo user:', e)
-  }
-}
-
-// Chạy gieo hạt ngay khi load file
-seedQuangUser()
 
 export const getCurrentUser = () => getAuthSession()?.user ?? null
 
@@ -105,46 +70,25 @@ const saveSession = (session: AuthSession | null) => {
   dispatchAuthUpdated(session)
 }
 
-const nameFromEmail = (email: string) => {
-  const rawName = email.split('@')[0].replace(/[._-]+/g, ' ').trim()
-  const words = rawName.split(' ').filter(Boolean)
-  const firstName = words.map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') || 'Khách hàng'
-  return { firstName, lastName: '' }
+export const loginDemo = async (email: string, password: string) => {
+  const result = await api.post<{ token: string; user: AuthUser }>('/auth/login', { email, password })
+  setAccessToken(result.token)
+  saveSession({ user: result.user, password: '' })
+  return result.user
 }
 
-export const loginDemo = (email: string, password: string) => {
-  const normalizedEmail = email.trim().toLowerCase()
-  const existingAccount = getStoredAccounts()[normalizedEmail]
-  const existingUser = existingAccount?.user ?? null
-  const generatedName = nameFromEmail(normalizedEmail)
-
-  const user: AuthUser = existingUser ?? {
-    id: `user-${Date.now()}`,
-    email: normalizedEmail,
-    firstName: generatedName.firstName,
-    lastName: generatedName.lastName,
-    phone: '',
-    addresses: [],
-  }
-
-  // Tự động gieo hạt đơn hàng mẫu nếu đây là tài khoản quang@gmail.com
-  if (normalizedEmail === 'quang@gmail.com') {
-    seedMockOrders(user.id)
-  }
-
-  saveSession({ user, password: existingAccount?.password || password })
-  return user
+export const registerDemo = async (data: Omit<AuthUser, 'id' | 'addresses' | 'role'>, password: string) => {
+  const result = await api.post<{ token: string; user: AuthUser }>('/auth/register', { ...data, password })
+  setAccessToken(result.token)
+  saveSession({ user: result.user, password: '' })
+  return result.user
 }
 
-export const registerDemo = (data: Omit<AuthUser, 'id' | 'addresses'>, password: string) => {
-  const user: AuthUser = {
-    ...data,
-    id: `user-${Date.now()}`,
-    email: data.email.trim().toLowerCase(),
-    addresses: [],
-  }
-  saveSession({ user, password })
-  return user
+export const loginSocial = async (provider: 'google' | 'facebook') => {
+  const result = await api.post<{ token: string; user: AuthUser }>('/auth/social', { provider })
+  setAccessToken(result.token)
+  saveSession({ user: result.user, password: '' })
+  return result.user
 }
 
 export const updateCurrentUser = (updater: (user: AuthUser) => AuthUser) => {
@@ -155,14 +99,43 @@ export const updateCurrentUser = (updater: (user: AuthUser) => AuthUser) => {
   return nextSession.user
 }
 
-export const changeDemoPassword = (currentPassword: string, newPassword: string) => {
-  const session = getAuthSession()
-  if (!session || session.password !== currentPassword) return false
-  saveSession({ ...session, password: newPassword })
+export const changeDemoPassword = async (currentPassword: string, newPassword: string) => {
+  await api.put('/customers/me/password', { currentPassword, newPassword })
   return true
 }
 
-export const logoutDemo = () => saveSession(null)
+export const updateProfile = async (input: Pick<AuthUser, 'firstName' | 'lastName' | 'email' | 'phone'> & { avatar?: string }) => {
+  const user = await api.put<AuthUser>('/customers/me', input)
+  const session = getAuthSession()
+  saveSession({ user, password: session?.password ?? '' })
+  return user
+}
+
+export const addUserAddress = async (input: Omit<CustomerAddress, 'id'>) => {
+  const user = await api.post<AuthUser>('/customers/me/addresses', input)
+  const session = getAuthSession()
+  saveSession({ user, password: session?.password ?? '' })
+  return user
+}
+
+export const makeUserAddressDefault = async (addressId: string) => {
+  const user = await api.patch<AuthUser>(`/customers/me/addresses/${addressId}/default`)
+  const session = getAuthSession()
+  saveSession({ user, password: session?.password ?? '' })
+  return user
+}
+
+export const removeUserAddress = async (addressId: string) => {
+  const user = await api.delete<AuthUser>(`/customers/me/addresses/${addressId}`)
+  const session = getAuthSession()
+  saveSession({ user, password: session?.password ?? '' })
+  return user
+}
+
+export const logoutDemo = () => {
+  setAccessToken(null)
+  saveSession(null)
+}
 
 export const getUserInitial = (user: AuthUser) => {
   const source = `${user.lastName} ${user.firstName}`.trim() || user.email

@@ -1,5 +1,6 @@
 import { useState, type ReactNode, type SVGProps } from 'react'
 import { Link } from 'react-router-dom'
+import { getCurrentUser, getUserDisplayName, getUserInitial } from '../utils/auth'
 import { useStoreSettings } from '../utils/storeSettings'
 import '../pages/admin/AdminDashboardPage.css'
 
@@ -100,7 +101,7 @@ interface AdminLayoutProps {
 
 const navItems: Array<{ label: string; icon: AdminIconName; section?: AdminSection; to?: string; count?: number }> = [
   { label: 'Tổng quan', icon: 'dashboard', section: 'dashboard', to: '/admin' },
-  { label: 'Đơn hàng', icon: 'orders', section: 'orders', to: '/admin/don-hang', count: 12 },
+  { label: 'Đơn hàng', icon: 'orders', section: 'orders', to: '/admin/don-hang' },
   { label: 'Sản phẩm', icon: 'products', section: 'products', to: '/admin/san-pham' },
   { label: 'Danh mục', icon: 'folder', section: 'categories', to: '/admin/danh-muc' },
   { label: 'Kho hàng', icon: 'box', section: 'inventory', to: '/admin/kho' },
@@ -119,6 +120,9 @@ function AdminLayout({
 }: AdminLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const storeSettings = useStoreSettings()
+  const currentUser = getCurrentUser()
+  const adminName = currentUser ? getUserDisplayName(currentUser) : 'Quản trị viên'
+  const adminInitial = currentUser ? getUserInitial(currentUser) : 'QT'
 
   const renderNavItem = (item: (typeof navItems)[number]) => {
     const className = `admin-nav-item${item.section === activeItem ? ' is-active' : ''}`
@@ -168,8 +172,8 @@ function AdminLayout({
         </nav>
 
         <div className="admin-sidebar-profile">
-          <span className="admin-profile-avatar">QT</span>
-          <div><strong>Quản trị viên</strong><span>admin@rubeanora.vn</span></div>
+          <span className="admin-profile-avatar">{adminInitial}</span>
+          <div><strong>{adminName}</strong><span>{currentUser?.email || ' '}</span></div>
           <AdminIcon name="more" />
         </div>
       </aside>
@@ -190,10 +194,10 @@ function AdminLayout({
             />
           </label>
           <div className="admin-topbar-actions">
-            <button type="button" className="admin-notification" aria-label="Thông báo mới"><AdminIcon name="bell" /><span>3</span></button>
+            <button type="button" className="admin-notification" aria-label="Thông báo"><AdminIcon name="bell" /></button>
             <button type="button" className="admin-user-menu">
-              <span className="admin-profile-avatar">QT</span>
-              <span className="admin-user-copy"><strong>Quản trị viên</strong><small>Super Admin</small></span>
+              <span className="admin-profile-avatar">{adminInitial}</span>
+              <span className="admin-user-copy"><strong>{adminName}</strong><small>{currentUser?.role === 'ADMIN' ? 'Quản trị viên' : 'Tài khoản'}</small></span>
               <AdminIcon name="chevronDown" />
             </button>
           </div>

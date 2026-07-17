@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { formatPrice, products } from '../data/products'
-import { getCartItems, removeCartItem, updateCartItemQuantity } from '../utils/cart'
+import { formatPrice } from '../data/products'
+import { useCatalog } from '../hooks/useCatalog'
+import { getCartItems, removeCartItem, syncCartFromApi, updateCartItemQuantity } from '../utils/cart'
 import { getCurrentUser } from '../utils/auth'
 import './CartPage.css'
 
 function CartPage() {
+  const { products } = useCatalog()
   const navigate = useNavigate()
   const [cartItems, setCartItems] = useState(() => getCartItems())
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>(() =>
@@ -21,6 +23,7 @@ function CartPage() {
   }, [cartItems])
 
   useEffect(() => {
+    void syncCartFromApi().then(setCartItems).catch(() => undefined)
     const syncCart = () => setCartItems(getCartItems())
     const handleCartUpdated = (event: Event) => {
       const customEvent = event as CustomEvent<ReturnType<typeof getCartItems>>
@@ -43,7 +46,7 @@ function CartPage() {
         return product ? { product, quantity: item.quantity } : null
       })
       .filter((item): item is NonNullable<typeof item> => Boolean(item))
-  }, [cartItems])
+  }, [cartItems, products])
 
   const selectedProducts = useMemo(() => {
     return cartProducts.filter(({ product }) => selectedProductIds.includes(product.id))

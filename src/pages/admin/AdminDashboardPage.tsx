@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import AdminLayout, { AdminIcon, type AdminIconName } from '../../components/AdminLayout'
+import { api } from '../../services/api'
 import './AdminDashboardPage.css'
 
 type RevenuePeriod = 'week' | 'month' | 'quarter' | 'year'
@@ -13,45 +14,33 @@ interface DashboardStat {
   tone: string
 }
 
-const dashboardPeriodMeta: Record<RevenuePeriod, { label: string; comparison: string }> = {
-  week: { label: '7 ngày gần đây', comparison: 'so với tuần trước' },
-  month: { label: 'Tháng 7/2026', comparison: 'so với tháng trước' },
-  quarter: { label: 'Quý 3/2026', comparison: 'so với quý trước' },
-  year: { label: 'Năm 2026', comparison: 'so với năm 2025' },
+interface PeriodStats {
+  revenue: number
+  orders: number
+  customers: number
+  units_sold: number
 }
 
-const statsByPeriod: Record<RevenuePeriod, DashboardStat[]> = {
-  week: [
-    { label: 'Tổng doanh thu', value: '32.400.000đ', change: '6,8%', note: dashboardPeriodMeta.week.comparison, icon: 'revenue', tone: 'red' },
-    { label: 'Tổng đơn hàng', value: '112', change: '5,4%', note: dashboardPeriodMeta.week.comparison, icon: 'cart', tone: 'blue' },
-    { label: 'Khách hàng mới', value: '86', change: '9,1%', note: dashboardPeriodMeta.week.comparison, icon: 'userPlus', tone: 'green' },
-    { label: 'Sản phẩm đã bán', value: '348', change: '7,2%', note: dashboardPeriodMeta.week.comparison, icon: 'box', tone: 'orange' },
-  ],
-  month: [
-    { label: 'Tổng doanh thu', value: '128.650.000đ', change: '12,5%', note: dashboardPeriodMeta.month.comparison, icon: 'revenue', tone: 'red' },
-    { label: 'Tổng đơn hàng', value: '486', change: '8,2%', note: dashboardPeriodMeta.month.comparison, icon: 'cart', tone: 'blue' },
-    { label: 'Khách hàng mới', value: '1.248', change: '15,3%', note: dashboardPeriodMeta.month.comparison, icon: 'userPlus', tone: 'green' },
-    { label: 'Sản phẩm đã bán', value: '1.576', change: '6,4%', note: dashboardPeriodMeta.month.comparison, icon: 'box', tone: 'orange' },
-  ],
-  quarter: [
-    { label: 'Tổng doanh thu', value: '356.800.000đ', change: '10,7%', note: dashboardPeriodMeta.quarter.comparison, icon: 'revenue', tone: 'red' },
-    { label: 'Tổng đơn hàng', value: '1.284', change: '9,5%', note: dashboardPeriodMeta.quarter.comparison, icon: 'cart', tone: 'blue' },
-    { label: 'Khách hàng mới', value: '2.746', change: '11,8%', note: dashboardPeriodMeta.quarter.comparison, icon: 'userPlus', tone: 'green' },
-    { label: 'Sản phẩm đã bán', value: '4.124', change: '8,6%', note: dashboardPeriodMeta.quarter.comparison, icon: 'box', tone: 'orange' },
-  ],
-  year: [
-    { label: 'Tổng doanh thu', value: '1.240.000.000đ', change: '18,4%', note: dashboardPeriodMeta.year.comparison, icon: 'revenue', tone: 'red' },
-    { label: 'Tổng đơn hàng', value: '5.620', change: '14,1%', note: dashboardPeriodMeta.year.comparison, icon: 'cart', tone: 'blue' },
-    { label: 'Khách hàng mới', value: '9.438', change: '20,6%', note: dashboardPeriodMeta.year.comparison, icon: 'userPlus', tone: 'green' },
-    { label: 'Sản phẩm đã bán', value: '18.756', change: '16,2%', note: dashboardPeriodMeta.year.comparison, icon: 'box', tone: 'orange' },
-  ],
+interface DashboardOrder {
+  orderCode: string
+  customerName?: string
+  recipientName?: string
+  createdAt: string
+  total: number
+  orderStatus: string
 }
 
-const orderStatusByPeriod: Record<RevenuePeriod, { total: number; completed: number; processing: number; pending: number; cancelled: number }> = {
-  week: { total: 112, completed: 55, processing: 24, pending: 13, cancelled: 8 },
-  month: { total: 486, completed: 62, processing: 18, pending: 12, cancelled: 8 },
-  quarter: { total: 1284, completed: 67, processing: 17, pending: 10, cancelled: 6 },
-  year: { total: 5620, completed: 70, processing: 16, pending: 8, cancelled: 6 },
+interface DashboardPeriodData {
+  stats: PeriodStats
+  changes: { revenue: number; orders: number; customers: number; unitsSold: number }
+  revenueSeries: Array<{ bucket: number; revenue: number }>
+  orderStatus: { total: number; completed: number; processing: number; pending: number; cancelled: number }
+  bestSellingProducts: Array<{ id: string | null; name: string; sold: number }>
+  recentOrders: DashboardOrder[]
+}
+
+interface DashboardData {
+  periods: Record<RevenuePeriod, DashboardPeriodData>
 }
 
 interface RevenueChartData {
@@ -62,90 +51,26 @@ interface RevenueChartData {
   items: Array<{ label: string; detail: string; value: number }>
 }
 
-const revenueDatasets: Record<RevenuePeriod, RevenueChartData> = {
-  week: {
-    title: 'Doanh thu theo tuần',
-    description: '7 ngày gần đây · Đơn vị: triệu đồng',
-    ariaLabel: 'Biểu đồ doanh thu từng ngày trong tuần gần đây',
-    maxValue: 8,
-    items: [
-      { label: 'T2', detail: 'Thứ Hai', value: 2.8 },
-      { label: 'T3', detail: 'Thứ Ba', value: 3.6 },
-      { label: 'T4', detail: 'Thứ Tư', value: 3.2 },
-      { label: 'T5', detail: 'Thứ Năm', value: 4.7 },
-      { label: 'T6', detail: 'Thứ Sáu', value: 5.4 },
-      { label: 'T7', detail: 'Thứ Bảy', value: 6.8 },
-      { label: 'CN', detail: 'Chủ Nhật', value: 5.9 },
-    ],
-  },
-  month: {
-    title: 'Doanh thu theo tháng',
-    description: 'Tháng 7/2026 · Đơn vị: triệu đồng',
-    ariaLabel: 'Biểu đồ doanh thu theo các tuần trong tháng 7 năm 2026',
-    maxValue: 40,
-    items: [
-      { label: 'Tuần 1', detail: 'Tuần 1 tháng 7', value: 22.5 },
-      { label: 'Tuần 2', detail: 'Tuần 2 tháng 7', value: 28.7 },
-      { label: 'Tuần 3', detail: 'Tuần 3 tháng 7', value: 31.2 },
-      { label: 'Tuần 4', detail: 'Tuần 4 tháng 7', value: 34.8 },
-      { label: 'Tuần 5', detail: 'Tuần 5 tháng 7', value: 11.45 },
-    ],
-  },
-  quarter: {
-    title: 'Doanh thu theo quý',
-    description: 'Quý 3/2026 · Đơn vị: triệu đồng',
-    ariaLabel: 'Biểu đồ doanh thu theo ba tháng trong quý 3 năm 2026',
-    maxValue: 160,
-    items: [
-      { label: 'Tháng 7', detail: 'Tháng 7/2026', value: 128.65 },
-      { label: 'Tháng 8', detail: 'Tháng 8/2026', value: 116.2 },
-      { label: 'Tháng 9', detail: 'Tháng 9/2026', value: 111.95 },
-    ],
-  },
-  year: {
-    title: 'Doanh thu theo năm',
-    description: 'Năm 2026 · Đơn vị: triệu đồng',
-    ariaLabel: 'Biểu đồ doanh thu theo bốn quý trong năm 2026',
-    maxValue: 400,
-    items: [
-      { label: 'Quý 1', detail: 'Quý 1/2026', value: 245.2 },
-      { label: 'Quý 2', detail: 'Quý 2/2026', value: 318.6 },
-      { label: 'Quý 3', detail: 'Quý 3/2026', value: 356.8 },
-      { label: 'Quý 4', detail: 'Quý 4/2026', value: 319.4 },
-    ],
-  },
+const now = new Date()
+const currentMonth = now.getMonth() + 1
+const currentYear = now.getFullYear()
+const currentQuarter = Math.floor(now.getMonth() / 3) + 1
+
+const dashboardPeriodMeta: Record<RevenuePeriod, { label: string; comparison: string }> = {
+  week: { label: '7 ngày gần đây', comparison: 'so với 7 ngày trước' },
+  month: { label: `Tháng ${currentMonth}/${currentYear}`, comparison: 'so với tháng trước' },
+  quarter: { label: `Quý ${currentQuarter}/${currentYear}`, comparison: 'so với quý trước' },
+  year: { label: `Năm ${currentYear}`, comparison: `so với năm ${currentYear - 1}` },
 }
 
-const recentOrders = [
-  { code: 'RBB-26071301', customer: 'Nguyễn Minh Anh', initials: 'MA', date: '13/07/2026, 14:35', total: '780.000đ', status: 'Chờ xác nhận', statusKey: 'pending' },
-  { code: 'RBB-26071302', customer: 'Trần Quang Huy', initials: 'QH', date: '13/07/2026, 13:10', total: '450.000đ', status: 'Đã xác nhận', statusKey: 'confirmed' },
-  { code: 'RBB-26071303', customer: 'Lê Thu Trang', initials: 'TT', date: '13/07/2026, 11:42', total: '690.000đ', status: 'Đang giao hàng', statusKey: 'shipping' },
-  { code: 'RBB-26071204', customer: 'Phạm Quốc Bảo', initials: 'QB', date: '12/07/2026, 20:18', total: '250.000đ', status: 'Đã giao hàng', statusKey: 'completed' },
-  { code: 'RBB-26071205', customer: 'Vũ Ngọc Hà', initials: 'NH', date: '12/07/2026, 18:06', total: '520.000đ', status: 'Đã hủy', statusKey: 'cancelled' },
-]
-
-const bestSellingProductBase = [
-  { name: 'Sữa rửa mặt tạo bọt đậu đỏ', shortName: 'Sữa rửa mặt', tone: 'red' },
-  { name: 'Mặt nạ tẩy tế bào chết đậu đỏ', shortName: 'Mặt nạ', tone: 'green' },
-  { name: 'Toner dưỡng da đậu đỏ', shortName: 'Toner', tone: 'blue' },
-  { name: 'Combo chăm sóc da 3 bước', shortName: 'Combo 3 bước', tone: 'orange' },
-  { name: 'Bột đậu đỏ nguyên chất', shortName: 'Bột đậu đỏ', tone: 'purple' },
-]
-
-const productSalesByPeriod: Record<RevenuePeriod, { maxValue: number; values: number[] }> = {
-  week: { maxValue: 100, values: [82, 71, 64, 52, 41] },
-  month: { maxValue: 400, values: [342, 286, 254, 198, 156] },
-  quarter: { maxValue: 1000, values: [864, 742, 689, 536, 418] },
-  year: { maxValue: 4000, values: [3420, 2986, 2654, 2198, 1756] },
+const emptyPeriod: DashboardPeriodData = {
+  stats: { revenue: 0, orders: 0, customers: 0, units_sold: 0 },
+  changes: { revenue: 0, orders: 0, customers: 0, unitsSold: 0 },
+  revenueSeries: [],
+  orderStatus: { total: 0, completed: 0, processing: 0, pending: 0, cancelled: 0 },
+  bestSellingProducts: [],
+  recentOrders: [],
 }
-
-const productChartWidth = 900
-const productChartHeight = 285
-const productChartPadding = { top: 35, right: 25, bottom: 55, left: 52 }
-const productPlotWidth = productChartWidth - productChartPadding.left - productChartPadding.right
-const productPlotHeight = productChartHeight - productChartPadding.top - productChartPadding.bottom
-const productBarBand = productPlotWidth / bestSellingProductBase.length
-const productBarWidth = 76
 
 const chartWidth = 700
 const chartHeight = 230
@@ -153,24 +78,145 @@ const chartPadding = { top: 18, right: 18, bottom: 38, left: 46 }
 const plotWidth = chartWidth - chartPadding.left - chartPadding.right
 const plotHeight = chartHeight - chartPadding.top - chartPadding.bottom
 
+const productChartWidth = 900
+const productChartHeight = 285
+const productChartPadding = { top: 35, right: 25, bottom: 55, left: 52 }
+const productPlotWidth = productChartWidth - productChartPadding.left - productChartPadding.right
+const productPlotHeight = productChartHeight - productChartPadding.top - productChartPadding.bottom
+const productBarWidth = 76
+const productTones = ['red', 'green', 'blue', 'orange', 'purple']
+
+const formatPrice = (value: number) => `${value.toLocaleString('vi-VN')}đ`
+const formatChange = (value: number) => `${value > 0 ? '+' : ''}${value.toLocaleString('vi-VN')}%`
+const toPercentage = (value: number, total: number) => total ? (value / total) * 100 : 0
+
+const getRevenueChart = (
+  period: RevenuePeriod,
+  series: DashboardPeriodData['revenueSeries'],
+): RevenueChartData => {
+  const values = new Map(series.map((item) => [item.bucket, item.revenue / 1_000_000]))
+  let items: RevenueChartData['items']
+
+  if (period === 'week') {
+    items = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date()
+      date.setDate(date.getDate() - 6 + index)
+      const weekday = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][date.getDay()]
+      return {
+        label: weekday,
+        detail: date.toLocaleDateString('vi-VN'),
+        value: values.get(index + 1) ?? 0,
+      }
+    })
+  } else if (period === 'month') {
+    items = Array.from({ length: 5 }, (_, index) => ({
+      label: `Tuần ${index + 1}`,
+      detail: `Tuần ${index + 1} tháng ${currentMonth}`,
+      value: values.get(index + 1) ?? 0,
+    }))
+  } else if (period === 'quarter') {
+    const firstMonth = (currentQuarter - 1) * 3 + 1
+    items = Array.from({ length: 3 }, (_, index) => ({
+      label: `Tháng ${firstMonth + index}`,
+      detail: `Tháng ${firstMonth + index}/${currentYear}`,
+      value: values.get(index + 1) ?? 0,
+    }))
+  } else {
+    items = Array.from({ length: 4 }, (_, index) => ({
+      label: `Quý ${index + 1}`,
+      detail: `Quý ${index + 1}/${currentYear}`,
+      value: values.get(index + 1) ?? 0,
+    }))
+  }
+
+  const label = dashboardPeriodMeta[period].label
+  return {
+    title: period === 'week' ? 'Doanh thu theo tuần' : period === 'month' ? 'Doanh thu theo tháng' : period === 'quarter' ? 'Doanh thu theo quý' : 'Doanh thu theo năm',
+    description: `${label} · Đơn vị: triệu đồng`,
+    ariaLabel: `Biểu đồ doanh thu ${label.toLocaleLowerCase('vi-VN')}`,
+    maxValue: Math.max(1, ...items.map((item) => item.value)) * 1.15,
+    items,
+  }
+}
+
+const orderStatusMeta: Record<string, { label: string; tone: string }> = {
+  CHO_XAC_NHAN: { label: 'Chờ xác nhận', tone: 'pending' },
+  DA_XAC_NHAN: { label: 'Đã xác nhận', tone: 'confirmed' },
+  DANG_CHUAN_BI: { label: 'Đang chuẩn bị', tone: 'packing' },
+  DANG_GIAO: { label: 'Đang giao hàng', tone: 'shipping' },
+  DA_GIAO: { label: 'Đã giao hàng', tone: 'completed' },
+  DA_HUY: { label: 'Đã hủy', tone: 'cancelled' },
+}
+
+const getInitials = (name: string) => name.trim().split(/\s+/).slice(-2)
+  .map((part) => part.charAt(0)).join('').toLocaleUpperCase('vi-VN') || 'KH'
+
 function AdminDashboardPage() {
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null)
   const [dashboardPeriod, setDashboardPeriod] = useState<RevenuePeriod>('month')
   const [hoveredRevenueIndex, setHoveredRevenueIndex] = useState<number | null>(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    api.get<DashboardData>('/admin/dashboard')
+      .then((data) => {
+        setDashboard(data)
+        setError('')
+      })
+      .catch(() => {
+        setDashboard(null)
+        setError('Không thể tải dữ liệu dashboard từ máy chủ.')
+      })
+  }, [])
+
   const periodMeta = dashboardPeriodMeta[dashboardPeriod]
-  const stats = statsByPeriod[dashboardPeriod]
-  const orderStatus = orderStatusByPeriod[dashboardPeriod]
-  const completedOrderCount = Math.round((orderStatus.total * orderStatus.completed) / 100)
-  const processingOrderCount = Math.round((orderStatus.total * orderStatus.processing) / 100)
-  const pendingOrderCount = Math.round((orderStatus.total * orderStatus.pending) / 100)
-  const cancelledOrderCount = orderStatus.total - completedOrderCount - processingOrderCount - pendingOrderCount
-  const revenueChart = revenueDatasets[dashboardPeriod]
-  const productSales = productSalesByPeriod[dashboardPeriod]
-  const bestSellingProducts = bestSellingProductBase.map((product, index) => ({
+  const periodData = dashboard?.periods?.[dashboardPeriod] ?? emptyPeriod
+  const stats: DashboardStat[] = [
+    { label: 'Tổng doanh thu', value: formatPrice(periodData.stats.revenue), change: formatChange(periodData.changes.revenue), note: periodMeta.comparison, icon: 'revenue', tone: 'red' },
+    { label: 'Tổng đơn hàng', value: periodData.stats.orders.toLocaleString('vi-VN'), change: formatChange(periodData.changes.orders), note: periodMeta.comparison, icon: 'cart', tone: 'blue' },
+    { label: 'Khách hàng mới', value: periodData.stats.customers.toLocaleString('vi-VN'), change: formatChange(periodData.changes.customers), note: periodMeta.comparison, icon: 'userPlus', tone: 'green' },
+    { label: 'Sản phẩm đã bán', value: periodData.stats.units_sold.toLocaleString('vi-VN'), change: formatChange(periodData.changes.unitsSold), note: periodMeta.comparison, icon: 'box', tone: 'orange' },
+  ]
+
+  const revenueChart = getRevenueChart(dashboardPeriod, periodData.revenueSeries)
+  const orderCounts = periodData.orderStatus
+  const orderStatus = {
+    total: orderCounts.total,
+    completed: toPercentage(orderCounts.completed, orderCounts.total),
+    processing: toPercentage(orderCounts.processing, orderCounts.total),
+    pending: toPercentage(orderCounts.pending, orderCounts.total),
+    cancelled: toPercentage(orderCounts.cancelled, orderCounts.total),
+  }
+  const completedOrderCount = orderCounts.completed
+  const processingOrderCount = orderCounts.processing
+  const pendingOrderCount = orderCounts.pending
+  const cancelledOrderCount = orderCounts.cancelled
+
+  const bestSellingProducts = periodData.bestSellingProducts.map((product, index) => ({
     ...product,
-    sold: productSales.values[index],
+    shortName: product.name.length > 18 ? `${product.name.slice(0, 17)}…` : product.name,
+    tone: productTones[index % productTones.length],
   }))
+  const maximumProductSales = Math.max(0, ...bestSellingProducts.map((product) => product.sold))
+  const productSales = { maxValue: Math.max(4, Math.ceil(maximumProductSales / 4) * 4) }
+  const productBarBand = productPlotWidth / Math.max(bestSellingProducts.length, 1)
+
+  const recentOrders = periodData.recentOrders.map((item) => {
+    const customer = item.customerName || item.recipientName || 'Khách hàng'
+    const status = orderStatusMeta[item.orderStatus] ?? { label: item.orderStatus, tone: 'pending' }
+    return {
+      code: item.orderCode,
+      initials: getInitials(customer),
+      customer,
+      date: new Date(item.createdAt).toLocaleString('vi-VN'),
+      total: formatPrice(Number(item.total || 0)),
+      status: status.label,
+      statusKey: status.tone,
+    }
+  })
+
   const chartPoints = revenueChart.items.map((item, index) => {
-    const x = chartPadding.left + (index * plotWidth) / (revenueChart.items.length - 1)
+    const x = chartPadding.left + (index * plotWidth) / Math.max(revenueChart.items.length - 1, 1)
     const y = chartPadding.top + plotHeight - (item.value / revenueChart.maxValue) * plotHeight
     return { ...item, x, y }
   })
@@ -182,10 +228,7 @@ function AdminDashboardPage() {
   const revenueTooltipWidth = 150
   const revenueTooltipHeight = 46
   const revenueTooltipX = hoveredRevenuePoint
-    ? Math.min(
-        Math.max(hoveredRevenuePoint.x - revenueTooltipWidth / 2, chartPadding.left),
-        chartWidth - chartPadding.right - revenueTooltipWidth,
-      )
+    ? Math.min(Math.max(hoveredRevenuePoint.x - revenueTooltipWidth / 2, chartPadding.left), chartWidth - chartPadding.right - revenueTooltipWidth)
     : 0
   const revenueTooltipY = hoveredRevenuePoint
     ? hoveredRevenuePoint.y - revenueTooltipHeight - 13 < chartPadding.top
@@ -219,6 +262,8 @@ function AdminDashboardPage() {
             </label>
           </div>
 
+          {error ? <section className="admin-panel"><p>{error}</p></section> : null}
+
           <section className="admin-stats-grid" aria-label="Các chỉ số tổng quan">
             {stats.map((stat) => (
               <article className="admin-stat-card" key={stat.label}>
@@ -228,7 +273,7 @@ function AdminDashboardPage() {
                 <div className="admin-stat-content">
                   <span>{stat.label}</span>
                   <strong>{stat.value}</strong>
-                  <p><b><AdminIcon name="arrowUp" />{stat.change}</b> {stat.note}</p>
+                  <p><b>{stat.change}</b> {stat.note}</p>
                 </div>
               </article>
             ))}
@@ -427,6 +472,7 @@ function AdminDashboardPage() {
                       <td><button type="button" className="admin-row-action" aria-label={`Xem chi tiết đơn ${order.code}`}><AdminIcon name="more" /></button></td>
                     </tr>
                   ))}
+                  {recentOrders.length === 0 ? <tr><td colSpan={6}>Chưa có đơn hàng trong khoảng thời gian này.</td></tr> : null}
                 </tbody>
               </table>
             </div>

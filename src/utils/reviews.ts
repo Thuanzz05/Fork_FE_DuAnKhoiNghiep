@@ -1,5 +1,4 @@
 import { getOrders, saveOrders } from './orders'
-import { seedProductReviews } from '../data/reviews'
 
 export type ReviewModerationStatus = 'pending' | 'approved' | 'hidden'
 
@@ -24,7 +23,7 @@ export const getReviews = (): ProductReview[] => {
   if (typeof window === 'undefined') return []
   try {
     const raw = localStorage.getItem(REVIEWS_STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as ProductReview[]) : seedProductReviews.map((review) => ({ ...review }))
+    return raw ? (JSON.parse(raw) as ProductReview[]) : []
   } catch {
     return []
   }

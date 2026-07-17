@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
 import Pagination from '../../components/Pagination'
-import { categories, products } from '../../data/products'
 import { usePagination } from '../../hooks/usePagination'
+import { api } from '../../services/api'
 import './AdminCategoriesPage.css'
 
 type CategoryStatus = 'active' | 'hidden'
@@ -17,6 +17,7 @@ interface ManagedCategory {
   status: CategoryStatus
   displayOrder: number
   createdAt: string
+  productCount?: number
 }
 
 interface CategoryFormState {
@@ -28,25 +29,7 @@ interface CategoryFormState {
   displayOrder: string
 }
 
-const categoryDescriptions: Record<string, string> = {
-  'sua-rua-mat': 'Các sản phẩm làm sạch dịu nhẹ, hỗ trợ loại bỏ bụi bẩn và bã nhờn trên da.',
-  'mat-na': 'Mặt nạ đậu đỏ giúp làm sạch tế bào chết, dưỡng ẩm và hỗ trợ làm sáng da.',
-  toner: 'Sản phẩm cân bằng, làm dịu và bổ sung độ ẩm cho làn da sau bước làm sạch.',
-  combo: 'Bộ sản phẩm chăm sóc da kết hợp nhiều bước, phù hợp dùng hằng ngày hoặc làm quà tặng.',
-}
-
-const seedCategories: ManagedCategory[] = categories
-  .filter((category) => category.slug !== 'tat-ca')
-  .map((category, index) => ({
-    id: `category-${index + 1}`,
-    name: category.name,
-    slug: category.slug,
-    description: categoryDescriptions[category.slug] ?? '',
-    image: products.find((product) => product.categorySlug === category.slug)?.image ?? '',
-    status: 'active',
-    displayOrder: index + 1,
-    createdAt: `2026-01-${String(index + 8).padStart(2, '0')}T08:00:00.000Z`,
-  }))
+const initialCategories: ManagedCategory[] = []
 
 const emptyForm: CategoryFormState = {
   name: '',
@@ -54,7 +37,7 @@ const emptyForm: CategoryFormState = {
   description: '',
   image: '',
   status: 'active',
-  displayOrder: String(seedCategories.length + 1),
+  displayOrder: String(initialCategories.length + 1),
 }
 
 const makeSlug = (value: string) => value
@@ -73,7 +56,7 @@ const formatDate = (value: string) => new Intl.DateTimeFormat('vi-VN', {
 }).format(new Date(value))
 
 function AdminCategoriesPage() {
-  const [categoryList, setCategoryList] = useState<ManagedCategory[]>(seedCategories)
+  const [categoryList, setCategoryList] = useState<ManagedCategory[]>(initialCategories)
   const [searchValue, setSearchValue] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | CategoryStatus>('all')
   const [sortBy, setSortBy] = useState<CategorySort>('order')
@@ -86,7 +69,25 @@ function AdminCategoriesPage() {
   const [notice, setNotice] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const imageFileInputRef = useRef<HTMLInputElement>(null)
 
-  const getProductCount = (slug: string) => products.filter((product) => product.categorySlug === slug).length
+  const getProductCount = useCallback((slug: string) => categoryList.find((item) => item.slug === slug)?.productCount ?? 0, [categoryList])
+
+  const loadCategories = async () => {
+    try {
+      const rows = await api.get<Array<{
+        id: string; name: string; slug: string; description?: string; imageUrl?: string
+        displayOrder: number; status: 'HOAT_DONG' | 'DANG_AN'; productCount: number
+      }>>('/admin/categories')
+      setCategoryList(rows.map((item) => ({
+        id: item.id, name: item.name, slug: item.slug, description: item.description || '',
+        image: item.imageUrl || '', status: item.status === 'HOAT_DONG' ? 'active' : 'hidden',
+        displayOrder: item.displayOrder, createdAt: new Date().toISOString(), productCount: item.productCount,
+      })))
+    } catch {
+      setCategoryList([])
+    }
+  }
+
+  useEffect(() => { void loadCategories() }, [])
 
   useEffect(() => {
     if (!notice) return
@@ -124,7 +125,7 @@ function AdminCategoriesPage() {
       if (sortBy === 'products') return getProductCount(second.slug) - getProductCount(first.slug)
       return first.displayOrder - second.displayOrder
     })
-  }, [categoryList, searchValue, sortBy, statusFilter])
+  }, [categoryList, getProductCount, searchValue, sortBy, statusFilter])
 
   const { currentPage, totalPages, pageItems: paginatedCategories, setCurrentPage } = usePagination(
     filteredCategories,
@@ -134,7 +135,7 @@ function AdminCategoriesPage() {
 
   const activeCount = categoryList.filter((category) => category.status === 'active').length
   const hiddenCount = categoryList.length - activeCount
-  const assignedProductCount = products.filter((product) => categoryList.some((category) => category.slug === product.categorySlug)).length
+  const assignedProductCount = categoryList.reduce((total, category) => total + (category.productCount ?? 0), 0)
   const editingCategoryProductCount = editingCategory ? getProductCount(editingCategory.slug) : 0
 
   const openCreateForm = () => {
@@ -194,7 +195,7 @@ function AdminCategoriesPage() {
     reader.readAsDataURL(file)
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const normalizedSlug = makeSlug(form.slug)
     const duplicatedSlug = categoryList.some((category) => category.slug === normalizedSlug && category.id !== editingCategory?.id)
@@ -207,41 +208,35 @@ function AdminCategoriesPage() {
       return
     }
 
-    if (editingCategory) {
-      setCategoryList((current) => current.map((category) => category.id === editingCategory.id ? {
-        ...category,
-        name: form.name.trim(),
-        slug: normalizedSlug,
-        description: form.description.trim(),
-        image: form.image.trim(),
-        status: form.status,
-        displayOrder: Math.max(1, Number(form.displayOrder) || 1),
-      } : category))
-      setNotice({ message: `Đã cập nhật danh mục “${form.name.trim()}”`, type: 'success' })
-    } else {
-      const newCategory: ManagedCategory = {
-        id: `category-${Date.now()}`,
-        name: form.name.trim(),
-        slug: normalizedSlug,
-        description: form.description.trim(),
-        image: form.image.trim(),
-        status: form.status,
+    try {
+      const payload = {
+        name: form.name.trim(), slug: normalizedSlug, description: form.description.trim(),
+        imageUrl: form.image.trim(), status: form.status === 'active' ? 'HOAT_DONG' : 'DANG_AN',
         displayOrder: Math.max(1, Number(form.displayOrder) || categoryList.length + 1),
-        createdAt: new Date().toISOString(),
       }
-      setCategoryList((current) => [...current, newCategory])
-      setNotice({ message: `Đã thêm danh mục “${newCategory.name}”`, type: 'success' })
+      if (editingCategory) await api.put(`/admin/categories/${editingCategory.id}`, payload)
+      else await api.post('/admin/categories', payload)
+      await loadCategories()
+      setNotice({ message: editingCategory ? `Đã cập nhật danh mục “${form.name.trim()}”` : `Đã thêm danh mục “${form.name.trim()}”`, type: 'success' })
+      setIsFormOpen(false)
+    } catch (error) {
+      setNotice({ message: error instanceof Error ? error.message : 'Không thể lưu danh mục', type: 'error' })
     }
-    setIsFormOpen(false)
   }
 
-  const toggleStatus = (category: ManagedCategory) => {
+  const toggleStatus = async (category: ManagedCategory) => {
     const nextStatus: CategoryStatus = category.status === 'active' ? 'hidden' : 'active'
-    setCategoryList((current) => current.map((item) => item.id === category.id ? { ...item, status: nextStatus } : item))
-    setNotice({
-      message: nextStatus === 'active' ? `Đã hiển thị danh mục “${category.name}”` : `Đã ẩn danh mục “${category.name}”`,
-      type: 'success',
-    })
+    try {
+      await api.put(`/admin/categories/${category.id}`, {
+        name: category.name, slug: category.slug, description: category.description,
+        imageUrl: category.image, displayOrder: category.displayOrder,
+        status: nextStatus === 'active' ? 'HOAT_DONG' : 'DANG_AN',
+      })
+      await loadCategories()
+      setNotice({ message: nextStatus === 'active' ? `Đã hiển thị danh mục “${category.name}”` : `Đã ẩn danh mục “${category.name}”`, type: 'success' })
+    } catch (error) {
+      setNotice({ message: error instanceof Error ? error.message : 'Không thể cập nhật danh mục', type: 'error' })
+    }
   }
 
   const requestDelete = (category: ManagedCategory) => {
@@ -253,10 +248,9 @@ function AdminCategoriesPage() {
     setDeletingCategory(category)
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deletingCategory) return
-    setCategoryList((current) => current.filter((category) => category.id !== deletingCategory.id))
-    setNotice({ message: `Đã xóa danh mục “${deletingCategory.name}”`, type: 'success' })
+    await toggleStatus(deletingCategory)
     setDeletingCategory(null)
   }
 
@@ -271,7 +265,7 @@ function AdminCategoriesPage() {
         <article><span className="is-red"><AdminIcon name="folder" /></span><div><small>Tổng danh mục</small><strong>{categoryList.length}</strong></div></article>
         <article><span className="is-green"><AdminIcon name="eye" /></span><div><small>Đang hiển thị</small><strong>{activeCount}</strong></div></article>
         <article><span className="is-orange"><AdminIcon name="pause" /></span><div><small>Đang ẩn</small><strong>{hiddenCount}</strong></div></article>
-        <article><span className="is-blue"><AdminIcon name="products" /></span><div><small>Sản phẩm đã phân loại</small><strong>{assignedProductCount}/{products.length}</strong></div></article>
+        <article><span className="is-blue"><AdminIcon name="products" /></span><div><small>Sản phẩm đã phân loại</small><strong>{assignedProductCount}</strong></div></article>
       </section>
 
       <section className="admin-categories-panel">

@@ -1,20 +1,19 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { productGalleries } from '../data/productGalleries'
 import { formatPrice } from '../data/products'
 import type { Product } from '../data/products'
 import { addCartItem } from '../utils/cart'
 import './ProductQuickViewModal.css'
 
 interface ProductQuickViewModalProps {
-  product: Product
+  product: Product & { gallery?: string[] }
   onClose: () => void
 }
 
 function ProductQuickViewModal({ product, onClose }: ProductQuickViewModalProps) {
   const [activeImage, setActiveImage] = useState(product.image)
   const [quantity, setQuantity] = useState(1)
-  const gallery = productGalleries[product.id] || [product.image]
+  const gallery = product.gallery?.length ? product.gallery : [product.image]
 
   useEffect(() => {
     setActiveImage(product.image)

@@ -1,80 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { categories, formatPrice, products } from '../data/products'
+import { formatPrice } from '../data/products'
 import type { Product } from '../data/products'
+import { useCatalog, type CatalogProduct, type CatalogPromotion } from '../hooks/useCatalog'
 import { addCartItem } from '../utils/cart'
 import { getWishlistIds, toggleWishlistId } from '../utils/wishlist'
 import Pagination from '../components/Pagination'
 import { usePagination } from '../hooks/usePagination'
 import './ProductsPage.css'
 
-const promoCodes = [
-  {
-    code: 'REDBEAN',
-    title: 'NHẬP MÃ: REDBEAN',
-    description: 'Giảm 10% cho đơn hàng đầu tiên',
-    conditions: ['Áp dụng cho khách hàng mua lần đầu', 'Giảm 10% cho đơn hàng từ 200K'],
-  },
-  {
-    code: 'COMBO20',
-    title: 'NHẬP MÃ: COMBO20',
-    description: 'Giảm 20% khi mua Combo 3 món',
-    conditions: ['Áp dụng cho sản phẩm combo', 'Giảm 20% cho combo chăm sóc da đậu đỏ 3 món'],
-  },
-  {
-    code: 'FREESHIP',
-    title: 'NHẬP MÃ: FREESHIP',
-    description: 'Miễn phí ship cho đơn từ 300K',
-    conditions: ['Áp dụng toàn quốc', 'Miễn phí vận chuyển cho đơn hàng từ 300K'],
-  },
-  {
-    code: 'SKINCARE',
-    title: 'NHẬP MÃ: SKINCARE',
-    description: 'Tặng mẫu thử khi mua từ 250K',
-    conditions: ['Áp dụng khi đơn hàng từ 250K', 'Quà tặng được gửi kèm theo đơn hàng'],
-  },
-]
-
-const productGalleries: Record<string, string[]> = {
-  '1': [
-    '/images/products/combo-3mon6.jpg',
-    '/images/products/combo-3mon.jpg',
-    '/images/products/combo-3mon2.png',
-    '/images/products/combo-3mon3.png',
-  ],
-  '2': [
-    '/images/products/sua-rua-mat-tao-bot3.jpg',
-    '/images/products/sua-rua-mat-tao-bot1.png',
-    '/images/products/sua-rua-mat-tao-bot2.png',
-    '/images/products/sua-rua-mat-tao-bot4.png',
-  ],
-  '3': [
-    '/images/products/mat-na-tay-te-bao-chet6.jpg',
-    '/images/products/mat-na-tay-te-bao-chet1.jpg',
-    '/images/products/mat-na-tay-te-bao-chet2.jpg',
-    '/images/products/mat-na-tay-te-bao-chet4.png',
-  ],
-  '4': [
-    '/images/products/toner-duong-da4.jpg',
-    '/images/products/toner-duong-da1.png',
-    '/images/products/toner-duong-da2.jpg',
-    '/images/products/toner-duong-da3.jpg',
-  ],
-  '5': [
-    '/images/products/combo-duong-da-mini4.png',
-    '/images/products/combo-duong-da-mini.png',
-    '/images/products/combo-duong-da-mini2.jpg',
-    '/images/products/combo-duong-da-mini3.jpg',
-  ],
-}
-
 function ProductsPage() {
+  const { categories, products, promotions } = useCatalog()
   const [searchParams, setSearchParams] = useSearchParams()
   const activeCategorySlug = searchParams.get('danh-muc') || 'tat-ca'
   const [sortBy, setSortBy] = useState('default')
   const [filterOpen, setFilterOpen] = useState(false)
-  const [selectedPromo, setSelectedPromo] = useState<(typeof promoCodes)[number] | null>(null)
-  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null)
+  const [selectedPromo, setSelectedPromo] = useState<CatalogPromotion | null>(null)
+  const [quickViewProduct, setQuickViewProduct] = useState<CatalogProduct | null>(null)
   const [quickViewImage, setQuickViewImage] = useState('')
   const [quickViewQuantity, setQuickViewQuantity] = useState(1)
   const [wishlistIds, setWishlistIds] = useState(() => getWishlistIds())
@@ -107,7 +49,7 @@ function ProductsPage() {
     }
 
     return result
-  }, [activeCategorySlug, sortBy])
+  }, [activeCategorySlug, products, sortBy])
 
   const {
     currentPage,
@@ -123,7 +65,7 @@ function ProductsPage() {
     }, 450)
 
     return () => window.clearTimeout(timerId)
-  }, [loadVersion])
+  }, [loadVersion, products])
 
   const handleCategoryChange = (slug: string) => {
     if (slug === 'tat-ca') {
@@ -174,7 +116,7 @@ function ProductsPage() {
 
   const closeQuickView = () => setQuickViewProduct(null)
 
-  const quickViewGallery = quickViewProduct ? productGalleries[quickViewProduct.id] || [quickViewProduct.image] : []
+  const quickViewGallery = quickViewProduct ? (quickViewProduct.gallery?.length ? quickViewProduct.gallery : [quickViewProduct.image]) : []
 
   useEffect(() => {
     if (!wishlistToastOpen) return
@@ -220,7 +162,7 @@ function ProductsPage() {
 
       <div className="products-container">
         <div className="promo-grid">
-          {promoCodes.map((promo) => (
+          {promotions.map((promo) => (
             <div className="promo-card" key={promo.code}>
               <strong>{promo.title}</strong>
               <p>{promo.description}</p>

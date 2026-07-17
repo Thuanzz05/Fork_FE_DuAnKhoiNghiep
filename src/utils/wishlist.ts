@@ -31,15 +31,44 @@ export const saveWishlistIds = (ids: string[]) => {
   return uniqueIds
 }
 
+type WishlistProduct = { id: string }
+
+const syncApiWishlist = (products: WishlistProduct[]) => saveWishlistIds(products.map((product) => product.id))
+
+export const syncWishlistFromApi = async () => {
+  if (!getAccessToken()) return getWishlistIds()
+  const localIds = getWishlistIds()
+  let products = await api.get<WishlistProduct[]>('/customers/me/wishlist')
+  for (const productId of localIds.filter((id) => !products.some((product) => product.id === id))) {
+    products = await api.post<WishlistProduct[]>('/customers/me/wishlist/items', { productId })
+  }
+  return syncApiWishlist(products)
+}
+
 export const toggleWishlistId = (productId: string) => {
   const currentIds = getWishlistIds()
+  const isRemoving = currentIds.includes(productId)
   const nextIds = currentIds.includes(productId)
     ? currentIds.filter((id) => id !== productId)
     : [...currentIds, productId]
 
-  return saveWishlistIds(nextIds)
+  const ids = saveWishlistIds(nextIds)
+  if (getAccessToken()) {
+    const request = isRemoving
+      ? api.delete<WishlistProduct[]>(`/customers/me/wishlist/items/${productId}`)
+      : api.post<WishlistProduct[]>('/customers/me/wishlist/items', { productId })
+    void request.then(syncApiWishlist).catch(() => undefined)
+  }
+  return ids
 }
 
 export const removeWishlistId = (productId: string) => {
-  return saveWishlistIds(getWishlistIds().filter((id) => id !== productId))
+  const ids = saveWishlistIds(getWishlistIds().filter((id) => id !== productId))
+  if (getAccessToken()) {
+    void api.delete<WishlistProduct[]>(`/customers/me/wishlist/items/${productId}`)
+      .then(syncApiWishlist)
+      .catch(() => undefined)
+  }
+  return ids
 }
+import { api, getAccessToken } from '../services/api'

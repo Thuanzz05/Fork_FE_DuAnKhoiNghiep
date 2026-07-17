@@ -1,14 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
 import Pagination from '../../components/Pagination'
-import { products, type Product } from '../../data/products'
 import { usePagination } from '../../hooks/usePagination'
+import { useCatalog } from '../../hooks/useCatalog'
 import {
-  getReviews,
-  saveReviews,
   type ProductReview,
   type ReviewModerationStatus,
 } from '../../utils/reviews'
+import { api } from '../../services/api'
 import './AdminReviewsPage.css'
 
 type ReviewSort = 'newest' | 'oldest' | 'highest' | 'lowest'
@@ -25,16 +24,6 @@ const statusMeta: Record<ReviewModerationStatus, { label: string; tone: string }
   approved: { label: 'Đã hiển thị', tone: 'approved' },
   hidden: { label: 'Đã ẩn', tone: 'hidden' },
 }
-
-const buildInitialReviews = (): ManagedReview[] => {
-  return getReviews().map((review) => ({
-    ...review,
-    status: review.status ?? 'pending',
-    verifiedPurchase: review.verifiedPurchase ?? true,
-  }))
-}
-
-const getProduct = (productId: string): Product | undefined => products.find((product) => product.id === productId)
 
 const formatDateTime = (value: string) => new Intl.DateTimeFormat('vi-VN', {
   day: '2-digit',
@@ -57,7 +46,8 @@ function RatingStars({ rating }: { rating: number }) {
 }
 
 function AdminReviewsPage() {
-  const [reviews, setReviews] = useState<ManagedReview[]>(buildInitialReviews)
+  const { products } = useCatalog()
+  const [reviews, setReviews] = useState<ManagedReview[]>([])
   const [searchValue, setSearchValue] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | ReviewModerationStatus>('all')
   const [ratingFilter, setRatingFilter] = useState<'all' | '1' | '2' | '3' | '4' | '5'>('all')
@@ -68,6 +58,23 @@ function AdminReviewsPage() {
   const [draftStatus, setDraftStatus] = useState<ReviewModerationStatus>('pending')
   const [draftReply, setDraftReply] = useState('')
   const [notice, setNotice] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+  const loadReviews = async () => {
+    try {
+      const data = await api.get<{ items: Array<Record<string, any>> }>('/admin/reviews?limit=100')
+      setReviews(data.items.map((item) => ({
+        id: String(item.id), orderId: '', productId: String(item.productId), userId: String(item.userId),
+        userName: String(item.userName), rating: Number(item.rating), comment: String(item.content || ''),
+        createdAt: String(item.createdAt),
+        status: item.status === 'DA_DUYET' ? 'approved' : item.status === 'TU_CHOI' ? 'hidden' : 'pending',
+        reply: item.reply || undefined, verifiedPurchase: true,
+      })))
+    } catch {
+      setReviews([])
+    }
+  }
+
+  useEffect(() => { void loadReviews() }, [])
 
   useEffect(() => {
     if (!notice) return
@@ -91,10 +98,7 @@ function AdminReviewsPage() {
     }
   }, [deletingReview, selectedReview])
 
-  const persistReviews = (nextReviews: ManagedReview[]) => {
-    setReviews(nextReviews)
-    saveReviews(nextReviews)
-  }
+  const getProduct = useCallback((productId: string) => products.find((product) => product.id === productId), [products])
 
   const filteredReviews = useMemo(() => {
     const keyword = searchValue.trim().toLocaleLowerCase('vi-VN')
@@ -114,7 +118,7 @@ function AdminReviewsPage() {
       if (sortBy === 'lowest') return first.rating - second.rating
       return new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime()
     })
-  }, [productFilter, ratingFilter, reviews, searchValue, sortBy, statusFilter])
+  }, [getProduct, productFilter, ratingFilter, reviews, searchValue, sortBy, statusFilter])
 
   const { currentPage, totalPages, pageItems: paginatedReviews, setCurrentPage } = usePagination(
     filteredReviews,
@@ -132,12 +136,17 @@ function AdminReviewsPage() {
     setDraftReply(review.reply ?? '')
   }
 
-  const updateReviewStatus = (review: ManagedReview, status: ReviewModerationStatus) => {
-    persistReviews(reviews.map((item) => item.id === review.id ? { ...item, status } : item))
-    setNotice({ message: status === 'approved' ? 'Đã duyệt và hiển thị đánh giá' : 'Đã ẩn đánh giá khỏi cửa hàng', type: 'success' })
+  const updateReviewStatus = async (review: ManagedReview, status: ReviewModerationStatus) => {
+    try {
+      await api.patch(`/admin/reviews/${review.id}`, { status: status === 'approved' ? 'DA_DUYET' : status === 'hidden' ? 'TU_CHOI' : 'CHO_DUYET' })
+      await loadReviews()
+      setNotice({ message: status === 'approved' ? 'Đã duyệt và hiển thị đánh giá' : 'Đã ẩn đánh giá khỏi cửa hàng', type: 'success' })
+    } catch (error) {
+      setNotice({ message: error instanceof Error ? error.message : 'Không thể cập nhật đánh giá', type: 'error' })
+    }
   }
 
-  const saveReviewDetail = () => {
+  const saveReviewDetail = async () => {
     if (!selectedReview) return
     const reply = draftReply.trim()
     const updatedReview: ManagedReview = {
@@ -146,15 +155,23 @@ function AdminReviewsPage() {
       reply: reply || undefined,
       replyAt: reply ? new Date().toISOString() : undefined,
     }
-    persistReviews(reviews.map((review) => review.id === selectedReview.id ? updatedReview : review))
-    setSelectedReview(updatedReview)
-    setNotice({ message: 'Đã cập nhật đánh giá và phản hồi', type: 'success' })
+    try {
+      await api.patch(`/admin/reviews/${selectedReview.id}`, {
+        status: draftStatus === 'approved' ? 'DA_DUYET' : draftStatus === 'hidden' ? 'TU_CHOI' : 'CHO_DUYET',
+        reply: reply || undefined,
+      })
+      await loadReviews()
+      setSelectedReview(updatedReview)
+      setNotice({ message: 'Đã cập nhật đánh giá và phản hồi', type: 'success' })
+    } catch (error) {
+      setNotice({ message: error instanceof Error ? error.message : 'Không thể cập nhật đánh giá', type: 'error' })
+    }
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deletingReview) return
-    persistReviews(reviews.filter((review) => review.id !== deletingReview.id))
-    setNotice({ message: `Đã xóa đánh giá của ${deletingReview.userName}`, type: 'success' })
+    await updateReviewStatus(deletingReview, 'hidden')
+    setNotice({ message: `Đã từ chối đánh giá của ${deletingReview.userName}`, type: 'success' })
     setDeletingReview(null)
   }
 

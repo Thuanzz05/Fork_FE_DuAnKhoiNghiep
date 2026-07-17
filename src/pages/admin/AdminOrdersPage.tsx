@@ -3,10 +3,9 @@ import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
 import Pagination from '../../components/Pagination'
 import { formatPrice } from '../../data/products'
 import { usePagination } from '../../hooks/usePagination'
+import { api } from '../../services/api'
 import {
-  getOrders,
   type Order,
-  type OrderItem,
   type OrderStatus,
   type PaymentMethod,
   type PaymentStatus,
@@ -41,77 +40,7 @@ const paymentMethodMeta: Record<PaymentMethod, string> = {
   ZALOPAY: 'ZaloPay',
 }
 
-const productCatalog: Record<string, Omit<OrderItem, 'quantity'>> = {
-  combo: { productId: '1', productName: 'Combo chăm sóc da toàn diện đậu đỏ 3 món 150g', productImage: '/images/products/combo-3mon6.jpg', price: 450000, weight: '150g x 3' },
-  cleanser: { productId: '2', productName: 'Sữa rửa mặt tạo bọt đậu đỏ 150g', productImage: '/images/products/sua-rua-mat-tao-bot3.jpg', price: 220000, weight: '150g' },
-  mask: { productId: '3', productName: 'Mặt nạ tẩy tế bào chết đậu đỏ 150g', productImage: '/images/products/mat-na-tay-te-bao-chet6.jpg', price: 250000, weight: '150g' },
-  toner: { productId: '4', productName: 'Toner dưỡng da đậu đỏ', productImage: '/images/products/toner-duong-da4.jpg', price: 220000, weight: '150g' },
-  mini: { productId: '5', productName: 'Bộ combo dưỡng da đậu đỏ mini', productImage: '/images/products/combo-duong-da-mini4.png', price: 250000, weight: 'Mini size' },
-  serum: { productId: '6', productName: 'Serum Đậu Đỏ Dưỡng sáng da', productImage: '/images/products/toner-duong-da6.png', price: 280000, weight: '30ml' },
-  cream: { productId: '7', productName: 'Kem dưỡng ẩm Cấp ẩm, mịn da', productImage: '/images/products/combo-duong-da-mini.png', price: 290000, weight: '50g' },
-}
-
-interface SeedOrderConfig {
-  code: string
-  userId: string
-  recipientName: string
-  phone: string
-  address: string
-  createdAt: string
-  items: Array<{ key: keyof typeof productCatalog; quantity: number }>
-  discount: number
-  shippingFee: number
-  method: PaymentMethod
-  orderStatus: OrderStatus
-  paymentStatus: PaymentStatus
-  note?: string
-  cancelReason?: string
-}
-
-const seedOrderConfigs: SeedOrderConfig[] = [
-  { code: 'RBB-26071401', userId: 'customer-001', recipientName: 'Nguyễn Minh Anh', phone: '0912456780', address: 'Số 18 Nguyễn Trãi, Phường Thanh Xuân, Hà Nội', createdAt: '2026-07-14T08:35:00+07:00', items: [{ key: 'combo', quantity: 1 }, { key: 'toner', quantity: 1 }], discount: 0, shippingFee: 30000, method: 'COD', orderStatus: 'CHO_XAC_NHAN', paymentStatus: 'CHUA_THANH_TOAN', note: 'Giao hàng trong giờ hành chính.' },
-  { code: 'RBB-26071402', userId: 'customer-005', recipientName: 'Trần Quang Huy', phone: '0903147258', address: '45 Lê Lợi, Phường Bến Nghé, TP. Hồ Chí Minh', createdAt: '2026-07-14T07:10:00+07:00', items: [{ key: 'combo', quantity: 1 }], discount: 30000, shippingFee: 30000, method: 'CHUYEN_KHOAN', orderStatus: 'DA_XAC_NHAN', paymentStatus: 'DA_THANH_TOAN' },
-  { code: 'RBB-26071303', userId: 'customer-002', recipientName: 'Lê Thu Trang', phone: '0386921754', address: '120 Trần Phú, Phường Hà Đông, Hà Nội', createdAt: '2026-07-13T19:42:00+07:00', items: [{ key: 'cleanser', quantity: 2 }, { key: 'mask', quantity: 1 }], discount: 30000, shippingFee: 0, method: 'MOMO', orderStatus: 'DANG_DONG_GOI', paymentStatus: 'DA_THANH_TOAN' },
-  { code: 'RBB-26071304', userId: 'customer-004', recipientName: 'Vũ Ngọc Hà', phone: '0325678419', address: '266 Cầu Giấy, Phường Cầu Giấy, Hà Nội', createdAt: '2026-07-13T16:18:00+07:00', items: [{ key: 'serum', quantity: 1 }, { key: 'toner', quantity: 1 }], discount: 0, shippingFee: 0, method: 'VNPAY', orderStatus: 'DANG_GIAO_HANG', paymentStatus: 'DA_THANH_TOAN' },
-  { code: 'RBB-26071205', userId: 'customer-003', recipientName: 'Phạm Quốc Bảo', phone: '0963847120', address: '32 Hai Bà Trưng, Phường Hồng Bàng, Hải Phòng', createdAt: '2026-07-12T20:18:00+07:00', items: [{ key: 'mask', quantity: 1 }], discount: 0, shippingFee: 30000, method: 'COD', orderStatus: 'DA_GIAO_HANG', paymentStatus: 'DA_THANH_TOAN' },
-  { code: 'RBB-26071206', userId: 'user-quang-demo', recipientName: 'Lê Văn Quang', phone: '0987654321', address: '15 Trần Hưng Đạo, Phường Bến Thành, TP. Hồ Chí Minh', createdAt: '2026-07-12T18:06:00+07:00', items: [{ key: 'cleanser', quantity: 1 }, { key: 'toner', quantity: 1 }], discount: 50000, shippingFee: 0, method: 'COD', orderStatus: 'DA_HUY', paymentStatus: 'CHUA_THANH_TOAN', cancelReason: 'Khách hàng yêu cầu thay đổi sản phẩm.' },
-  { code: 'RBB-26071107', userId: 'customer-006', recipientName: 'Nguyễn Lan Anh', phone: '0938127465', address: '75 Nguyễn Huệ, Phường Thuận Hóa, Huế', createdAt: '2026-07-11T14:22:00+07:00', items: [{ key: 'serum', quantity: 1 }], discount: 0, shippingFee: 0, method: 'ZALOPAY', orderStatus: 'TRA_HANG', paymentStatus: 'DA_HOAN_TIEN', cancelReason: 'Sản phẩm bị móp hộp khi vận chuyển.' },
-  { code: 'RBB-26071008', userId: 'customer-007', recipientName: 'Đỗ Minh Thư', phone: '0975612843', address: '19 Lý Thường Kiệt, Phường Ninh Kiều, Cần Thơ', createdAt: '2026-07-10T10:05:00+07:00', items: [{ key: 'combo', quantity: 2 }], discount: 50000, shippingFee: 0, method: 'COD', orderStatus: 'DA_GIAO_HANG', paymentStatus: 'DA_THANH_TOAN' },
-  { code: 'RBB-26070909', userId: 'customer-008', recipientName: 'Hoàng Mai Phương', phone: '0357421869', address: '88 Võ Nguyên Giáp, Phường Hải Châu, Đà Nẵng', createdAt: '2026-07-09T13:45:00+07:00', items: [{ key: 'mini', quantity: 1 }, { key: 'cream', quantity: 1 }], discount: 0, shippingFee: 0, method: 'VNPAY', orderStatus: 'DA_GIAO_HANG', paymentStatus: 'DA_THANH_TOAN' },
-  { code: 'RBB-26070810', userId: 'customer-009', recipientName: 'Bùi Đức Long', phone: '0863971524', address: '102 Trần Phú, Phường Nam Định, Ninh Bình', createdAt: '2026-07-08T09:30:00+07:00', items: [{ key: 'cleanser', quantity: 1 }], discount: 0, shippingFee: 30000, method: 'COD', orderStatus: 'DA_GIAO_HANG', paymentStatus: 'DA_THANH_TOAN' },
-  { code: 'RBB-26070711', userId: 'customer-010', recipientName: 'Ngô Hải Yến', phone: '0391542876', address: '27 Hùng Vương, Phường Việt Trì, Phú Thọ', createdAt: '2026-07-07T21:12:00+07:00', items: [{ key: 'mask', quantity: 1 }, { key: 'serum', quantity: 1 }], discount: 50000, shippingFee: 0, method: 'MOMO', orderStatus: 'DA_GIAO_HANG', paymentStatus: 'DA_THANH_TOAN' },
-  { code: 'RBB-26070512', userId: 'customer-011', recipientName: 'Trịnh Khánh Linh', phone: '0948251367', address: '60 Quang Trung, Phường Hạ Long, Quảng Ninh', createdAt: '2026-07-05T11:40:00+07:00', items: [{ key: 'toner', quantity: 2 }], discount: 0, shippingFee: 30000, method: 'CHUYEN_KHOAN', orderStatus: 'DA_GIAO_HANG', paymentStatus: 'DA_THANH_TOAN' },
-]
-
-const seedOrders: Order[] = seedOrderConfigs.map((config, index) => {
-  const items = config.items.map(({ key, quantity }) => ({ ...productCatalog[key], quantity }))
-  const totalProductPrice = items.reduce((total, item) => total + item.price * item.quantity, 0)
-  return {
-    id: `admin-order-${index + 1}`,
-    orderCode: config.code,
-    userId: config.userId,
-    recipientName: config.recipientName,
-    phone: config.phone,
-    shippingAddress: config.address,
-    customerNote: config.note,
-    totalProductPrice,
-    discountAmount: config.discount,
-    shippingFee: config.shippingFee,
-    totalPayment: totalProductPrice - config.discount + config.shippingFee,
-    paymentMethod: config.method,
-    orderStatus: config.orderStatus,
-    paymentStatus: config.paymentStatus,
-    createdAt: config.createdAt,
-    cancelReason: config.cancelReason,
-    items,
-  }
-})
-
-const buildInitialOrders = () => {
-  const orderMap = new Map(seedOrders.map((order) => [order.orderCode, order]))
-  getOrders().forEach((order) => orderMap.set(order.orderCode, order))
-  return Array.from(orderMap.values()).sort((first, second) => new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime())
-}
+const buildInitialOrders = (): Order[] => []
 
 const formatDateTime = (value: string) => new Date(value).toLocaleString('vi-VN', {
   day: '2-digit',
@@ -123,6 +52,36 @@ const formatDateTime = (value: string) => new Date(value).toLocaleString('vi-VN'
 
 function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>(buildInitialOrders)
+
+  const mapOrderStatus = (status: string): OrderStatus => ({
+    DANG_CHUAN_BI: 'DANG_DONG_GOI', DANG_GIAO: 'DANG_GIAO_HANG', DA_GIAO: 'DA_GIAO_HANG',
+  }[status] as OrderStatus || status as OrderStatus)
+  const toBackendStatus = (status: OrderStatus) => ({
+    DANG_DONG_GOI: 'DANG_CHUAN_BI', DANG_GIAO_HANG: 'DANG_GIAO', DA_GIAO_HANG: 'DA_GIAO',
+  } as Record<string, string>)[status] || status
+
+  const loadOrders = async () => {
+    try {
+      const list = await api.get<{ items: Array<{ id: string }>; pagination: unknown }>('/admin/orders?limit=100')
+      const details = await Promise.all(list.items.map((item) => api.get<Record<string, any>>(`/admin/orders/${item.id}`)))
+      setOrders(details.map((item) => ({
+        id: String(item.id), orderCode: String(item.orderCode), userId: String(item.customerId),
+        recipientName: String(item.recipientName), phone: String(item.phone), shippingAddress: String(item.shippingAddress),
+        customerNote: item.customerNote, totalProductPrice: Number(item.subtotal), discountAmount: Number(item.discount),
+        shippingFee: Number(item.shippingFee), totalPayment: Number(item.total), paymentMethod: item.paymentMethod as PaymentMethod,
+        orderStatus: mapOrderStatus(String(item.orderStatus)), paymentStatus: item.paymentStatus as PaymentStatus,
+        createdAt: String(item.createdAt), cancelReason: item.cancelReason,
+        items: (item.items || []).map((line: Record<string, any>) => ({
+          productId: String(line.productId), productName: String(line.name), productImage: String(line.image || ''),
+          price: Number(line.unitPrice), quantity: Number(line.quantity), weight: '',
+        })),
+      })))
+    } catch {
+      setOrders([])
+    }
+  }
+
+  useEffect(() => { void loadOrders() }, [])
   const [searchValue, setSearchValue] = useState('')
   const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | OrderStatus>('all')
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<'all' | PaymentStatus>('all')
@@ -193,7 +152,7 @@ function AdminOrdersPage() {
     setDraftPaymentStatus(order.paymentStatus)
   }
 
-  const saveOrderUpdate = () => {
+  const saveOrderUpdate = async () => {
     if (!selectedOrder) return
     const updatedOrder: Order = {
       ...selectedOrder,
@@ -201,13 +160,21 @@ function AdminOrdersPage() {
       paymentStatus: draftPaymentStatus,
       cancelReason: draftOrderStatus === 'DA_HUY' ? selectedOrder.cancelReason || 'Quản trị viên hủy đơn hàng.' : selectedOrder.cancelReason,
     }
-    setOrders((current) => current.map((order) => order.id === selectedOrder.id ? updatedOrder : order))
-    setSelectedOrder(updatedOrder)
-    setNotice(`Đã cập nhật đơn ${selectedOrder.orderCode}`)
+    try {
+      await api.patch(`/admin/orders/${selectedOrder.id}`, {
+        orderStatus: toBackendStatus(draftOrderStatus), paymentStatus: draftPaymentStatus,
+        cancelReason: draftOrderStatus === 'DA_HUY' ? updatedOrder.cancelReason : undefined,
+      })
+      await loadOrders()
+      setSelectedOrder(updatedOrder)
+      setNotice(`Đã cập nhật đơn ${selectedOrder.orderCode}`)
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Không thể cập nhật đơn hàng')
+    }
   }
 
   const refreshOrders = () => {
-    setOrders(buildInitialOrders())
+    void loadOrders()
     setNotice('Đã làm mới danh sách đơn hàng')
   }
 

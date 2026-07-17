@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
 import Pagination from '../../components/Pagination'
-import { newsArticles } from '../../data/news'
 import { usePagination } from '../../hooks/usePagination'
+import { api } from '../../services/api'
 import './AdminArticlesPage.css'
 
 type ArticleStatus = 'published' | 'draft' | 'scheduled'
@@ -45,72 +45,7 @@ const statusMeta: Record<ArticleStatus, { label: string; tone: string }> = {
   scheduled: { label: 'Đã lên lịch', tone: 'scheduled' },
 }
 
-const viewsByArticleId: Record<number, number> = {
-  1: 1842,
-  2: 1276,
-  3: 968,
-  4: 754,
-  5: 683,
-  6: 521,
-}
-
-const toIsoDate = (value: string) => {
-  const [day, month, year] = value.split('/')
-  return `${year}-${month}-${day}T08:00`
-}
-
-const bodyToText = (article: (typeof newsArticles)[number]) => article.body
-  .flatMap((section) => [section.heading ? `## ${section.heading}` : '', ...section.paragraphs])
-  .filter(Boolean)
-  .join('\n\n')
-
-const articleSeed: ManagedArticle[] = [
-  ...newsArticles.map((article, index) => ({
-    id: article.id,
-    title: article.title,
-    category: articleCategories[index % 3],
-    excerpt: article.excerpt,
-    lead: article.lead,
-    content: bodyToText(article),
-    image: article.image,
-    author: 'Red Bean Beauty',
-    status: 'published' as ArticleStatus,
-    publishedAt: toIsoDate(article.date),
-    updatedAt: toIsoDate(article.date),
-    views: viewsByArticleId[article.id] ?? 0,
-    featured: article.id === 1,
-  })),
-  {
-    id: 7,
-    title: 'Nhật ký phát triển mỹ phẩm từ hạt đậu đỏ Việt Nam',
-    category: 'Câu chuyện thương hiệu',
-    excerpt: 'Hành trình nghiên cứu nguyên liệu bản địa và phát triển bộ sản phẩm chăm sóc da dịu nhẹ của Rubeanora.',
-    lead: 'Mỗi sản phẩm bắt đầu từ mong muốn nâng tầm nguyên liệu Việt và tạo ra trải nghiệm chăm sóc da gần gũi hơn.',
-    content: '## Bắt đầu từ nguyên liệu Việt\n\nĐậu đỏ được lựa chọn nhờ nguồn dưỡng chất tự nhiên và sự gần gũi với người tiêu dùng Việt Nam.\n\n## Quá trình hoàn thiện sản phẩm\n\nCông thức được thử nghiệm, điều chỉnh để phù hợp với thói quen chăm sóc da hằng ngày.',
-    image: '/images/chung_toi.png',
-    author: 'Ban biên tập',
-    status: 'draft',
-    publishedAt: '2026-07-18T08:00',
-    updatedAt: '2026-07-14T16:20',
-    views: 0,
-    featured: false,
-  },
-  {
-    id: 8,
-    title: '5 lưu ý khi bắt đầu chu trình chăm sóc da đậu đỏ',
-    category: 'Hướng dẫn sử dụng',
-    excerpt: 'Những lưu ý đơn giản giúp bạn sử dụng sản phẩm đúng tần suất và hạn chế kích ứng không mong muốn.',
-    lead: 'Một chu trình hiệu quả nên bắt đầu chậm rãi, theo dõi phản ứng của da và duy trì đều đặn.',
-    content: '## Thử sản phẩm trên vùng da nhỏ\n\nLuôn kiểm tra phản ứng của da trước khi dùng sản phẩm trên toàn khuôn mặt.\n\n## Duy trì tần suất phù hợp\n\nKhông nên tẩy tế bào chết quá thường xuyên, đặc biệt khi da đang nhạy cảm.',
-    image: '/images/products/combo-duong-da-mini3.jpg',
-    author: 'Red Bean Beauty',
-    status: 'scheduled',
-    publishedAt: '2026-07-20T09:00',
-    updatedAt: '2026-07-15T08:10',
-    views: 0,
-    featured: false,
-  },
-]
+const initialArticles: ManagedArticle[] = []
 
 const emptyForm: ArticleFormState = {
   title: '',
@@ -121,7 +56,7 @@ const emptyForm: ArticleFormState = {
   image: '',
   author: 'Red Bean Beauty',
   status: 'draft',
-  publishedAt: '2026-07-15T09:00',
+  publishedAt: new Date().toISOString().slice(0, 16),
   featured: false,
 }
 
@@ -130,7 +65,25 @@ const formatDateTime = (value: string) => new Intl.DateTimeFormat('vi-VN', {
 }).format(new Date(value))
 
 function AdminArticlesPage() {
-  const [articles, setArticles] = useState<ManagedArticle[]>(articleSeed)
+  const [articles, setArticles] = useState<ManagedArticle[]>(initialArticles)
+
+  const loadArticles = async () => {
+    try {
+      const rows = await api.get<Array<Record<string, any>>>('/admin/articles')
+      setArticles(rows.map((item) => ({
+        id: Number(item.id), title: String(item.title), category: String(item.category || articleCategories[0]),
+        excerpt: String(item.summary || ''), lead: '', content: String(item.content || ''),
+        image: String(item.imageUrl || ''), author: String(item.authorName || 'Rubeanora'),
+        status: item.status === 'DA_DANG' ? 'published' : item.status === 'DANG_AN' ? 'scheduled' : 'draft',
+        publishedAt: String(item.publishedAt || item.createdAt), updatedAt: String(item.updatedAt),
+        views: Number(item.views || 0), featured: Boolean(item.featured),
+      })))
+    } catch {
+      setArticles([])
+    }
+  }
+
+  useEffect(() => { void loadArticles() }, [])
   const [searchValue, setSearchValue] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<'all' | ArticleStatus>('all')
@@ -245,46 +198,39 @@ function AdminArticlesPage() {
     reader.readAsDataURL(file)
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const now = new Date().toISOString()
-    if (editingArticle) {
-      setArticles((current) => current.map((article) => article.id === editingArticle.id ? {
-        ...article,
-        ...form,
-        title: form.title.trim(),
-        excerpt: form.excerpt.trim(),
-        lead: form.lead.trim(),
-        content: form.content.trim(),
-        image: form.image.trim(),
-        author: form.author.trim(),
-        updatedAt: now,
-      } : article))
-      setNotice(`Đã cập nhật bài viết “${form.title.trim()}”`)
-    } else {
-      const newArticle: ManagedArticle = {
-        id: Math.max(0, ...articles.map((article) => article.id)) + 1,
-        ...form,
-        title: form.title.trim(),
-        excerpt: form.excerpt.trim(),
-        lead: form.lead.trim(),
-        content: form.content.trim(),
-        image: form.image.trim(),
-        author: form.author.trim(),
-        updatedAt: now,
-        views: 0,
+    try {
+      const payload = {
+        title: form.title.trim(), category: form.category, summary: form.excerpt.trim(),
+        content: JSON.stringify({
+          lead: form.lead.trim(),
+          sections: [{ paragraphs: form.content.split(/\n\s*\n/).map((item) => item.trim()).filter(Boolean) }],
+        }),
+        imageUrl: form.image.trim(), featured: form.featured,
+        status: form.status === 'published' ? 'DA_DANG' : form.status === 'scheduled' ? 'DANG_AN' : 'NHAP',
+        publishedAt: form.publishedAt || undefined,
       }
-      setArticles((current) => [newArticle, ...current])
-      setNotice(`Đã tạo bài viết “${newArticle.title}”`)
+      if (editingArticle) await api.put(`/admin/articles/${editingArticle.id}`, payload)
+      else await api.post('/admin/articles', payload)
+      await loadArticles()
+      setNotice(editingArticle ? `Đã cập nhật bài viết “${form.title.trim()}”` : `Đã tạo bài viết “${form.title.trim()}”`)
+      setIsFormOpen(false)
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Không thể lưu bài viết')
     }
-    setIsFormOpen(false)
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deletingArticle) return
-    setArticles((current) => current.filter((article) => article.id !== deletingArticle.id))
-    setNotice(`Đã xóa bài viết “${deletingArticle.title}”`)
-    setDeletingArticle(null)
+    try {
+      await api.put(`/admin/articles/${deletingArticle.id}`, { status: 'DANG_AN' })
+      await loadArticles()
+      setNotice(`Đã ẩn bài viết “${deletingArticle.title}”`)
+      setDeletingArticle(null)
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Không thể cập nhật bài viết')
+    }
   }
 
   return (

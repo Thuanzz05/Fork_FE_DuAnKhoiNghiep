@@ -1,22 +1,48 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
-import { getNewsArticle, newsArticles } from '../data/news'
+import type { NewsArticle } from '../data/news'
+import { api } from '../services/api'
 import './NewsDetailPage.css'
 
 function NewsDetailPage() {
   const { id } = useParams()
-  const article = getNewsArticle(Number(id))
+  const [article, setArticle] = useState<NewsArticle | undefined>(undefined)
+  const [relatedArticles, setRelatedArticles] = useState<NewsArticle[]>([])
+  const [loading, setLoading] = useState(true)
   const [commentSent, setCommentSent] = useState(false)
 
+  useEffect(() => {
+    setLoading(true)
+    api.get<{ article: NewsArticle; relatedArticles: NewsArticle[] }>(`/news/${id}`)
+      .then((data) => {
+        setArticle(data.article)
+        setRelatedArticles(data.relatedArticles)
+      })
+      .catch(() => {
+        setArticle(undefined)
+        setRelatedArticles([])
+      })
+      .finally(() => setLoading(false))
+  }, [id])
+
+  if (!article && loading) return null
   if (!article) return <Navigate to="/404" replace />
 
-  const relatedArticles = newsArticles.filter((item) => item.id !== article.id).slice(0, 5)
-
-  const handleComment = (event: FormEvent<HTMLFormElement>) => {
+  const handleComment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    event.currentTarget.reset()
-    setCommentSent(true)
+    const form = event.currentTarget
+    const formData = new FormData(form)
+    try {
+      await api.post(`/news/${article.id}/comments`, {
+        name: String(formData.get('name') || ''), email: String(formData.get('email') || ''),
+        content: String(formData.get('content') || ''),
+      })
+      form.reset()
+      setCommentSent(true)
+    } catch {
+      setCommentSent(false)
+    }
   }
 
   return (
@@ -60,7 +86,7 @@ function NewsDetailPage() {
           <div className="news-detail-meta">
             <span>
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="3.5" /><path d="M5 21v-2a7 7 0 0 1 14 0v2" /></svg>
-              Red Bean Beauty
+              {article.author || 'Rubeanora'}
             </span>
             <span>
               <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M8 3v4M16 3v4M3 10h18" /></svg>

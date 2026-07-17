@@ -2,11 +2,10 @@ import { useEffect, useState, useCallback } from 'react'
 import { Navigate, Link } from 'react-router-dom'
 import CustomerAccountSidebar from '../components/CustomerAccountSidebar'
 import { getCurrentUser } from '../utils/auth'
-import { getUserOrders, cancelOrder } from '../utils/orders'
 import type { Order, OrderStatus } from '../utils/orders'
 import { addCartItem } from '../utils/cart'
 import { formatPrice } from '../data/products'
-import { submitOrderReviews, getOrderReviews } from '../utils/reviews'
+import { api } from '../services/api'
 import './CustomerOrdersPage.css'
 
 type FilterTab = 'ALL' | 'CHO_XAC_NHAN' | 'DANG_GIAO_HANG' | 'DA_GIAO_HANG' | 'DA_HUY'
@@ -29,17 +28,21 @@ function CustomerOrdersPage() {
   const [comments, setComments] = useState<Record<string, string>>({})
   const [existingReviews, setExistingReviews] = useState<any[]>([])
 
-  const loadOrders = useCallback(() => {
-    if (user) {
-      setOrders(getUserOrders(user.id))
+  const loadOrders = useCallback(async () => {
+    if (!user) return
+    try {
+      const data = await api.get<{ orders: Order[] }>('/customers/me/orders')
+      setOrders(data.orders)
+    } catch (error) {
+      setActionNotice({ message: error instanceof Error ? error.message : 'Không thể tải đơn hàng.', type: 'error' })
     }
   }, [user])
 
   useEffect(() => {
-    loadOrders()
+    void loadOrders()
 
     const handleOrdersUpdated = () => {
-      loadOrders()
+      void loadOrders()
     }
 
     window.addEventListener('orders-updated', handleOrdersUpdated)
@@ -167,18 +170,18 @@ function CustomerOrdersPage() {
     setCancelReason('Thay đổi ý định mua sắm')
   }
 
-  const confirmCancelOrder = () => {
+  const confirmCancelOrder = async () => {
     if (!cancelOrderId) return
-    const success = cancelOrder(cancelOrderId, cancelReason)
-    if (success) {
+    try {
+      await api.patch(`/customers/me/orders/${cancelOrderId}/cancel`, { reason: cancelReason })
       setActionNotice({ message: 'Hủy đơn hàng thành công!', type: 'success' })
-      loadOrders()
+      await loadOrders()
       // Cập nhật selectedOrder nếu đang xem chi tiết đơn hàng đó
       if (selectedOrder && selectedOrder.id === cancelOrderId) {
         setSelectedOrder((prev) => (prev ? { ...prev, orderStatus: 'DA_HUY', cancelReason } : null))
       }
-    } else {
-      setActionNotice({ message: 'Không thể hủy đơn hàng này.', type: 'error' })
+    } catch (error) {
+      setActionNotice({ message: error instanceof Error ? error.message : 'Không thể hủy đơn hàng này.', type: 'error' })
     }
     setCancelOrderId(null)
     setTimeout(() => setActionNotice({ message: '', type: '' }), 3000)
@@ -204,9 +207,14 @@ function CustomerOrdersPage() {
     setComments(initialComments)
   }
 
-  const handleViewReviewsClick = (order: Order) => {
+  const handleViewReviewsClick = async (order: Order) => {
     setViewReviewsOrder(order)
-    setExistingReviews(getOrderReviews(order.id))
+    try {
+      const data = await api.get<{ reviews: unknown[] }>(`/customers/me/orders/${order.id}/reviews`)
+      setExistingReviews(data.reviews)
+    } catch {
+      setExistingReviews([])
+    }
   }
 
   const handleRatingChange = (productId: string, value: number) => {
@@ -217,7 +225,7 @@ function CustomerOrdersPage() {
     setComments((prev) => ({ ...prev, [productId]: value }))
   }
 
-  const handleReviewSubmit = (e: React.FormEvent) => {
+  const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!reviewOrder || !user) return
 
@@ -227,16 +235,14 @@ function CustomerOrdersPage() {
       comment: comments[item.productId] || '',
     }))
 
-    const userName = `${user.lastName} ${user.firstName}`.trim() || 'Khách hàng'
-
-    submitOrderReviews(reviewOrder.id, user.id, userName, reviewsData)
-
-    setActionNotice({
-      message: 'Cảm ơn bạn đã gửi đánh giá sản phẩm thành công!',
-      type: 'success',
-    })
-    setReviewOrder(null)
-    loadOrders()
+    try {
+      await api.post(`/customers/me/orders/${reviewOrder.id}/reviews`, { reviews: reviewsData })
+      setActionNotice({ message: 'Cảm ơn bạn đã gửi đánh giá sản phẩm thành công!', type: 'success' })
+      setReviewOrder(null)
+      await loadOrders()
+    } catch (error) {
+      setActionNotice({ message: error instanceof Error ? error.message : 'Không thể gửi đánh giá.', type: 'error' })
+    }
 
     setTimeout(() => {
       setActionNotice({ message: '', type: '' })

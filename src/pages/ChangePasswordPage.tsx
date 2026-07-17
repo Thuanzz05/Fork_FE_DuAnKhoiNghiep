@@ -13,7 +13,7 @@ function ChangePasswordPage() {
 
   if (!user) return <Navigate to="/tai-khoan?che-do=dang-nhap" replace />
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
     const currentPassword = String(formData.get('currentPassword') || '')
@@ -26,9 +26,11 @@ function ChangePasswordPage() {
       return
     }
 
-    if (!changeDemoPassword(currentPassword, newPassword)) {
+    try {
+      await changeDemoPassword(currentPassword, newPassword)
+    } catch (error) {
       setIsError(true)
-      setNotice('Mật khẩu hiện tại không chính xác.')
+      setNotice(error instanceof Error ? error.message : 'Không thể đổi mật khẩu.')
       return
     }
 

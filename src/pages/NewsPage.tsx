@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Pagination from '../components/Pagination'
-import { newsArticles } from '../data/news'
+import type { NewsArticle } from '../data/news'
 import { usePagination } from '../hooks/usePagination'
+import { api } from '../services/api'
 import './NewsPage.css'
 
 function UserIcon() {
@@ -24,17 +25,22 @@ function CalendarIcon() {
 }
 
 function NewsPage() {
+  const [articles, setArticles] = useState<NewsArticle[]>([])
   const [contentState, setContentState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [loadVersion, setLoadVersion] = useState(0)
-  const { currentPage, totalPages, pageItems, setCurrentPage } = usePagination(newsArticles, 3)
+  const { currentPage, totalPages, pageItems, setCurrentPage } = usePagination(articles, 3)
 
   useEffect(() => {
     setContentState('loading')
-    const timerId = window.setTimeout(() => {
-      setContentState(Array.isArray(newsArticles) ? 'ready' : 'error')
-    }, 450)
-
-    return () => window.clearTimeout(timerId)
+    let active = true
+    api.get<{ articles: Array<Partial<NewsArticle> & Pick<NewsArticle, 'id' | 'title' | 'excerpt' | 'image' | 'date'>> }>('/news')
+      .then((data) => {
+        if (!active) return
+        setArticles(data.articles.map((item) => ({ ...item, lead: '', body: [] })))
+        setContentState('ready')
+      })
+      .catch(() => active && setContentState('error'))
+    return () => { active = false }
   }, [loadVersion])
 
   return (
@@ -73,7 +79,7 @@ function NewsPage() {
                 <p className="news-excerpt">{article.excerpt}</p>
 
                 <div className="news-meta">
-                  <span><UserIcon />Red Bean Beauty</span>
+                  <span><UserIcon />{article.author || 'Rubeanora'}</span>
                   <span><CalendarIcon />{article.date}</span>
                 </div>
               </div>
@@ -89,7 +95,7 @@ function NewsPage() {
           </div>
         ) : null}
 
-        {contentState === 'ready' && newsArticles.length === 0 ? (
+        {contentState === 'ready' && articles.length === 0 ? (
           <div className="news-status news-empty">
             <strong>Chưa có bài viết</strong>
             <p>Các nội dung chăm sóc da mới sẽ sớm được cập nhật.</p>
@@ -100,7 +106,7 @@ function NewsPage() {
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
-            totalItems={newsArticles.length}
+            totalItems={articles.length}
             pageSize={3}
             itemLabel="bài viết"
             onPageChange={setCurrentPage}
