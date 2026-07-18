@@ -164,7 +164,8 @@
   font-weight: 700;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
   height: 42px;
   padding: 0 14px;
   border: 1px solid #dfd4d5;
@@ -176,9 +177,36 @@
   outline: none;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group select:focus {
   border-color: #b53740;
   box-shadow: 0 0 0 3px rgba(181, 55, 64, 0.08);
+}
+
+.form-group select:disabled {
+  color: #9b9091;
+  background: #f7f4f4;
+  cursor: not-allowed;
+}
+
+.checkout-address-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #b42318;
+  font-size: 12px;
+}
+
+.checkout-address-error button {
+  padding: 0;
+  border: 0;
+  color: #b53740;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 /* Payment option Card styling */

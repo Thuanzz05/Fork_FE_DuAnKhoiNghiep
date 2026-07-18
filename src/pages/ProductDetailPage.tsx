@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { formatPrice } from '../data/products'
 import { useCatalog, type CatalogPromotion } from '../hooks/useCatalog'
 import { api } from '../services/api'
-import { addCartItem } from '../utils/cart'
+import { addCartItem, addCartItemAndSync } from '../utils/cart'
 import type { ProductReview } from '../utils/reviews'
 import { useStoreSettings } from '../utils/storeSettings'
 import { getWishlistIds, toggleWishlistId } from '../utils/wishlist'
@@ -138,9 +138,13 @@ function ProductDetailPage() {
 
   const handleAddToCart = () => addCartItem(product.id, quantity)
 
-  const handleBuyNow = () => {
-    addCartItem(product.id, quantity)
-    navigate('/gio-hang')
+  const handleBuyNow = async () => {
+    try {
+      await addCartItemAndSync(product.id, quantity)
+      navigate('/thanh-toan', { state: { selectedIds: [product.id] } })
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Không thể thêm sản phẩm vào giỏ hàng. Vui lòng thử lại.')
+    }
   }
 
   return (
@@ -227,7 +231,7 @@ function ProductDetailPage() {
           </div>
 
           <div className="product-buy-actions">
-            <button className="buy-now-button" type="button" onClick={handleBuyNow}>Mua ngay</button>
+            <button className="buy-now-button" type="button" onClick={() => void handleBuyNow()}>Mua ngay</button>
             <button className="add-cart-button" type="button" onClick={handleAddToCart}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5" /><circle cx="18" cy="20" r="1.5" /><path d="M3 4h2l2.4 10.8a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L21 8H6" /></svg>
               Thêm vào giỏ

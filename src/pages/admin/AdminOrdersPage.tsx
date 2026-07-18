@@ -168,6 +168,7 @@ function AdminOrdersPage() {
       await loadOrders()
       setSelectedOrder(updatedOrder)
       setNotice(`Đã cập nhật đơn ${selectedOrder.orderCode}`)
+      window.dispatchEvent(new Event('admin-orders-updated'))
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Không thể cập nhật đơn hàng')
     }
