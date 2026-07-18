@@ -28,6 +28,10 @@ type AuthSession = {
   password: string
 }
 
+type UserResponse = {
+  user: AuthUser
+}
+
 const AUTH_SESSION_KEY = 'red-bean-beauty-auth-session'
 const AUTH_USERS_KEY = 'red-bean-beauty-auth-users'
 
@@ -38,7 +42,11 @@ const dispatchAuthUpdated = (session: AuthSession | null) => {
 export const getAuthSession = (): AuthSession | null => {
   try {
     const raw = localStorage.getItem(AUTH_SESSION_KEY)
-    return raw ? (JSON.parse(raw) as AuthSession) : null
+    if (!raw) return null
+    const session = JSON.parse(raw) as AuthSession & { user: AuthUser & { user?: AuthUser } }
+    // Recover sessions saved by older clients that stored the API's { user } wrapper.
+    if (session.user?.user) return { ...session, user: session.user.user }
+    return session
   } catch {
     return null
   }
@@ -105,28 +113,28 @@ export const changeDemoPassword = async (currentPassword: string, newPassword: s
 }
 
 export const updateProfile = async (input: Pick<AuthUser, 'firstName' | 'lastName' | 'email' | 'phone'> & { avatar?: string }) => {
-  const user = await api.put<AuthUser>('/customers/me', input)
+  const { user } = await api.put<UserResponse>('/customers/me', input)
   const session = getAuthSession()
   saveSession({ user, password: session?.password ?? '' })
   return user
 }
 
 export const addUserAddress = async (input: Omit<CustomerAddress, 'id'>) => {
-  const user = await api.post<AuthUser>('/customers/me/addresses', input)
+  const { user } = await api.post<UserResponse>('/customers/me/addresses', input)
   const session = getAuthSession()
   saveSession({ user, password: session?.password ?? '' })
   return user
 }
 
 export const makeUserAddressDefault = async (addressId: string) => {
-  const user = await api.patch<AuthUser>(`/customers/me/addresses/${addressId}/default`)
+  const { user } = await api.patch<UserResponse>(`/customers/me/addresses/${addressId}/default`)
   const session = getAuthSession()
   saveSession({ user, password: session?.password ?? '' })
   return user
 }
 
 export const removeUserAddress = async (addressId: string) => {
-  const user = await api.delete<AuthUser>(`/customers/me/addresses/${addressId}`)
+  const { user } = await api.delete<UserResponse>(`/customers/me/addresses/${addressId}`)
   const session = getAuthSession()
   saveSession({ user, password: session?.password ?? '' })
   return user

@@ -120,7 +120,13 @@ function CustomerAccountPage() {
     reader.onload = async () => {
       if (typeof reader.result !== 'string') return
       try {
-        const nextUser = await updateProfile({ ...user, avatar: reader.result })
+        const nextUser = await updateProfile({
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phone: user.phone,
+          avatar: reader.result,
+        })
         setUser(nextUser)
         setProfileNotice('Ảnh đại diện đã được cập nhật.')
       } catch (error) {
@@ -187,7 +193,13 @@ function CustomerAccountPage() {
 
   const removeAvatar = async () => {
     try {
-      const nextUser = await updateProfile({ ...user, avatar: '' })
+      const nextUser = await updateProfile({
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        avatar: '',
+      })
       setUser(nextUser)
       setProfileNotice('Đã dùng ảnh đại diện mặc định.')
     } catch (error) {

@@ -1,7 +1,8 @@
-import { useState, type ReactNode, type SVGProps } from 'react'
+import { useCallback, useEffect, useState, type ReactNode, type SVGProps } from 'react'
 import { Link } from 'react-router-dom'
 import { getCurrentUser, getUserDisplayName, getUserInitial } from '../utils/auth'
 import { useStoreSettings } from '../utils/storeSettings'
+import { apiRequest } from '../services/api'
 import '../pages/admin/AdminDashboardPage.css'
 
 export type AdminIconName =
@@ -39,6 +40,7 @@ export type AdminIconName =
   | 'eye'
   | 'download'
   | 'print'
+  | 'message'
 
 interface AdminIconProps extends SVGProps<SVGSVGElement> {
   name: AdminIconName
@@ -80,6 +82,7 @@ export const AdminIcon = ({ name, ...props }: AdminIconProps) => {
     eye: <><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></>,
     download: <><path d="M12 3v12M7 10l5 5 5-5" /><path d="M5 21h14a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2" /></>,
     print: <><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="7" /><path d="M18 12h.01" /></>,
+    message: <><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z" /><path d="M8 9h8M8 13h5" /></>,
   }
 
   return (
@@ -89,7 +92,7 @@ export const AdminIcon = ({ name, ...props }: AdminIconProps) => {
   )
 }
 
-type AdminSection = 'dashboard' | 'orders' | 'products' | 'categories' | 'inventory' | 'accounts' | 'promotions' | 'articles' | 'reviews' | 'reports' | 'settings'
+type AdminSection = 'dashboard' | 'orders' | 'products' | 'categories' | 'inventory' | 'accounts' | 'promotions' | 'articles' | 'reviews' | 'messages' | 'reports' | 'settings'
 
 interface AdminLayoutProps {
   activeItem: AdminSection
@@ -109,6 +112,7 @@ const navItems: Array<{ label: string; icon: AdminIconName; section?: AdminSecti
   { label: 'Khuyến mãi', icon: 'discount', section: 'promotions', to: '/admin/khuyen-mai' },
   { label: 'Bài viết', icon: 'news', section: 'articles', to: '/admin/bai-viet' },
   { label: 'Đánh giá', icon: 'star', section: 'reviews', to: '/admin/danh-gia' },
+  { label: 'Tin nhắn', icon: 'message', section: 'messages', to: '/admin/tin-nhan' },
 ]
 
 function AdminLayout({
@@ -119,10 +123,25 @@ function AdminLayout({
   searchPlaceholder = 'Tìm kiếm đơn hàng, sản phẩm...',
 }: AdminLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [newContactCount, setNewContactCount] = useState(0)
   const storeSettings = useStoreSettings()
   const currentUser = getCurrentUser()
   const adminName = currentUser ? getUserDisplayName(currentUser) : 'Quản trị viên'
   const adminInitial = currentUser ? getUserInitial(currentUser) : 'QT'
+
+  const loadContactCount = useCallback(async () => {
+    try {
+      const result = await apiRequest<{ pagination: { total: number } }>('/admin/contacts?status=MOI&limit=1')
+      setNewContactCount(result.pagination.total)
+    } catch { setNewContactCount(0) }
+  }, [])
+
+  useEffect(() => {
+    loadContactCount()
+    const timer = window.setInterval(loadContactCount, 30000)
+    window.addEventListener('admin-contacts-updated', loadContactCount)
+    return () => { window.clearInterval(timer); window.removeEventListener('admin-contacts-updated', loadContactCount) }
+  }, [loadContactCount])
 
   const renderNavItem = (item: (typeof navItems)[number]) => {
     const className = `admin-nav-item${item.section === activeItem ? ' is-active' : ''}`
@@ -130,7 +149,7 @@ function AdminLayout({
       <>
         <AdminIcon name={item.icon} />
         <span>{item.label}</span>
-        {item.count ? <b>{item.count}</b> : null}
+        {item.section === 'messages' && newContactCount > 0 ? <b>{newContactCount}</b> : item.count ? <b>{item.count}</b> : null}
       </>
     )
 
@@ -194,7 +213,7 @@ function AdminLayout({
             />
           </label>
           <div className="admin-topbar-actions">
-            <button type="button" className="admin-notification" aria-label="Thông báo"><AdminIcon name="bell" /></button>
+            <Link to="/admin/tin-nhan" className="admin-notification" aria-label={`${newContactCount} tin nhắn mới`}><AdminIcon name="bell" />{newContactCount > 0 && <span>{newContactCount > 99 ? '99+' : newContactCount}</span>}</Link>
             <button type="button" className="admin-user-menu">
               <span className="admin-profile-avatar">{adminInitial}</span>
               <span className="admin-user-copy"><strong>{adminName}</strong><small>{currentUser?.role === 'ADMIN' ? 'Quản trị viên' : 'Tài khoản'}</small></span>

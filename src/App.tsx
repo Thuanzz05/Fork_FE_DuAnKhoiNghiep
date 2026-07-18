@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Routes, Route, useLocation } from 'react-router-dom'
 import CartToast from './components/CartToast'
+import CustomerChatWidget from './components/CustomerChatWidget'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import HomePage from './pages/HomePage'
@@ -33,6 +34,7 @@ import AdminCategoriesPage from './pages/admin/AdminCategoriesPage'
 import AdminReviewsPage from './pages/admin/AdminReviewsPage'
 import AdminSettingsPage from './pages/admin/AdminSettingsPage'
 import AdminReportsPage from './pages/admin/AdminReportsPage'
+import AdminMessagesPage from './pages/admin/AdminMessagesPage'
 import NotFoundPage from './pages/NotFoundPage'
 import { useStoreSettings } from './utils/storeSettings'
 import { getCurrentUser } from './utils/auth'
@@ -63,6 +65,7 @@ function AppContent() {
       <ScrollToTop />
       {!isAdminRoute && <Header />}
       {!isAdminRoute && <CartToast />}
+      {!isAdminRoute && <CustomerChatWidget />}
 
       <Routes>
         <Route path="/" element={<HomePage />} />
@@ -92,6 +95,7 @@ function AppContent() {
         <Route path="/admin/kho" element={<AdminGuard><AdminInventoryPage /></AdminGuard>} />
         <Route path="/admin/bai-viet" element={<AdminGuard><AdminArticlesPage /></AdminGuard>} />
         <Route path="/admin/danh-gia" element={<AdminGuard><AdminReviewsPage /></AdminGuard>} />
+        <Route path="/admin/tin-nhan" element={<AdminGuard><AdminMessagesPage /></AdminGuard>} />
         <Route path="/admin/bao-cao" element={<AdminGuard><AdminReportsPage /></AdminGuard>} />
         <Route path="/admin/cai-dat" element={<AdminGuard><AdminSettingsPage /></AdminGuard>} />
         <Route path="/404" element={<NotFoundPage />} />

@@ -12,6 +12,19 @@ interface LocationState {
   selectedIds?: string[]
 }
 
+type AdministrativeUnit = {
+  code: string
+  name: string
+  type: string
+}
+
+type AddressApiResponse = {
+  success: boolean
+  data: AdministrativeUnit[]
+}
+
+const ADDRESS_API_BASE = 'https://tinhthanhpho.com/api/v1'
+
 type CheckoutPaymentMethod = 'COD' | 'CHUYEN_KHOAN' | 'MOMO' | 'VNPAY'
 
 const getPaymentOptions = (settings: StoreSettings) => {
@@ -41,6 +54,14 @@ function CheckoutPage() {
   const [recipientName, setRecipientName] = useState('')
   const [phone, setPhone] = useState('')
   const [shippingAddress, setShippingAddress] = useState('')
+  const [provinces, setProvinces] = useState<AdministrativeUnit[]>([])
+  const [wards, setWards] = useState<AdministrativeUnit[]>([])
+  const [provinceCode, setProvinceCode] = useState('')
+  const [wardCode, setWardCode] = useState('')
+  const [addressDetail, setAddressDetail] = useState('')
+  const [addressLoading, setAddressLoading] = useState(false)
+  const [addressApiError, setAddressApiError] = useState('')
+  const [wardRetryKey, setWardRetryKey] = useState(0)
   const [useCustomAddress, setUseCustomAddress] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<CheckoutPaymentMethod>(() => getPaymentOptions(storeSettings)[0].id)
   const [customerNote, setCustomerNote] = useState('')
@@ -50,6 +71,65 @@ function CheckoutPage() {
   const [appliedVoucher, setAppliedVoucher] = useState<string | null>(null)
   const [voucherDiscount, setVoucherDiscount] = useState(0)
   const [voucherNotice, setVoucherNotice] = useState({ message: '', type: '' })
+
+  const loadProvinces = async () => {
+    setAddressLoading(true)
+    setAddressApiError('')
+    try {
+      const response = await fetch(`${ADDRESS_API_BASE}/new-provinces?limit=100`, {
+        headers: { Accept: 'application/json' },
+      })
+      if (!response.ok) throw new Error('Không thể tải tỉnh/thành phố')
+      const result = (await response.json()) as AddressApiResponse
+      setProvinces(result.data || [])
+    } catch {
+      setAddressApiError('Không thể tải dữ liệu địa chỉ. Vui lòng thử lại.')
+    } finally {
+      setAddressLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void loadProvinces()
+  }, [])
+
+  useEffect(() => {
+    if (!provinceCode) {
+      setWards([])
+      setWardCode('')
+      return
+    }
+
+    const loadWards = async () => {
+      setAddressLoading(true)
+      setAddressApiError('')
+      try {
+        const response = await fetch(`${ADDRESS_API_BASE}/new-provinces/${provinceCode}/wards?limit=500`, {
+          headers: { Accept: 'application/json' },
+        })
+        if (!response.ok) throw new Error('Không thể tải phường/xã')
+        const result = (await response.json()) as AddressApiResponse
+        setWards(result.data || [])
+        setWardCode('')
+      } catch {
+        setWards([])
+        setAddressApiError('Không thể tải danh sách phường/xã. Vui lòng thử lại.')
+      } finally {
+        setAddressLoading(false)
+      }
+    }
+
+    void loadWards()
+  }, [provinceCode, wardRetryKey])
+
+  useEffect(() => {
+    if (!useCustomAddress) return
+    const province = provinces.find((item) => item.code === provinceCode)
+    const ward = wards.find((item) => item.code === wardCode)
+    const provinceName = province ? `${province.type} ${province.name}`.trim() : ''
+    const wardName = ward ? `${ward.type} ${ward.name}`.trim() : ''
+    setShippingAddress([addressDetail.trim(), wardName, provinceName].filter(Boolean).join(', '))
+  }, [addressDetail, provinceCode, provinces, useCustomAddress, wardCode, wards])
 
   // Redirect if not logged in or no selected products
   useEffect(() => {
@@ -98,6 +178,9 @@ function CheckoutPage() {
     setRecipientName(user ? `${user.lastName} ${user.firstName}`.trim() : '')
     setPhone(user?.phone || '')
     setShippingAddress('')
+    setProvinceCode('')
+    setWardCode('')
+    setAddressDetail('')
   }
 
   // Get selected products and quantities
@@ -157,7 +240,8 @@ function CheckoutPage() {
     if (!user) return
     if (checkoutItems.length === 0) return
 
-    if (!recipientName.trim() || !phone.trim() || !shippingAddress.trim()) {
+    if (!recipientName.trim() || !phone.trim() || !shippingAddress.trim()
+      || (useCustomAddress && (!provinceCode || !wardCode || !addressDetail.trim()))) {
       alert('Vui lòng điền đầy đủ thông tin giao hàng.')
       return
     }
@@ -271,16 +355,59 @@ function CheckoutPage() {
                     </label>
                   </div>
 
+                  <div className="form-group-row">
+                    <label className="form-group">
+                      <span>Tỉnh/Thành phố *</span>
+                      <select
+                        value={provinceCode}
+                        onChange={(e) => setProvinceCode(e.target.value)}
+                        disabled={addressLoading && provinces.length === 0}
+                        required
+                      >
+                        <option value="">Chọn tỉnh/thành phố</option>
+                        {provinces.map((item) => (
+                          <option value={item.code} key={item.code}>{item.type} {item.name}</option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="form-group">
+                      <span>Phường/Xã *</span>
+                      <select
+                        value={wardCode}
+                        onChange={(e) => setWardCode(e.target.value)}
+                        disabled={!provinceCode || addressLoading}
+                        required
+                      >
+                        <option value="">Chọn phường/xã</option>
+                        {wards.map((item) => (
+                          <option value={item.code} key={item.code}>{item.type} {item.name}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
                   <label className="form-group">
-                    <span>Địa chỉ chi tiết (Số nhà, tên đường, phường/xã, quận, tỉnh...) *</span>
+                    <span>Số nhà, tên đường *</span>
                     <input
                       type="text"
-                      value={shippingAddress}
-                      onChange={(e) => setShippingAddress(e.target.value)}
-                      placeholder="Ví dụ: Số 12, ngõ 34 Trần Hưng Đạo, P. Bến Thành, Quận 1, TP. HCM"
+                      value={addressDetail}
+                      onChange={(e) => setAddressDetail(e.target.value)}
+                      placeholder="Ví dụ: Số 12, đường Nguyễn Văn A"
                       required
                     />
                   </label>
+                  {addressApiError && (
+                    <div className="checkout-address-error" role="alert">
+                      {addressApiError}
+                      <button
+                        type="button"
+                        onClick={() => provinceCode ? setWardRetryKey((key) => key + 1) : void loadProvinces()}
+                      >
+                        Thử lại
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </section>
