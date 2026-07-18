@@ -997,6 +997,58 @@
 }
 
 @media (max-width: 640px) {
+  .order-modal-backdrop {
+    padding: 10px;
+  }
+
+  .order-modal-card {
+    max-height: calc(100dvh - 20px);
+    border-radius: 10px;
+  }
+
+  .order-modal-header {
+    padding: 14px 16px;
+  }
+
+  .order-modal-header h2 {
+    font-size: 16px;
+  }
+
+  .order-modal-body {
+    padding: 16px;
+  }
+
+  .modal-product-row {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .modal-prod-qty,
+  .modal-prod-price {
+    text-align: left;
+  }
+
+  .order-modal-footer {
+    flex-wrap: wrap;
+    padding: 12px 16px;
+  }
+
+  .confirmation-modal {
+    width: 100%;
+    max-height: calc(100dvh - 20px);
+    padding: 20px;
+    overflow-y: auto;
+  }
+
+  .confirmation-actions {
+    flex-direction: column-reverse;
+  }
+
+  .confirmation-actions button {
+    width: 100%;
+  }
+
   .order-card-header {
     flex-direction: column;
     align-items: flex-start;

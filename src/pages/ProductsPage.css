@@ -1382,6 +1382,31 @@
     padding-right: 18px;
   }
 
+  .quick-view-overlay {
+    padding: 12px;
+  }
+
+  .quick-view-modal {
+    max-height: calc(100dvh - 24px);
+    border-radius: 12px;
+  }
+
+  .quick-view-main-image {
+    min-height: 220px;
+  }
+
+  .quick-view-info h2 {
+    font-size: 21px;
+  }
+
+  .quick-view-price {
+    flex-wrap: wrap;
+  }
+
+  .quick-view-price strong {
+    font-size: 25px;
+  }
+
   .quick-view-thumbs {
     gap: 8px;
   }

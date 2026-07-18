@@ -83,10 +83,6 @@ function AccountPage() {
     }
   }
 
-  if (existingUser) {
-    return <Navigate to={existingUser.role === 'ADMIN' ? '/admin' : '/'} replace />
-  }
-
   const handleGoogleLogin = useCallback(async (credential: string) => {
     try {
       setNotice('Đang xác thực tài khoản Google...')
@@ -96,6 +92,10 @@ function AccountPage() {
       setNotice(error instanceof Error ? error.message : 'Không thể đăng nhập bằng Google.')
     }
   }, [navigate])
+
+  if (existingUser) {
+    return <Navigate to={existingUser.role === 'ADMIN' ? '/admin' : '/'} replace />
+  }
 
   return (
     <main className="account-page">

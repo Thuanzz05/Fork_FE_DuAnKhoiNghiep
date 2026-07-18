@@ -37,7 +37,7 @@ function GoogleSignInButton({ onCredential, onError }: GoogleSignInButtonProps) 
         type: 'standard',
         theme: 'outline',
         size: 'large',
-        text: 'continue_with',
+        text: 'signin_with',
         shape: 'pill',
         width: Math.min(hostRef.current.clientWidth || 320, 400),
         locale: 'vi',

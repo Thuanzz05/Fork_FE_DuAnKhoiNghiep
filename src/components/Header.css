@@ -824,6 +824,7 @@
   .cart-button {
     width: 36px;
     height: 36px;
+    align-self: center;
     border-radius: 0;
     background: transparent;
     padding: 0;
@@ -1031,5 +1032,48 @@
   .dropdown-item:hover {
     background: #FFF0F0 !important;
     transform: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .header-container {
+    width: calc(100% - 20px);
+  }
+
+  .header-main {
+    gap: 6px;
+    padding: 8px 0;
+  }
+
+  .logo-img {
+    height: 50px;
+  }
+
+  .header-actions {
+    gap: 0;
+  }
+
+  .account-button,
+  .wishlist-button,
+  .cart-button {
+    width: 32px;
+    height: 32px;
+  }
+
+  .account-button svg,
+  .wishlist-button svg,
+  .cart-button svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .header-search,
+  .header-search button {
+    height: 40px;
+  }
+
+  .account-dropdown {
+    right: -66px;
+    width: min(205px, calc(100vw - 20px));
   }
 }

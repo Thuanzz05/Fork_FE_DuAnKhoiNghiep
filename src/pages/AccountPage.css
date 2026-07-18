@@ -338,3 +338,26 @@
     height: 46px;
   }
 }
+
+@media (max-width: 380px) {
+  .account-page {
+    padding: 18px 10px 36px;
+  }
+
+  .account-form-wrap {
+    padding: 20px 14px 24px;
+  }
+
+  .account-options {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .forgot-button {
+    margin-left: auto;
+  }
+
+  .account-heading h1 {
+    font-size: 20px;
+  }
+}

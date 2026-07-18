@@ -1362,10 +1362,10 @@
     border-radius: 20px;
     padding: 30px 20px;
     box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     align-items: center;
-    gap: 20px;
+    gap: 16px 8px;
     border: 1px solid rgba(4, 104, 55, 0.12);
   }
 
@@ -1385,6 +1385,7 @@
     transform: none;
     width: 100%;
     text-align: center;
+    grid-column: 1 / -1;
   }
 
   .partner-label-overlay {
@@ -1392,11 +1393,52 @@
     width: 100%;
     left: 0 !important;
     bottom: 0;
-    margin-top: 5px;
+    min-height: 64px;
+    margin-top: 0;
+    padding: 10px 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: none !important;
+    border: 1px solid rgba(4, 104, 55, 0.1);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.66);
   }
 
   .pillar-text-new {
     font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-partner-overlay {
+    margin-top: 22px;
+    padding: 24px 14px;
+    border-radius: 16px;
+  }
+
+  .partner-kicker-new {
+    font-size: 8px;
+    letter-spacing: 0.55px;
+  }
+
+  .partner-title-new {
+    font-size: 17px;
+  }
+
+  .partner-desc-new {
+    font-size: 11px;
+    line-height: 1.55;
+  }
+
+  .partner-label-overlay {
+    min-height: 58px;
+    padding: 8px 3px;
+  }
+
+  .pillar-text-new {
+    font-size: 11px;
+    line-height: 1.3;
   }
 }
 
