@@ -124,24 +124,50 @@ function AdminLayout({
 }: AdminLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [newContactCount, setNewContactCount] = useState(0)
+  const [newOrderCount, setNewOrderCount] = useState(0)
+  const [pendingReviewCount, setPendingReviewCount] = useState(0)
   const storeSettings = useStoreSettings()
   const currentUser = getCurrentUser()
   const adminName = currentUser ? getUserDisplayName(currentUser) : 'Quản trị viên'
   const adminInitial = currentUser ? getUserInitial(currentUser) : 'QT'
 
-  const loadContactCount = useCallback(async () => {
+  const loadNotificationCounts = useCallback(async () => {
     try {
-      const result = await apiRequest<{ pagination: { total: number } }>('/admin/contacts?status=MOI&limit=1')
-      setNewContactCount(result.pagination.total)
-    } catch { setNewContactCount(0) }
+      const [contacts, orders, reviews] = await Promise.all([
+        apiRequest<{ pagination: { total: number } }>('/admin/contacts?status=MOI&limit=1'),
+        apiRequest<{ pagination: { total: number } }>('/admin/orders?status=CHO_XAC_NHAN&limit=1'),
+        apiRequest<{ pagination: { total: number } }>('/admin/reviews?status=CHO_DUYET&limit=1'),
+      ])
+      setNewContactCount(contacts.pagination.total)
+      setNewOrderCount(orders.pagination.total)
+      setPendingReviewCount(reviews.pagination.total)
+    } catch {
+      setNewContactCount(0)
+      setNewOrderCount(0)
+      setPendingReviewCount(0)
+    }
   }, [])
 
   useEffect(() => {
-    loadContactCount()
-    const timer = window.setInterval(loadContactCount, 30000)
-    window.addEventListener('admin-contacts-updated', loadContactCount)
-    return () => { window.clearInterval(timer); window.removeEventListener('admin-contacts-updated', loadContactCount) }
-  }, [loadContactCount])
+    void loadNotificationCounts()
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void loadNotificationCounts()
+    }
+    const timer = window.setInterval(refresh, 3000)
+    window.addEventListener('focus', refresh)
+    window.addEventListener('admin-contacts-updated', refresh)
+    window.addEventListener('admin-orders-updated', refresh)
+    window.addEventListener('admin-reviews-updated', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener('admin-contacts-updated', refresh)
+      window.removeEventListener('admin-orders-updated', refresh)
+      window.removeEventListener('admin-reviews-updated', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [loadNotificationCounts])
 
   const renderNavItem = (item: (typeof navItems)[number]) => {
     const className = `admin-nav-item${item.section === activeItem ? ' is-active' : ''}`
@@ -149,7 +175,13 @@ function AdminLayout({
       <>
         <AdminIcon name={item.icon} />
         <span>{item.label}</span>
-        {item.section === 'messages' && newContactCount > 0 ? <b>{newContactCount}</b> : item.count ? <b>{item.count}</b> : null}
+        {item.section === 'messages' && newContactCount > 0
+          ? <b>{newContactCount > 99 ? '99+' : newContactCount}</b>
+          : item.section === 'orders' && newOrderCount > 0
+            ? <b>{newOrderCount > 99 ? '99+' : newOrderCount}</b>
+            : item.section === 'reviews' && pendingReviewCount > 0
+              ? <b>{pendingReviewCount > 99 ? '99+' : pendingReviewCount}</b>
+            : item.count ? <b>{item.count}</b> : null}
       </>
     )
 
@@ -213,7 +245,7 @@ function AdminLayout({
             />
           </label>
           <div className="admin-topbar-actions">
-            <Link to="/admin/tin-nhan" className="admin-notification" aria-label={`${newContactCount} tin nhắn mới`}><AdminIcon name="bell" />{newContactCount > 0 && <span>{newContactCount > 99 ? '99+' : newContactCount}</span>}</Link>
+            <Link to={newContactCount > 0 ? '/admin/tin-nhan' : newOrderCount > 0 ? '/admin/don-hang' : '/admin/danh-gia'} className="admin-notification" aria-label={`${newContactCount} tin nhắn mới, ${newOrderCount} đơn hàng mới, ${pendingReviewCount} đánh giá chờ duyệt`}><AdminIcon name="bell" />{newContactCount + newOrderCount + pendingReviewCount > 0 && <span>{newContactCount + newOrderCount + pendingReviewCount > 99 ? '99+' : newContactCount + newOrderCount + pendingReviewCount}</span>}</Link>
             <button type="button" className="admin-user-menu">
               <span className="admin-profile-avatar">{adminInitial}</span>
               <span className="admin-user-copy"><strong>{adminName}</strong><small>{currentUser?.role === 'ADMIN' ? 'Quản trị viên' : 'Tài khoản'}</small></span>

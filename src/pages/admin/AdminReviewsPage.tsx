@@ -140,6 +140,7 @@ function AdminReviewsPage() {
     try {
       await api.patch(`/admin/reviews/${review.id}`, { status: status === 'approved' ? 'DA_DUYET' : status === 'hidden' ? 'TU_CHOI' : 'CHO_DUYET' })
       await loadReviews()
+      window.dispatchEvent(new Event('admin-reviews-updated'))
       setNotice({ message: status === 'approved' ? 'Đã duyệt và hiển thị đánh giá' : 'Đã ẩn đánh giá khỏi cửa hàng', type: 'success' })
     } catch (error) {
       setNotice({ message: error instanceof Error ? error.message : 'Không thể cập nhật đánh giá', type: 'error' })
@@ -161,6 +162,7 @@ function AdminReviewsPage() {
         reply: reply || undefined,
       })
       await loadReviews()
+      window.dispatchEvent(new Event('admin-reviews-updated'))
       setSelectedReview(updatedReview)
       setNotice({ message: 'Đã cập nhật đánh giá và phản hồi', type: 'success' })
     } catch (error) {

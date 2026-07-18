@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
 import { apiRequest } from '../../services/api'
 import './AdminMessagesPage.css'
@@ -55,11 +55,12 @@ function AdminMessagesPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const conversationBodyRef = useRef<HTMLDivElement>(null)
 
   const load = useCallback(async () => {
     try {
       const data = await apiRequest<Result>('/admin/contacts?limit=100')
-      setMessages(data.items)
+      setMessages((current) => JSON.stringify(current) === JSON.stringify(data.items) ? current : data.items)
       setError('')
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Không thể tải tin nhắn')
@@ -70,8 +71,19 @@ function AdminMessagesPage() {
 
   useEffect(() => {
     void load()
-    const timer = window.setInterval(() => void load(), 30000)
-    return () => window.clearInterval(timer)
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void load()
+    }, 3000)
+    const refreshWhenActive = () => {
+      if (document.visibilityState === 'visible') void load()
+    }
+    window.addEventListener('focus', refreshWhenActive)
+    document.addEventListener('visibilitychange', refreshWhenActive)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', refreshWhenActive)
+      document.removeEventListener('visibilitychange', refreshWhenActive)
+    }
   }, [load])
 
   const conversations = useMemo(() => {
@@ -105,6 +117,16 @@ function AdminMessagesPage() {
   }, [conversations, filter, search])
 
   const selected = conversations.find((message) => message.id === selectedId) ?? null
+  const selectedLastMessageId = selected ? getThreadMessages(selected).at(-1)?.id : undefined
+
+  useEffect(() => {
+    if (!selectedId) return
+    window.requestAnimationFrame(() => {
+      const body = conversationBodyRef.current
+      if (body) body.scrollTop = body.scrollHeight
+    })
+  }, [selectedId, selectedLastMessageId])
+
   const count = (status?: Status) => status
     ? conversations.filter((message) => message.status === status).length
     : conversations.length
@@ -223,7 +245,7 @@ function AdminMessagesPage() {
                 <i className={`is-${statusMeta[selected.status].tone}`}>{statusMeta[selected.status].label}</i>
               </header>
 
-              <div className="admin-conversation-body">
+              <div className="admin-conversation-body" ref={conversationBodyRef}>
                 <div className="admin-conversation-date"><span>Lịch sử hội thoại</span></div>
                 {getThreadMessages(selected).map((reply) => (
                   <div className={`admin-chat-message is-${reply.direction === 'CUSTOMER' ? 'customer' : 'admin'}`} key={reply.id}>

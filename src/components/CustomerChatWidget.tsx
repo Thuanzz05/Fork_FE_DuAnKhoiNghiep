@@ -30,7 +30,8 @@ function CustomerChatWidget() {
     if (!user) return
     try {
       const data = await apiRequest<SupportResult>('/customers/me/support-messages')
-      setConversations(data.conversations || [])
+      const next = data.conversations || []
+      setConversations((current) => JSON.stringify(current) === JSON.stringify(next) ? current : next)
     } catch {
       // Polling âm thầm; lỗi gửi vẫn được hiển thị riêng trong biểu mẫu.
     }
@@ -39,8 +40,19 @@ function CustomerChatWidget() {
   useEffect(() => {
     void loadMessages()
     if (!user) return
-    const timer = window.setInterval(() => void loadMessages(), 15000)
-    return () => window.clearInterval(timer)
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void loadMessages()
+    }, 3000)
+    const refreshWhenActive = () => {
+      if (document.visibilityState === 'visible') void loadMessages()
+    }
+    window.addEventListener('focus', refreshWhenActive)
+    document.addEventListener('visibilitychange', refreshWhenActive)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', refreshWhenActive)
+      document.removeEventListener('visibilitychange', refreshWhenActive)
+    }
   }, [loadMessages, user])
 
   const unreadCount = useMemo(() => conversations.reduce((total, conversation) => (
