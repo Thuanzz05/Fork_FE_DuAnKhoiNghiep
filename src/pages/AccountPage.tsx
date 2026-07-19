@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import GoogleSignInButton from '../components/GoogleSignInButton'
-import { getCurrentUser, loginDemo, loginSocial, loginWithGoogle, registerDemo } from '../utils/auth'
+import { getCurrentUser, loginDemo, loginWithGoogle, registerDemo } from '../utils/auth'
 import './AccountPage.css'
 
 type AccountMode = 'login' | 'register'
@@ -70,16 +70,6 @@ function AccountPage() {
       }
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Không thể đăng nhập. Vui lòng thử lại.')
-    }
-  }
-
-  const handleSocialLogin = async (provider: 'Google' | 'Facebook') => {
-    try {
-      setNotice('Đang kết nối máy chủ...')
-      const user = await loginSocial(provider.toLowerCase() as 'google' | 'facebook')
-      navigate(user.role === 'ADMIN' ? '/admin' : '/')
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Không thể đăng nhập mạng xã hội.')
     }
   }
 
@@ -226,10 +216,6 @@ function AccountPage() {
 
           <div className="social-login">
             <GoogleSignInButton onCredential={handleGoogleLogin} onError={setNotice} />
-            <button type="button" onClick={() => handleSocialLogin('Facebook')}>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8h3V4h-3c-3 0-5 2-5 5v3H6v4h3v8h4v-8h3l1-4h-4V9c0-.6.4-1 1-1Z" /></svg>
-              Facebook
-            </button>
           </div>
 
           <p className="account-switch">
