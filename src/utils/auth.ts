@@ -92,13 +92,6 @@ export const registerDemo = async (data: Omit<AuthUser, 'id' | 'addresses' | 'ro
   return result.user
 }
 
-export const loginSocial = async (provider: 'google' | 'facebook') => {
-  const result = await api.post<{ token: string; user: AuthUser }>('/auth/social', { provider })
-  setAccessToken(result.token)
-  saveSession({ user: result.user, password: '' })
-  return result.user
-}
-
 export const loginWithGoogle = async (credential: string) => {
   const result = await api.post<{ token: string; user: AuthUser }>('/auth/google', { credential })
   setAccessToken(result.token)
