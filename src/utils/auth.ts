@@ -32,6 +32,11 @@ type UserResponse = {
   user: AuthUser
 }
 
+type PasswordResetRequestResponse = {
+  message: string
+  resetUrl?: string
+}
+
 const AUTH_SESSION_KEY = 'red-bean-beauty-auth-session'
 const AUTH_USERS_KEY = 'red-bean-beauty-auth-users'
 
@@ -97,6 +102,14 @@ export const loginWithGoogle = async (credential: string) => {
   setAccessToken(result.token)
   saveSession({ user: result.user, password: '' })
   return result.user
+}
+
+export const requestPasswordReset = async (email: string) => {
+  return api.post<PasswordResetRequestResponse>('/auth/forgot-password', { email })
+}
+
+export const resetForgottenPassword = async (token: string, newPassword: string) => {
+  return api.post<{ message: string }>('/auth/reset-password', { token, newPassword })
 }
 
 export const updateCurrentUser = (updater: (user: AuthUser) => AuthUser) => {
