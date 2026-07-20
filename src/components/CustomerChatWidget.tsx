@@ -12,13 +12,35 @@ const emptyForm: ChatForm = { fullName: '', email: '', phone: '', message: '' }
 const formatTime = (value: string) => new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }).format(new Date(value))
 
 function CustomerChatWidget() {
-  const [user] = useState(() => getCurrentUser())
+  const [user, setUser] = useState(() => getCurrentUser())
   const [isOpen, setIsOpen] = useState(false)
   const [form, setForm] = useState<ChatForm>(emptyForm)
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [sending, setSending] = useState(false)
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const historyRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const syncAuth = () => {
+      const nextUser = getCurrentUser()
+      setUser(nextUser)
+
+      // Never retain one customer's conversation in the UI after the session
+      // changes (especially when logging out on a shared device).
+      setIsOpen(false)
+      setConversations([])
+      setForm(emptyForm)
+      setNotice(null)
+      setSending(false)
+    }
+
+    window.addEventListener('auth-updated', syncAuth)
+    window.addEventListener('storage', syncAuth)
+    return () => {
+      window.removeEventListener('auth-updated', syncAuth)
+      window.removeEventListener('storage', syncAuth)
+    }
+  }, [])
 
   useEffect(() => {
     if (!user) return
@@ -28,8 +50,12 @@ function CustomerChatWidget() {
 
   const loadMessages = useCallback(async () => {
     if (!user) return
+    const requestedUserId = user.id
     try {
       const data = await apiRequest<SupportResult>('/customers/me/support-messages')
+      // Ignore a response that finishes after this user has logged out or a
+      // different account has logged in.
+      if (getCurrentUser()?.id !== requestedUserId) return
       const next = data.conversations || []
       setConversations((current) => JSON.stringify(current) === JSON.stringify(next) ? current : next)
     } catch {
