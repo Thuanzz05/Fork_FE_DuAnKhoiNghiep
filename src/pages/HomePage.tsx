@@ -1,5 +1,5 @@
 import './HomePage.css'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { addCartItem } from '../utils/cart'
 import { formatPrice } from '../data/products'
@@ -7,9 +7,77 @@ import type { NewsArticle } from '../data/news'
 import { useCatalog } from '../hooks/useCatalog'
 import { api } from '../services/api'
 
+const testimonials = [
+  {
+    id: 'lan-anh',
+    name: 'Lan Anh',
+    purchasedProduct: 'Đã mua combo Full Care',
+    avatarColor: '#b53740',
+    comment: 'Da mình cải thiện rõ rệt sau 2 tuần sử dụng. Sản phẩm lành tính, không gây kích ứng.',
+    productImage: '/images/products/combo_ref1.png',
+    productAlt: 'Combo chăm sóc da đậu đỏ',
+  },
+  {
+    id: 'ngoc-han',
+    name: 'Ngọc Hân',
+    purchasedProduct: 'Đã mua Toner Đậu Đỏ',
+    avatarColor: '#9d4960',
+    comment: 'Toner thấm nhanh, không nhờn rít. Mùi thơm nhẹ, rất dễ chịu và da mềm hơn rõ rệt.',
+    productImage: '/images/products/toner-duong-da6.png',
+    productAlt: 'Toner dưỡng da đậu đỏ',
+  },
+  {
+    id: 'duc-minh',
+    name: 'Đức Minh',
+    purchasedProduct: 'Đã mua Sữa rửa mặt Đậu Đỏ',
+    avatarColor: '#386f5b',
+    comment: 'Rửa mặt sạch sâu nhưng không khô da. Dùng buổi sáng và tối đều rất dễ chịu.',
+    productImage: '/images/products/sua-rua-mat-tao-bot4.png',
+    productAlt: 'Sữa rửa mặt tạo bọt đậu đỏ',
+  },
+  {
+    id: 'khanh-linh',
+    name: 'Khánh Linh',
+    purchasedProduct: 'Đã mua Combo dưỡng da mini',
+    avatarColor: '#c05b64',
+    comment: 'Bộ mini rất tiện để mang đi du lịch. Chất kem nhẹ, thấm nhanh và không gây bí da.',
+    productImage: '/images/products/combo-duong-da-mini.png',
+    productAlt: 'Combo dưỡng da đậu đỏ mini',
+  },
+  {
+    id: 'bao-ngoc',
+    name: 'Bảo Ngọc',
+    purchasedProduct: 'Đã mua Mặt nạ Đậu Đỏ',
+    avatarColor: '#7f506c',
+    comment: 'Sau khi dùng da mịn và sáng hơn, hạt tẩy dịu nhẹ. Mình sẽ tiếp tục ủng hộ sản phẩm.',
+    productImage: '/images/products/mat-na-tay-te-bao-chet4.png',
+    productAlt: 'Mặt nạ tẩy tế bào chết đậu đỏ',
+  },
+  {
+    id: 'thanh-tam',
+    name: 'Thanh Tâm',
+    purchasedProduct: 'Đã mua Combo chăm sóc da 3 món',
+    avatarColor: '#a56b42',
+    comment: 'Quy trình chăm sóc đơn giản, sản phẩm dùng êm và phù hợp với da nhạy cảm của mình.',
+    productImage: '/images/products/combo-3mon5.png',
+    productAlt: 'Combo chăm sóc da đậu đỏ 3 món',
+  },
+]
+
+function getNameInitials(name: string) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join('')
+    .toLocaleUpperCase('vi-VN')
+}
+
 function HomePage() {
   const { products } = useCatalog()
   const [articles, setArticles] = useState<NewsArticle[]>([])
+  const testimonialsRef = useRef<HTMLDivElement>(null)
   const bestSellers = products.slice(0, 5)
   const featuredCombo = products.find((product) => product.isCombo)
 
@@ -21,6 +89,32 @@ function HomePage() {
 
   const handleAddToCart = (productId: string) => {
     addCartItem(productId, 1)
+  }
+
+  const scrollTestimonials = (direction: -1 | 1) => {
+    const container = testimonialsRef.current
+    const card = container?.querySelector<HTMLElement>('.testimonial-card')
+
+    if (!container || !card) return
+
+    const styles = window.getComputedStyle(container)
+    const gap = Number.parseFloat(styles.columnGap || styles.gap) || 16
+    const maxScrollLeft = container.scrollWidth - container.clientWidth
+
+    if (direction === 1 && container.scrollLeft >= maxScrollLeft - 4) {
+      container.scrollTo({ left: 0, behavior: 'smooth' })
+      return
+    }
+
+    if (direction === -1 && container.scrollLeft <= 4) {
+      container.scrollTo({ left: maxScrollLeft, behavior: 'smooth' })
+      return
+    }
+
+    container.scrollBy({
+      left: direction * (card.offsetWidth + gap),
+      behavior: 'smooth',
+    })
   }
 
   return (
@@ -398,118 +492,69 @@ function HomePage() {
             <h2 id="testimonials-title" className="testimonials-section-title">
               KHÁCH HÀNG NÓI GÌ VỀ CHÚNG TÔI
             </h2>
-            <a href="/danh-gia" className="testimonials-view-all">
-              <span>Xem tất cả</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="arrow-icon">
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-                <polyline points="12 5 19 12 12 19"></polyline>
-              </svg>
-            </a>
           </div>
 
           <div className="testimonials-carousel-wrapper">
-            <button className="carousel-btn btn-left" aria-label="Previous review">
+            <button
+              type="button"
+              className="carousel-btn btn-left"
+              aria-label="Xem đánh giá trước"
+              onClick={() => scrollTestimonials(-1)}
+            >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="15 18 9 12 15 6"></polyline>
               </svg>
             </button>
 
-            <div className="testimonials-grid">
-              {/* Testimonial Card 1 */}
-              <div className="testimonial-card">
-                <div className="testimonial-user-info">
-                  <img
-                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&h=100&q=80"
-                    alt="Khách hàng Minh Anh"
-                    className="testimonial-avatar"
-                  />
-                  <div className="testimonial-user-meta">
-                    <strong className="user-name">Minh Anh</strong>
-                    <span className="purchased-product">Đã mua combo Full Care</span>
+            <div
+              ref={testimonialsRef}
+              className="testimonials-grid"
+              aria-label="Danh sách đánh giá của khách hàng"
+            >
+              {testimonials.map((testimonial) => (
+                <article className="testimonial-card" key={testimonial.id}>
+                  <div className="testimonial-user-info">
+                    <span
+                      className="testimonial-avatar"
+                      style={{ backgroundColor: testimonial.avatarColor }}
+                      aria-hidden="true"
+                    >
+                      {getNameInitials(testimonial.name)}
+                    </span>
+                    <div className="testimonial-user-meta">
+                      <strong className="user-name">{testimonial.name}</strong>
+                      <span className="purchased-product">{testimonial.purchasedProduct}</span>
+                    </div>
                   </div>
-                </div>
 
-                <div className="testimonial-rating">
-                  {[...Array(5)].map((_, i) => (
-                    <svg key={i} viewBox="0 0 24 24" fill="currentColor" className="star-icon">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                    </svg>
-                  ))}
-                </div>
-
-                <p className="testimonial-comment">
-                  Da mình cải thiện rõ rệt sau 2 tuần sử dụng. Sản phẩm lành tính, không gây kích ứng.
-                </p>
-
-                <div className="testimonial-product-thumb">
-                  <img src="/images/products/combo_ref1.png" alt="Combo chăm sóc da đậu đỏ" />
-                </div>
-              </div>
-
-              {/* Testimonial Card 2 */}
-              <div className="testimonial-card">
-                <div className="testimonial-user-info">
-                  <img
-                    src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=100&h=100&q=80"
-                    alt="Khách hàng Thu Trang"
-                    className="testimonial-avatar"
-                  />
-                  <div className="testimonial-user-meta">
-                    <strong className="user-name">Thu Trang</strong>
-                    <span className="purchased-product">Đã mua Toner Đậu Đỏ</span>
+                  <div className="testimonial-rating" aria-label="5 trên 5 sao">
+                    {Array.from({ length: 5 }, (_, index) => (
+                      <svg
+                        key={index}
+                        viewBox="0 0 24 24"
+                        className="testimonial-star-icon"
+                        aria-hidden="true"
+                      >
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                      </svg>
+                    ))}
                   </div>
-                </div>
 
-                <div className="testimonial-rating">
-                  {[...Array(5)].map((_, i) => (
-                    <svg key={i} viewBox="0 0 24 24" fill="currentColor" className="star-icon">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                    </svg>
-                  ))}
-                </div>
+                  <p className="testimonial-comment">{testimonial.comment}</p>
 
-                <p className="testimonial-comment">
-                  Toner thấm nhanh, không nhờn rít. Mùi thơm nhẹ, rất dễ chịu.
-                </p>
-
-                <div className="testimonial-product-thumb">
-                  <img src="/images/products/toner-duong-da6.png" alt="Toner dưỡng da đậu đỏ" />
-                </div>
-              </div>
-
-              {/* Testimonial Card 3 */}
-              <div className="testimonial-card">
-                <div className="testimonial-user-info">
-                  <img
-                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&h=100&q=80"
-                    alt="Khách hàng Hoàng Nam"
-                    className="testimonial-avatar"
-                  />
-                  <div className="testimonial-user-meta">
-                    <strong className="user-name">Hoàng Nam</strong>
-                    <span className="purchased-product">Đã mua Sữa rửa mặt Đậu Đỏ</span>
+                  <div className="testimonial-product-thumb">
+                    <img src={testimonial.productImage} alt={testimonial.productAlt} loading="lazy" />
                   </div>
-                </div>
-
-                <div className="testimonial-rating">
-                  {[...Array(5)].map((_, i) => (
-                    <svg key={i} viewBox="0 0 24 24" fill="currentColor" className="star-icon">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                    </svg>
-                  ))}
-                </div>
-
-                <p className="testimonial-comment">
-                  Rửa mặt sạch sâu nhưng không khô da. Sẽ ủng hộ lâu dài!
-                </p>
-
-                <div className="testimonial-product-thumb">
-                  <img src="/images/products/sua-rua-mat-tao-bot4.png" alt="Sữa rửa mặt tạo bọt đậu đỏ" />
-                </div>
-              </div>
+                </article>
+              ))}
             </div>
 
-            <button className="carousel-btn btn-right" aria-label="Next review">
+            <button
+              type="button"
+              className="carousel-btn btn-right"
+              aria-label="Xem đánh giá tiếp theo"
+              onClick={() => scrollTestimonials(1)}
+            >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
