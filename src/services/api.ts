@@ -24,10 +24,16 @@ export const setAccessToken = (token: string | null) => {
   else localStorage.removeItem(ACCESS_TOKEN_KEY)
 }
 
+export const resolveApiUrl = (path: string) => {
+  if (/^https?:\/\//i.test(path)) return path
+  const apiPath = path.replace(/^\/?api\//i, '/')
+  return `${API_BASE_URL}${apiPath.startsWith('/') ? apiPath : `/${apiPath}`}`
+}
+
 export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getAccessToken()
   const headers = new Headers(options.headers)
-  if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json')
+  if (typeof options.body === 'string' && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
   if (token) headers.set('Authorization', `Bearer ${token}`)
 
   let response: Response

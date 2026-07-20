@@ -12,13 +12,19 @@ const emptyForm: ChatForm = { fullName: '', email: '', phone: '', message: '' }
 const formatTime = (value: string) => new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }).format(new Date(value))
 
 function CustomerChatWidget() {
-  const [user] = useState(() => getCurrentUser())
+  const [user, setUser] = useState(() => getCurrentUser())
   const [isOpen, setIsOpen] = useState(false)
   const [form, setForm] = useState<ChatForm>(emptyForm)
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [sending, setSending] = useState(false)
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const historyRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const syncAuthUser = () => setUser(getCurrentUser())
+    window.addEventListener('auth-updated', syncAuthUser)
+    return () => window.removeEventListener('auth-updated', syncAuthUser)
+  }, [])
 
   useEffect(() => {
     if (!user) return
