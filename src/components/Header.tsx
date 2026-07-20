@@ -236,6 +236,12 @@ function Header() {
                     <strong>{getUserDisplayName(authUser)}</strong>
                     <small>{authUser.email}</small>
                   </div>
+                  {authUser.role === 'ADMIN' ? (
+                    <Link role="menuitem" to="/admin" onClick={(event) => { event.currentTarget.blur(); setAccountMenuOpen(false) }}>
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>
+                      Trang quản trị
+                    </Link>
+                  ) : null}
                   <Link role="menuitem" to="/tai-khoan/thong-tin" onClick={(event) => { event.currentTarget.blur(); setAccountMenuOpen(false) }}>
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0M12 11a4 4 0 1 0 0-8" /></svg>
                     Thông tin tài khoản
