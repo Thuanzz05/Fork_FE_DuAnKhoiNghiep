@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent 
 import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
 import Pagination from '../../components/Pagination'
 import { usePagination } from '../../hooks/usePagination'
-import { api } from '../../services/api'
+import { api, apiRequest, resolveApiUrl } from '../../services/api'
 import './AdminArticlesPage.css'
 
 type ArticleStatus = 'published' | 'draft' | 'scheduled'
@@ -60,6 +60,116 @@ const emptyForm: ArticleFormState = {
   featured: false,
 }
 
+type StoredArticleSection = {
+  heading?: unknown
+  paragraphs?: unknown
+}
+
+type ParsedArticleContent = {
+  lead: string
+  content: string
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+)
+
+const normalizeArticleImagePath = (value: unknown) => {
+  const path = String(value ?? '').trim().replaceAll('\\', '/')
+  return path.replace(/^\/?public\//i, '/')
+}
+
+const parseStoredArticleContent = (value: unknown, depth = 0): ParsedArticleContent => {
+  const rawContent = String(value ?? '').trim()
+  if (!rawContent) return { lead: '', content: '' }
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(rawContent)
+  } catch {
+    return { lead: '', content: rawContent }
+  }
+
+  if (!isRecord(parsed) || !Array.isArray(parsed.sections)) {
+    return { lead: '', content: rawContent }
+  }
+
+  const lead = typeof parsed.lead === 'string' ? parsed.lead.trim() : ''
+  const sections = parsed.sections.filter(isRecord) as StoredArticleSection[]
+
+  // Recover content saved by the old form, which wrapped the original JSON
+  // inside a single paragraph every time an article was edited.
+  if (depth < 4 && sections.length === 1) {
+    const onlySection = sections[0]
+    const paragraphs = Array.isArray(onlySection.paragraphs) ? onlySection.paragraphs : []
+    if (!onlySection.heading && paragraphs.length === 1 && typeof paragraphs[0] === 'string') {
+      const nested = parseStoredArticleContent(paragraphs[0], depth + 1)
+      if (nested.content !== paragraphs[0].trim()) {
+        return { lead: lead || nested.lead, content: nested.content }
+      }
+    }
+  }
+
+  const content = sections
+    .flatMap((section) => {
+      const heading = typeof section.heading === 'string' ? section.heading.trim() : ''
+      const paragraphs = Array.isArray(section.paragraphs)
+        ? section.paragraphs.filter((paragraph): paragraph is string => typeof paragraph === 'string')
+          .map((paragraph) => paragraph.trim()).filter(Boolean)
+        : []
+      return [...(heading ? [`## ${heading}`] : []), ...paragraphs]
+    })
+    .join('\n\n')
+
+  return { lead, content }
+}
+
+const buildArticleSections = (value: string) => {
+  const sections: Array<{ heading?: string; paragraphs: string[] }> = []
+  let current: { heading?: string; paragraphs: string[] } = { paragraphs: [] }
+  let paragraphLines: string[] = []
+
+  const flushParagraph = () => {
+    const paragraph = paragraphLines.join('\n').trim()
+    if (paragraph) current.paragraphs.push(paragraph)
+    paragraphLines = []
+  }
+
+  const flushSection = () => {
+    flushParagraph()
+    if (current.heading || current.paragraphs.length) sections.push(current)
+  }
+
+  value.replaceAll('\r', '').split('\n').forEach((line) => {
+    const heading = line.match(/^##\s+(.+)$/)
+    if (heading) {
+      flushSection()
+      current = { heading: heading[1].trim(), paragraphs: [] }
+      return
+    }
+    if (!line.trim()) {
+      flushParagraph()
+      return
+    }
+    paragraphLines.push(line)
+  })
+  flushSection()
+
+  return sections
+}
+
+const toDateTimeLocalValue = (value: unknown) => {
+  const date = new Date(String(value ?? ''))
+  if (Number.isNaN(date.getTime())) return new Date().toISOString().slice(0, 16)
+  const localTime = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return localTime.toISOString().slice(0, 16)
+}
+
+const toDatabaseDateTime = (value: string) => {
+  if (!value) return undefined
+  return `${value.replace('T', ' ')}${value.length === 16 ? ':00' : ''}`
+}
+
 const formatDateTime = (value: string) => new Intl.DateTimeFormat('vi-VN', {
   hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric',
 }).format(new Date(value))
@@ -70,14 +180,17 @@ function AdminArticlesPage() {
   const loadArticles = async () => {
     try {
       const rows = await api.get<Array<Record<string, any>>>('/admin/articles')
-      setArticles(rows.map((item) => ({
-        id: Number(item.id), title: String(item.title), category: String(item.category || articleCategories[0]),
-        excerpt: String(item.summary || ''), lead: '', content: String(item.content || ''),
-        image: String(item.imageUrl || ''), author: String(item.authorName || 'Rubeanora'),
-        status: item.status === 'DA_DANG' ? 'published' : item.status === 'DANG_AN' ? 'scheduled' : 'draft',
-        publishedAt: String(item.publishedAt || item.createdAt), updatedAt: String(item.updatedAt),
-        views: Number(item.views || 0), featured: Boolean(item.featured),
-      })))
+      setArticles(rows.map((item) => {
+        const parsedContent = parseStoredArticleContent(item.content)
+        return {
+          id: Number(item.id), title: String(item.title), category: String(item.category || articleCategories[0]),
+          excerpt: String(item.summary || ''), lead: parsedContent.lead, content: parsedContent.content,
+          image: normalizeArticleImagePath(item.imageUrl), author: String(item.authorName || 'Rubeanora'),
+          status: item.status === 'DA_DANG' ? 'published' : item.status === 'DANG_AN' ? 'scheduled' : 'draft',
+          publishedAt: String(item.publishedAt || item.createdAt), updatedAt: String(item.updatedAt),
+          views: Number(item.views || 0), featured: Boolean(item.featured),
+        }
+      }))
     } catch {
       setArticles([])
     }
@@ -93,6 +206,7 @@ function AdminArticlesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [form, setForm] = useState<ArticleFormState>(emptyForm)
   const [selectedImageName, setSelectedImageName] = useState('')
+  const [isImageUploading, setIsImageUploading] = useState(false)
   const [notice, setNotice] = useState('')
   const imageFileInputRef = useRef<HTMLInputElement>(null)
 
@@ -170,13 +284,13 @@ function AdminArticlesPage() {
       image: article.image,
       author: article.author,
       status: article.status,
-      publishedAt: article.publishedAt.slice(0, 16),
+      publishedAt: toDateTimeLocalValue(article.publishedAt),
       featured: article.featured,
     })
     setIsFormOpen(true)
   }
 
-  const handleImageFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleImageFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
     if (!file.type.startsWith('image/')) {
@@ -189,27 +303,45 @@ function AdminArticlesPage() {
       event.target.value = ''
       return
     }
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result !== 'string') return
-      updateField('image', reader.result)
+
+    setIsImageUploading(true)
+    setNotice('')
+    try {
+      const uploaded = await apiRequest<{ url: string }>('/admin/uploads/images', {
+        method: 'POST',
+        headers: {
+          'Content-Type': file.type,
+          'X-File-Name': encodeURIComponent(file.name),
+        },
+        body: file,
+      })
+      updateField('image', resolveApiUrl(uploaded.url))
       setSelectedImageName(file.name)
+      setNotice('Đã tải ảnh lên thành công')
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Không thể tải ảnh lên')
+    } finally {
+      setIsImageUploading(false)
+      event.target.value = ''
     }
-    reader.readAsDataURL(file)
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (isImageUploading) {
+      setNotice('Vui lòng chờ ảnh tải lên hoàn tất')
+      return
+    }
     try {
       const payload = {
         title: form.title.trim(), category: form.category, summary: form.excerpt.trim(),
         content: JSON.stringify({
           lead: form.lead.trim(),
-          sections: [{ paragraphs: form.content.split(/\n\s*\n/).map((item) => item.trim()).filter(Boolean) }],
+          sections: buildArticleSections(form.content),
         }),
-        imageUrl: form.image.trim(), featured: form.featured,
+        imageUrl: normalizeArticleImagePath(form.image), featured: form.featured,
         status: form.status === 'published' ? 'DA_DANG' : form.status === 'scheduled' ? 'DANG_AN' : 'NHAP',
-        publishedAt: form.publishedAt || undefined,
+        publishedAt: toDatabaseDateTime(form.publishedAt),
       }
       if (editingArticle) await api.put(`/admin/articles/${editingArticle.id}`, payload)
       else await api.post('/admin/articles', payload)
@@ -289,13 +421,13 @@ function AdminArticlesPage() {
                 <label><span>Tác giả *</span><input required value={form.author} onChange={(event) => updateField('author', event.target.value)} /></label>
                 <label><span>Trạng thái *</span><select value={form.status} onChange={(event) => updateField('status', event.target.value as ArticleStatus)}><option value="published">Đã đăng</option><option value="draft">Bản nháp</option><option value="scheduled">Đã lên lịch</option></select></label>
                 <label><span>Ngày đăng *</span><input required type="datetime-local" value={form.publishedAt} onChange={(event) => updateField('publishedAt', event.target.value)} /></label>
-                <label className="is-wide"><span>Ảnh đại diện *</span><div className="admin-article-image-field"><div className="admin-article-image-preview">{form.image ? <img src={form.image} alt="Ảnh xem trước" /> : <AdminIcon name="upload" />}</div><div><div className="admin-article-image-input"><input required placeholder="/images/... hoặc đường dẫn ảnh" value={form.image} onChange={(event) => { updateField('image', event.target.value); setSelectedImageName('') }} /><button type="button" onClick={() => imageFileInputRef.current?.click()}><AdminIcon name="upload" />Chọn ảnh từ máy</button><input ref={imageFileInputRef} className="admin-article-hidden-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" tabIndex={-1} onChange={handleImageFileChange} /></div><small>{selectedImageName ? `Đã chọn: ${selectedImageName}` : 'Ảnh ngang, dung lượng tối đa 5MB.'}</small></div></div></label>
+                <label className="is-wide"><span>Ảnh đại diện *</span><div className="admin-article-image-field"><div className="admin-article-image-preview">{form.image ? <img src={form.image} alt="Ảnh xem trước" /> : <AdminIcon name="upload" />}</div><div><div className="admin-article-image-input"><input required placeholder="/images/... hoặc đường dẫn ảnh" value={form.image} onChange={(event) => { updateField('image', event.target.value); setSelectedImageName('') }} /><button type="button" disabled={isImageUploading} onClick={() => imageFileInputRef.current?.click()}><AdminIcon name="upload" />{isImageUploading ? 'Đang tải ảnh...' : 'Chọn ảnh từ máy'}</button><input ref={imageFileInputRef} className="admin-article-hidden-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" tabIndex={-1} onChange={handleImageFileChange} /></div><small>{isImageUploading ? 'Đang tải ảnh lên máy chủ...' : selectedImageName ? `Đã tải lên: ${selectedImageName}` : 'Ảnh ngang, dung lượng tối đa 5MB.'}</small></div></div></label>
                 <label className="is-wide"><span>Mô tả ngắn *</span><textarea required rows={3} maxLength={320} value={form.excerpt} onChange={(event) => updateField('excerpt', event.target.value)} /><small>{form.excerpt.length}/320 ký tự</small></label>
                 <label className="is-wide"><span>Đoạn mở đầu *</span><textarea required rows={3} value={form.lead} onChange={(event) => updateField('lead', event.target.value)} /></label>
                 <label className="is-wide"><span>Nội dung bài viết *</span><textarea required rows={9} placeholder="Dùng ## ở đầu dòng để tạo tiêu đề nội dung" value={form.content} onChange={(event) => updateField('content', event.target.value)} /><small>Có thể chia nội dung thành nhiều đoạn; dùng “## Tiêu đề” để đánh dấu đề mục.</small></label>
                 <label className="admin-article-checkbox is-wide"><input type="checkbox" checked={form.featured} onChange={(event) => updateField('featured', event.target.checked)} /><span>Đánh dấu là bài viết nổi bật</span></label>
               </div>
-              <footer><button type="button" className="admin-article-secondary" onClick={() => setIsFormOpen(false)}>Hủy</button><button type="submit" className="admin-article-primary">{editingArticle ? 'Lưu thay đổi' : 'Tạo bài viết'}</button></footer>
+              <footer><button type="button" className="admin-article-secondary" onClick={() => setIsFormOpen(false)}>Hủy</button><button type="submit" className="admin-article-primary" disabled={isImageUploading}>{isImageUploading ? 'Đang tải ảnh...' : editingArticle ? 'Lưu thay đổi' : 'Tạo bài viết'}</button></footer>
             </form>
           </section>
         </div>

@@ -17,17 +17,23 @@ export class ApiError extends Error {
   }
 }
 
-export const getAccessToken = () => localStorage.getItem(ACCESS_TOKEN_KEY)
+export const getAccessToken = () => sessionStorage.getItem(ACCESS_TOKEN_KEY)
 
 export const setAccessToken = (token: string | null) => {
-  if (token) localStorage.setItem(ACCESS_TOKEN_KEY, token)
-  else localStorage.removeItem(ACCESS_TOKEN_KEY)
+  if (token) sessionStorage.setItem(ACCESS_TOKEN_KEY, token)
+  else sessionStorage.removeItem(ACCESS_TOKEN_KEY)
+}
+
+export const resolveApiUrl = (path: string) => {
+  if (/^https?:\/\//i.test(path)) return path
+  const apiPath = path.replace(/^\/?api\//i, '/')
+  return `${API_BASE_URL}${apiPath.startsWith('/') ? apiPath : `/${apiPath}`}`
 }
 
 export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getAccessToken()
   const headers = new Headers(options.headers)
-  if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json')
+  if (typeof options.body === 'string' && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
   if (token) headers.set('Authorization', `Bearer ${token}`)
 
   let response: Response
@@ -44,7 +50,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
   if (!response.ok || payload.success === false) {
     if (response.status === 401) {
       setAccessToken(null)
-      localStorage.removeItem('red-bean-beauty-auth-session')
+      sessionStorage.removeItem('red-bean-beauty-auth-session')
       window.dispatchEvent(new CustomEvent('auth-updated', { detail: null }))
     }
     throw new ApiError(payload.message || `Yêu cầu thất bại (${response.status})`, response.status)

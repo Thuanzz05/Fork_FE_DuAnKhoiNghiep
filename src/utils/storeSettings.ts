@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { api } from '../services/api'
 
 export interface StoreSettings {
   storeName: string
@@ -29,9 +30,7 @@ export interface StoreSettings {
   maintenanceMode: boolean
 }
 
-const STORE_SETTINGS_KEY = 'rubeanora-store-settings'
 export const STORE_SETTINGS_EVENT = 'store-settings-updated'
-const LEGACY_STORE_DESCRIPTION = 'Mỹ phẩm chăm sóc da từ hạt đậu đỏ Việt Nam, dịu nhẹ và phù hợp với mọi loại da.'
 
 export const defaultStoreSettings: StoreSettings = {
   storeName: 'Rubeanora',
@@ -62,47 +61,62 @@ export const defaultStoreSettings: StoreSettings = {
   maintenanceMode: false,
 }
 
+let currentStoreSettings = defaultStoreSettings
+
+type PublicStoreSettings = {
+  storeName: string; logoUrl?: string; description?: string; hotline?: string; email?: string
+  address?: string; workingHours?: string; shippingFee: number; freeShippingThreshold: number
+  facebookUrl?: string; instagramUrl?: string; tiktokUrl?: string
+}
+
+const mapApiSettings = (data: PublicStoreSettings): StoreSettings => ({
+  ...currentStoreSettings,
+  storeName: data.storeName,
+  logo: data.logoUrl || '',
+  storeDescription: data.description || '',
+  hotline: data.hotline || '',
+  contactEmail: data.email || '',
+  address: data.address || '',
+  businessHours: data.workingHours || '',
+  standardShippingFee: data.shippingFee,
+  freeShippingThreshold: data.freeShippingThreshold,
+  facebookUrl: data.facebookUrl || '',
+  instagramUrl: data.instagramUrl || '',
+  tiktokUrl: data.tiktokUrl || '',
+})
+
 export const getStoreSettings = (): StoreSettings => {
-  if (typeof window === 'undefined') return defaultStoreSettings
-  try {
-    const raw = localStorage.getItem(STORE_SETTINGS_KEY)
-    if (!raw) return defaultStoreSettings
-    const savedSettings = JSON.parse(raw) as Partial<StoreSettings>
-    const mergedSettings = { ...defaultStoreSettings, ...savedSettings }
-    if (savedSettings.storeDescription === LEGACY_STORE_DESCRIPTION) {
-      mergedSettings.storeDescription = defaultStoreSettings.storeDescription
-    }
-    return mergedSettings
-  } catch {
-    return defaultStoreSettings
-  }
+  return currentStoreSettings
 }
 
 export const saveStoreSettings = (settings: StoreSettings): StoreSettings => {
-  localStorage.setItem(STORE_SETTINGS_KEY, JSON.stringify(settings))
+  currentStoreSettings = settings
   window.dispatchEvent(new CustomEvent<StoreSettings>(STORE_SETTINGS_EVENT, { detail: settings }))
   return settings
 }
 
 export const resetStoreSettings = (): StoreSettings => {
-  localStorage.removeItem(STORE_SETTINGS_KEY)
+  currentStoreSettings = defaultStoreSettings
   window.dispatchEvent(new CustomEvent<StoreSettings>(STORE_SETTINGS_EVENT, { detail: defaultStoreSettings }))
   return defaultStoreSettings
+}
+
+export const loadStoreSettings = async () => {
+  const data = await api.get<PublicStoreSettings>('/home/settings')
+  return saveStoreSettings(mapApiSettings(data))
 }
 
 export const useStoreSettings = () => {
   const [settings, setSettings] = useState<StoreSettings>(getStoreSettings)
 
   useEffect(() => {
-    const syncSettings = () => setSettings(getStoreSettings())
     const handleSettingsUpdated = (event: Event) => {
       const customEvent = event as CustomEvent<StoreSettings>
       setSettings(customEvent.detail ?? getStoreSettings())
     }
-    window.addEventListener('storage', syncSettings)
     window.addEventListener(STORE_SETTINGS_EVENT, handleSettingsUpdated)
+    void loadStoreSettings().catch(() => undefined)
     return () => {
-      window.removeEventListener('storage', syncSettings)
       window.removeEventListener(STORE_SETTINGS_EVENT, handleSettingsUpdated)
     }
   }, [])

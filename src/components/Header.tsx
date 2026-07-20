@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useCatalog } from '../hooks/useCatalog'
-import { getCartCount, getCartItems, syncCartFromApi } from '../utils/cart'
-import { getWishlistIds, syncWishlistFromApi } from '../utils/wishlist'
+import { getCartCount, getCartItems, refreshCartScope, syncCartFromApi } from '../utils/cart'
+import { getWishlistIds, refreshWishlistScope, syncWishlistFromApi } from '../utils/wishlist'
 import { getCurrentUser, getUserDisplayName, getUserInitial, logoutDemo } from '../utils/auth'
 import { useStoreSettings } from '../utils/storeSettings'
 import './Header.css'
@@ -29,11 +29,17 @@ function Header() {
   const [searchTerm, setSearchTerm] = useState(() => new URLSearchParams(location.search).get('tu-khoa') || '')
 
   useEffect(() => {
-    const syncAuth = () => setAuthUser(getCurrentUser())
-    if (getCurrentUser()) {
-      void syncCartFromApi().catch(() => undefined)
-      void syncWishlistFromApi().catch(() => undefined)
+    const syncAuth = () => {
+      const nextUser = getCurrentUser()
+      setAuthUser(nextUser)
+      refreshCartScope()
+      refreshWishlistScope()
+      if (nextUser) {
+        void syncCartFromApi().catch(() => undefined)
+        void syncWishlistFromApi().catch(() => undefined)
+      }
     }
+    syncAuth()
     window.addEventListener('storage', syncAuth)
     window.addEventListener('auth-updated', syncAuth)
     return () => {
@@ -236,6 +242,12 @@ function Header() {
                     <strong>{getUserDisplayName(authUser)}</strong>
                     <small>{authUser.email}</small>
                   </div>
+                  {authUser.role === 'ADMIN' ? (
+                    <Link role="menuitem" to="/admin" onClick={(event) => { event.currentTarget.blur(); setAccountMenuOpen(false) }}>
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>
+                      Trang quản trị
+                    </Link>
+                  ) : null}
                   <Link role="menuitem" to="/tai-khoan/thong-tin" onClick={(event) => { event.currentTarget.blur(); setAccountMenuOpen(false) }}>
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0M12 11a4 4 0 1 0 0-8" /></svg>
                     Thông tin tài khoản

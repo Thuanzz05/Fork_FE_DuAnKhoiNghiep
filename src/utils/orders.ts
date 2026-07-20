@@ -42,7 +42,7 @@ export interface Order {
   items: OrderItem[]
 }
 
-const ORDERS_STORAGE_KEY = 'red-bean-beauty-orders'
+let memoryOrders: Order[] = []
 
 const emitOrdersUpdated = (orders: Order[]) => {
   if (typeof window === 'undefined') return
@@ -55,12 +55,7 @@ const emitOrdersUpdated = (orders: Order[]) => {
 
 export const getOrders = (): Order[] => {
   if (typeof window === 'undefined') return []
-  try {
-    const raw = localStorage.getItem(ORDERS_STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as Order[]) : []
-  } catch {
-    return []
-  }
+  return memoryOrders.map((order) => ({ ...order, items: order.items.map((item) => ({ ...item })) }))
 }
 
 export const getUserOrders = (userId: string): Order[] => {
@@ -70,7 +65,7 @@ export const getUserOrders = (userId: string): Order[] => {
 }
 
 export const saveOrders = (orders: Order[]): Order[] => {
-  localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders))
+  memoryOrders = orders
   emitOrdersUpdated(orders)
   return orders
 }

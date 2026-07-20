@@ -7,6 +7,7 @@ import '../pages/admin/AdminDashboardPage.css'
 
 export type AdminIconName =
   | 'menu'
+  | 'home'
   | 'dashboard'
   | 'orders'
   | 'products'
@@ -49,6 +50,7 @@ interface AdminIconProps extends SVGProps<SVGSVGElement> {
 export const AdminIcon = ({ name, ...props }: AdminIconProps) => {
   const paths: Record<AdminIconName, ReactNode> = {
     menu: <path d="M4 7h16M4 12h16M4 17h16" />,
+    home: <><path d="m3 11 9-8 9 8" /><path d="M5 10v11h14V10M9 21v-7h6v7" /></>,
     dashboard: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>,
     orders: <><path d="M6 2h12l3 5v14H3V7l3-5Z" /><path d="M3 7h18M8 11v1a4 4 0 0 0 8 0v-1" /></>,
     products: <><path d="m12 2 9 5-9 5-9-5 9-5Z" /><path d="m3 7 9 5 9-5M3 12l9 5 9-5M3 17l9 5 9-5" /></>,
@@ -220,6 +222,7 @@ function AdminLayout({
           <p className="admin-nav-title admin-nav-title-spaced">HỆ THỐNG</p>
           <Link to="/admin/bao-cao" className={`admin-nav-item${activeItem === 'reports' ? ' is-active' : ''}`} onClick={() => setIsSidebarOpen(false)}><AdminIcon name="report" /><span>Báo cáo</span></Link>
           <Link to="/admin/cai-dat" className={`admin-nav-item${activeItem === 'settings' ? ' is-active' : ''}`} onClick={() => setIsSidebarOpen(false)}><AdminIcon name="settings" /><span>Cài đặt</span></Link>
+          <Link to="/" className="admin-nav-item" onClick={() => setIsSidebarOpen(false)}><AdminIcon name="home" /><span>Về trang chủ</span></Link>
         </nav>
 
         <div className="admin-sidebar-profile">

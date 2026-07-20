@@ -26,6 +26,12 @@
   background: var(--admin-brand-dark);
 }
 
+.admin-article-primary:disabled,
+.admin-article-image-input button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
 .admin-article-primary svg {
   width: 17px;
   height: 17px;
@@ -553,7 +559,7 @@
   white-space: nowrap;
 }
 
-.admin-article-image-input button:hover {
+.admin-article-image-input button:hover:not(:disabled) {
   background: #fbf0f1;
 }
 

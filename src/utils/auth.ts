@@ -38,7 +38,6 @@ type PasswordResetRequestResponse = {
 }
 
 const AUTH_SESSION_KEY = 'red-bean-beauty-auth-session'
-const AUTH_USERS_KEY = 'red-bean-beauty-auth-users'
 
 const dispatchAuthUpdated = (session: AuthSession | null) => {
   window.dispatchEvent(new CustomEvent<AuthSession | null>('auth-updated', { detail: session }))
@@ -46,7 +45,7 @@ const dispatchAuthUpdated = (session: AuthSession | null) => {
 
 export const getAuthSession = (): AuthSession | null => {
   try {
-    const raw = localStorage.getItem(AUTH_SESSION_KEY)
+    const raw = sessionStorage.getItem(AUTH_SESSION_KEY)
     if (!raw) return null
     const session = JSON.parse(raw) as AuthSession & { user: AuthUser & { user?: AuthUser } }
     // Recover sessions saved by older clients that stored the API's { user } wrapper.
@@ -57,28 +56,13 @@ export const getAuthSession = (): AuthSession | null => {
   }
 }
 
-const getStoredAccounts = (): Record<string, AuthSession> => {
-  try {
-    const raw = localStorage.getItem(AUTH_USERS_KEY)
-    return raw ? (JSON.parse(raw) as Record<string, AuthSession>) : {}
-  } catch {
-    return {}
-  }
-}
-
-
 export const getCurrentUser = () => getAuthSession()?.user ?? null
-
-export const getRegisteredUsers = (): AuthUser[] => Object.values(getStoredAccounts()).map((account) => account.user)
 
 const saveSession = (session: AuthSession | null) => {
   if (session) {
-    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session))
-    const accounts = getStoredAccounts()
-    accounts[session.user.email] = session
-    localStorage.setItem(AUTH_USERS_KEY, JSON.stringify(accounts))
+    sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session))
   } else {
-    localStorage.removeItem(AUTH_SESSION_KEY)
+    sessionStorage.removeItem(AUTH_SESSION_KEY)
   }
   dispatchAuthUpdated(session)
 }

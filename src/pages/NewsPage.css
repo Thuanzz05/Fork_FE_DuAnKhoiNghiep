@@ -27,7 +27,7 @@
 .news-heading h1 {
   margin: 0;
   color: #3d171a;
-  font-size: 32px;
+  font-size: 24px;
   font-weight: 800;
   line-height: 1.25;
   text-transform: uppercase;
@@ -55,7 +55,7 @@
 
 .news-image-link {
   display: block;
-  aspect-ratio: 1.52 / 1;
+  aspect-ratio: 1.6 / 1;
   overflow: hidden;
   border-radius: 8px;
   background: #f8eeee;
@@ -79,13 +79,13 @@
 
 .news-card h2 {
   display: -webkit-box;
-  min-height: 54px;
+  min-height: 48px;
   margin: 0 0 10px;
   overflow: hidden;
   color: #2e2021;
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 750;
-  line-height: 1.35;
+  line-height: 1.4;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -102,12 +102,12 @@
 
 .news-excerpt {
   display: -webkit-box;
-  min-height: 66px;
+  min-height: 60px;
   margin: 0 0 14px;
   overflow: hidden;
   color: #6c6263;
-  font-size: 15px;
-  line-height: 1.48;
+  font-size: 14px;
+  line-height: 1.5;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
 }
@@ -156,7 +156,7 @@
   }
 
   .news-heading h1 {
-    font-size: 27px;
+    font-size: 22px;
   }
 
   .news-grid {

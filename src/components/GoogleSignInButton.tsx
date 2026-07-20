@@ -3,6 +3,13 @@ import { useEffect, useRef, useState } from 'react'
 const GOOGLE_SCRIPT_ID = 'google-identity-services'
 const GOOGLE_SCRIPT_URL = 'https://accounts.google.com/gsi/client'
 
+type GoogleCredentialResponse = {
+  credential?: string
+}
+
+let initializedClientId = ''
+let activeCredentialHandler: ((response: GoogleCredentialResponse) => void) | null = null
+
 type GoogleSignInButtonProps = {
   onCredential: (credential: string) => void
   onError: (message: string) => void
@@ -25,14 +32,20 @@ function GoogleSignInButton({ onCredential, onError }: GoogleSignInButtonProps) 
       if (cancelled || !hostRef.current || !window.google) return
 
       hostRef.current.replaceChildren()
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: (response) => {
+      const credentialHandler = (response: GoogleCredentialResponse) => {
           if (response.credential) onCredential(response.credential)
           else onError('Google không trả về thông tin đăng nhập.')
-        },
-        cancel_on_tap_outside: true,
-      })
+      }
+      activeCredentialHandler = credentialHandler
+
+      if (initializedClientId !== clientId) {
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: (response) => activeCredentialHandler?.(response),
+          cancel_on_tap_outside: true,
+        })
+        initializedClientId = clientId
+      }
       window.google.accounts.id.renderButton(hostRef.current, {
         type: 'standard',
         theme: 'outline',
@@ -48,6 +61,7 @@ function GoogleSignInButton({ onCredential, onError }: GoogleSignInButtonProps) 
       renderGoogleButton()
       return () => {
         cancelled = true
+        activeCredentialHandler = null
       }
     }
 
@@ -69,6 +83,7 @@ function GoogleSignInButton({ onCredential, onError }: GoogleSignInButtonProps) 
 
     return () => {
       cancelled = true
+      activeCredentialHandler = null
       script.removeEventListener('load', handleLoad)
       script.removeEventListener('error', handleError)
     }

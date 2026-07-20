@@ -1,4 +1,5 @@
 import { api, getAccessToken } from '../services/api'
+import { getCurrentUser } from './auth'
 
 export interface CartItem {
   productId: string
@@ -10,7 +11,16 @@ export interface CartToastDetail {
   quantity: number
 }
 
-export const CART_STORAGE_KEY = 'red-bean-beauty-cart'
+let cartItems: CartItem[] = []
+let cartScope = getCurrentUser()?.id ?? 'guest'
+
+const ensureCartScope = () => {
+  const nextScope = getCurrentUser()?.id ?? 'guest'
+  if (nextScope !== cartScope) {
+    cartScope = nextScope
+    cartItems = []
+  }
+}
 
 const emitCartUpdated = (items: CartItem[]) => {
   if (typeof window === 'undefined') return
@@ -34,24 +44,8 @@ const emitCartToast = (detail: CartToastDetail) => {
 
 export const getCartItems = (): CartItem[] => {
   if (typeof window === 'undefined') return []
-
-  try {
-    const rawValue = window.localStorage.getItem(CART_STORAGE_KEY)
-    const parsedValue = rawValue ? JSON.parse(rawValue) : []
-
-    if (!Array.isArray(parsedValue)) return []
-
-    return parsedValue
-      .filter((item): item is CartItem => {
-        return typeof item?.productId === 'string' && Number.isFinite(item?.quantity)
-      })
-      .map((item) => ({
-        productId: item.productId,
-        quantity: Math.max(1, Math.floor(item.quantity)),
-      }))
-  } catch {
-    return []
-  }
+  ensureCartScope()
+  return cartItems.map((item) => ({ ...item }))
 }
 
 export const saveCartItems = (items: CartItem[]) => {
@@ -64,7 +58,8 @@ export const saveCartItems = (items: CartItem[]) => {
       quantity: Math.max(1, Math.floor(item.quantity)),
     }))
 
-  window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(normalizedItems))
+  ensureCartScope()
+  cartItems = normalizedItems
   emitCartUpdated(normalizedItems)
   return normalizedItems
 }
@@ -73,21 +68,19 @@ type ApiCartItem = CartItem & { product?: unknown }
 type ApiCartResponse = { items: ApiCartItem[] }
 
 const syncApiItems = (items: ApiCartItem[]) => saveCartItems(items.map(({ productId, quantity }) => ({ productId, quantity })))
+const syncApiItemsForUser = (items: ApiCartItem[], userId: string) => (
+  getCurrentUser()?.id === userId ? syncApiItems(items) : getCartItems()
+)
 
 export const syncCartFromApi = async () => {
   if (!getAccessToken()) return getCartItems()
-  const localItems = getCartItems()
-  let remoteItems = (await api.get<ApiCartResponse>('/customers/me/cart')).items
-  for (const localItem of localItems) {
-    const remoteItem = remoteItems.find((item) => item.productId === localItem.productId)
-    if (!remoteItem) {
-      remoteItems = (await api.post<ApiCartResponse>('/customers/me/cart/items', localItem)).items
-    } else if (localItem.quantity > remoteItem.quantity) {
-      remoteItems = (await api.patch<ApiCartResponse>(`/customers/me/cart/items/${localItem.productId}`, { quantity: localItem.quantity })).items
-    }
-  }
+  const requestedUserId = getCurrentUser()?.id
+  const remoteItems = (await api.get<ApiCartResponse>('/customers/me/cart')).items
+  if (!requestedUserId || getCurrentUser()?.id !== requestedUserId) return getCartItems()
   return syncApiItems(remoteItems)
 }
+
+export const refreshCartScope = () => emitCartUpdated(getCartItems())
 
 export const addCartItem = (productId: string, quantity = 1) => {
   const currentItems = getCartItems()
@@ -105,9 +98,10 @@ export const addCartItem = (productId: string, quantity = 1) => {
 
   const savedItems = saveCartItems(nextItems)
   emitCartToast({ productId, quantity: addedQuantity })
-  if (getAccessToken()) {
+  const userId = getCurrentUser()?.id
+  if (getAccessToken() && userId) {
     void api.post<ApiCartResponse>('/customers/me/cart/items', { productId, quantity: addedQuantity })
-      .then((result) => syncApiItems(result.items))
+      .then((result) => syncApiItemsForUser(result.items, userId))
       .catch(() => undefined)
   }
 
@@ -124,10 +118,11 @@ export const addCartItemAndSync = async (productId: string, quantity = 1) => {
 
   const savedItems = saveCartItems(nextItems)
   emitCartToast({ productId, quantity: addedQuantity })
-  if (!getAccessToken()) return savedItems
+  const userId = getCurrentUser()?.id
+  if (!getAccessToken() || !userId) return savedItems
 
   const remoteItems = await api.post<ApiCartResponse>('/customers/me/cart/items', { productId, quantity: addedQuantity })
-  return syncApiItems(remoteItems.items)
+  return syncApiItemsForUser(remoteItems.items, userId)
 }
 
 export const updateCartItemQuantity = (productId: string, quantity: number) => {
@@ -136,9 +131,10 @@ export const updateCartItemQuantity = (productId: string, quantity: number) => {
       item.productId === productId ? { ...item, quantity: Math.max(1, Math.floor(quantity)) } : item,
     ),
   )
-  if (getAccessToken()) {
+  const userId = getCurrentUser()?.id
+  if (getAccessToken() && userId) {
     void api.patch<ApiCartResponse>(`/customers/me/cart/items/${productId}`, { quantity })
-      .then((result) => syncApiItems(result.items))
+      .then((result) => syncApiItemsForUser(result.items, userId))
       .catch(() => undefined)
   }
   return items
@@ -146,9 +142,10 @@ export const updateCartItemQuantity = (productId: string, quantity: number) => {
 
 export const removeCartItem = (productId: string) => {
   const items = saveCartItems(getCartItems().filter((item) => item.productId !== productId))
-  if (getAccessToken()) {
+  const userId = getCurrentUser()?.id
+  if (getAccessToken() && userId) {
     void api.delete<ApiCartResponse>(`/customers/me/cart/items/${productId}`)
-      .then((result) => syncApiItems(result.items))
+      .then((result) => syncApiItemsForUser(result.items, userId))
       .catch(() => undefined)
   }
   return items

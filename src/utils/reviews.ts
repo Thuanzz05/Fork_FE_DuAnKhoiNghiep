@@ -17,20 +17,15 @@ export interface ProductReview {
   verifiedPurchase?: boolean
 }
 
-const REVIEWS_STORAGE_KEY = 'red-bean-beauty-reviews'
+let memoryReviews: ProductReview[] = []
 
 export const getReviews = (): ProductReview[] => {
   if (typeof window === 'undefined') return []
-  try {
-    const raw = localStorage.getItem(REVIEWS_STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as ProductReview[]) : []
-  } catch {
-    return []
-  }
+  return memoryReviews.map((review) => ({ ...review }))
 }
 
 export const saveReviews = (reviews: ProductReview[]): void => {
-  localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(reviews))
+  memoryReviews = reviews
   window.dispatchEvent(new CustomEvent('reviews-updated'))
 }
 
