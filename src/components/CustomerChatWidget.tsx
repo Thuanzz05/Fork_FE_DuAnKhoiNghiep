@@ -21,9 +21,25 @@ function CustomerChatWidget() {
   const historyRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const syncAuthUser = () => setUser(getCurrentUser())
-    window.addEventListener('auth-updated', syncAuthUser)
-    return () => window.removeEventListener('auth-updated', syncAuthUser)
+    const syncAuth = () => {
+      const nextUser = getCurrentUser()
+      setUser(nextUser)
+
+      // Never retain one customer's conversation in the UI after the session
+      // changes (especially when logging out on a shared device).
+      setIsOpen(false)
+      setConversations([])
+      setForm(emptyForm)
+      setNotice(null)
+      setSending(false)
+    }
+
+    window.addEventListener('auth-updated', syncAuth)
+    window.addEventListener('storage', syncAuth)
+    return () => {
+      window.removeEventListener('auth-updated', syncAuth)
+      window.removeEventListener('storage', syncAuth)
+    }
   }, [])
 
   useEffect(() => {
@@ -34,8 +50,12 @@ function CustomerChatWidget() {
 
   const loadMessages = useCallback(async () => {
     if (!user) return
+    const requestedUserId = user.id
     try {
       const data = await apiRequest<SupportResult>('/customers/me/support-messages')
+      // Ignore a response that finishes after this user has logged out or a
+      // different account has logged in.
+      if (getCurrentUser()?.id !== requestedUserId) return
       const next = data.conversations || []
       setConversations((current) => JSON.stringify(current) === JSON.stringify(next) ? current : next)
     } catch {
