@@ -338,6 +338,258 @@ body:has(.admin-dashboard-page) {
 .admin-user-menu > svg {
   width: 16px;
   color: #8d8283;
+  transition: transform .2s ease;
+}
+
+.admin-user-menu.is-open > svg {
+  transform: rotate(180deg);
+}
+
+/* ── Dropdown wrappers ── */
+.admin-notif-wrap,
+.admin-profile-wrap {
+  position: relative;
+}
+
+.admin-notification {
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.admin-notification:hover {
+  border-color: #d69da1;
+  background: #fdf6f7;
+  box-shadow: 0 0 0 3px rgba(181, 55, 64, .07);
+}
+
+/* ── Dropdown panel (shared) ── */
+.admin-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 100;
+  min-width: 300px;
+  border: 1px solid var(--admin-border);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 12px 40px rgba(50, 30, 33, .12), 0 2px 8px rgba(50, 30, 33, .06);
+  animation: adminDropdownIn .2s ease;
+  overflow: hidden;
+}
+
+@keyframes adminDropdownIn {
+  from { opacity: 0; transform: translateY(-8px) scale(.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Dropdown header ── */
+.admin-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid #f0eaeb;
+}
+
+.admin-dropdown-header strong {
+  color: #2b2223;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.admin-dropdown-badge {
+  display: grid;
+  min-width: 22px;
+  height: 22px;
+  place-items: center;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: var(--admin-brand);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+/* ── Dropdown body ── */
+.admin-dropdown-body {
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+/* ── Dropdown items (notification rows) ── */
+.admin-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 14px 18px;
+  text-decoration: none;
+  color: inherit;
+  transition: background .15s ease;
+}
+
+.admin-dropdown-item:hover {
+  background: #fbf4f5;
+}
+
+.admin-dropdown-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+}
+
+.admin-dropdown-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.admin-dropdown-icon-blue { background: #e7f0fa; color: #3475b8; }
+.admin-dropdown-icon-green { background: #e5f3ed; color: #2c8562; }
+.admin-dropdown-icon-orange { background: #f8edde; color: #b66b20; }
+
+.admin-dropdown-item div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.admin-dropdown-item strong {
+  color: #2d2425;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.admin-dropdown-item small {
+  margin-top: 3px;
+  color: #968b8c;
+  font-size: 10px;
+}
+
+.admin-dropdown-item + .admin-dropdown-item {
+  border-top: 1px solid #f5efef;
+}
+
+/* ── Empty state ── */
+.admin-dropdown-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 36px 18px;
+  color: #b0a5a6;
+}
+
+.admin-dropdown-empty svg {
+  width: 32px;
+  height: 32px;
+  opacity: .45;
+}
+
+.admin-dropdown-empty p {
+  margin: 0;
+  font-size: 12px;
+}
+
+/* ── Profile dropdown ── */
+.admin-profile-dropdown {
+  min-width: 260px;
+}
+
+.admin-dropdown-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+}
+
+.admin-profile-avatar-lg {
+  width: 46px;
+  height: 46px;
+  font-size: 15px;
+}
+
+.admin-dropdown-profile-header > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.admin-dropdown-profile-header strong {
+  color: #2b2223;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-dropdown-profile-header small {
+  margin-top: 2px;
+  color: #968b8c;
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-role-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #fae8e9;
+  color: var(--admin-brand);
+  font-size: 9px;
+  font-weight: 700;
+  width: fit-content;
+}
+
+.admin-dropdown-divider {
+  height: 1px;
+  margin: 0;
+  background: #f0eaeb;
+}
+
+/* ── Dropdown action links ── */
+.admin-dropdown-action {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 11px 18px;
+  border: 0;
+  background: transparent;
+  color: #5f5657;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+
+.admin-dropdown-action:hover {
+  background: #fbf4f5;
+  color: var(--admin-brand);
+}
+
+.admin-dropdown-action svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+}
+
+/* ── Logout button ── */
+.admin-dropdown-logout {
+  color: #b53740;
+  border-top: 1px solid #f0eaeb;
+  margin-top: 0;
+}
+
+.admin-dropdown-logout:hover {
+  background: #fde8e9;
+  color: #8f2730;
 }
 
 .admin-content {

@@ -27,6 +27,10 @@ export interface StoreSettings {
   instagramUrl: string
   youtubeUrl: string
   tiktokUrl: string
+  facebookEnabled: boolean
+  instagramEnabled: boolean
+  youtubeEnabled: boolean
+  tiktokEnabled: boolean
   maintenanceMode: boolean
 }
 
@@ -58,6 +62,10 @@ export const defaultStoreSettings: StoreSettings = {
   instagramUrl: 'https://instagram.com/',
   youtubeUrl: 'https://youtube.com/',
   tiktokUrl: 'https://tiktok.com/',
+  facebookEnabled: true,
+  instagramEnabled: true,
+  youtubeEnabled: true,
+  tiktokEnabled: true,
   maintenanceMode: false,
 }
 

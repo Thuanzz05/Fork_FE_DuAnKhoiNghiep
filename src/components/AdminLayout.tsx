@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState, type ReactNode, type SVGProps } from 'react'
-import { Link } from 'react-router-dom'
-import { getCurrentUser, getUserDisplayName, getUserInitial } from '../utils/auth'
+import { useCallback, useEffect, useRef, useState, type ReactNode, type SVGProps } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { getCurrentUser, getUserDisplayName, getUserInitial, logoutDemo } from '../utils/auth'
 import { useStoreSettings } from '../utils/storeSettings'
 import { apiRequest } from '../services/api'
 import '../pages/admin/AdminDashboardPage.css'
@@ -128,10 +128,31 @@ function AdminLayout({
   const [newContactCount, setNewContactCount] = useState(0)
   const [newOrderCount, setNewOrderCount] = useState(0)
   const [pendingReviewCount, setPendingReviewCount] = useState(0)
+  const [isNotifOpen, setIsNotifOpen] = useState(false)
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const notifRef = useRef<HTMLDivElement>(null)
+  const profileRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
   const storeSettings = useStoreSettings()
   const currentUser = getCurrentUser()
   const adminName = currentUser ? getUserDisplayName(currentUser) : 'Quản trị viên'
   const adminInitial = currentUser ? getUserInitial(currentUser) : 'QT'
+
+  // Close dropdowns on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setIsNotifOpen(false)
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) setIsProfileOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleLogout = () => {
+    logoutDemo()
+    navigate('/admin')
+    window.location.reload()
+  }
 
   const loadNotificationCounts = useCallback(async () => {
     try {
@@ -248,12 +269,86 @@ function AdminLayout({
             />
           </label>
           <div className="admin-topbar-actions">
-            <Link to={newContactCount > 0 ? '/admin/tin-nhan' : newOrderCount > 0 ? '/admin/don-hang' : '/admin/danh-gia'} className="admin-notification" aria-label={`${newContactCount} tin nhắn mới, ${newOrderCount} đơn hàng mới, ${pendingReviewCount} đánh giá chờ duyệt`}><AdminIcon name="bell" />{newContactCount + newOrderCount + pendingReviewCount > 0 && <span>{newContactCount + newOrderCount + pendingReviewCount > 99 ? '99+' : newContactCount + newOrderCount + pendingReviewCount}</span>}</Link>
-            <button type="button" className="admin-user-menu">
-              <span className="admin-profile-avatar">{adminInitial}</span>
-              <span className="admin-user-copy"><strong>{adminName}</strong><small>{currentUser?.role === 'ADMIN' ? 'Quản trị viên' : 'Tài khoản'}</small></span>
-              <AdminIcon name="chevronDown" />
-            </button>
+            {/* Notification dropdown */}
+            <div className="admin-notif-wrap" ref={notifRef}>
+              <button type="button" className="admin-notification" aria-label={`${newContactCount} tin nhắn mới, ${newOrderCount} đơn hàng mới, ${pendingReviewCount} đánh giá chờ duyệt`} onClick={() => { setIsNotifOpen((v) => !v); setIsProfileOpen(false) }}>
+                <AdminIcon name="bell" />
+                {newContactCount + newOrderCount + pendingReviewCount > 0 && <span>{newContactCount + newOrderCount + pendingReviewCount > 99 ? '99+' : newContactCount + newOrderCount + pendingReviewCount}</span>}
+              </button>
+              {isNotifOpen && (
+                <div className="admin-dropdown admin-notif-dropdown">
+                  <div className="admin-dropdown-header">
+                    <strong>Thông báo</strong>
+                    {newContactCount + newOrderCount + pendingReviewCount > 0 && <span className="admin-dropdown-badge">{newContactCount + newOrderCount + pendingReviewCount}</span>}
+                  </div>
+                  <div className="admin-dropdown-body">
+                    {newOrderCount > 0 && (
+                      <Link to="/admin/don-hang" className="admin-dropdown-item" onClick={() => setIsNotifOpen(false)}>
+                        <span className="admin-dropdown-icon admin-dropdown-icon-blue"><AdminIcon name="orders" /></span>
+                        <div><strong>{newOrderCount} đơn hàng mới</strong><small>Cần xác nhận</small></div>
+                      </Link>
+                    )}
+                    {newContactCount > 0 && (
+                      <Link to="/admin/tin-nhan" className="admin-dropdown-item" onClick={() => setIsNotifOpen(false)}>
+                        <span className="admin-dropdown-icon admin-dropdown-icon-green"><AdminIcon name="message" /></span>
+                        <div><strong>{newContactCount} tin nhắn mới</strong><small>Chưa phản hồi</small></div>
+                      </Link>
+                    )}
+                    {pendingReviewCount > 0 && (
+                      <Link to="/admin/danh-gia" className="admin-dropdown-item" onClick={() => setIsNotifOpen(false)}>
+                        <span className="admin-dropdown-icon admin-dropdown-icon-orange"><AdminIcon name="star" /></span>
+                        <div><strong>{pendingReviewCount} đánh giá chờ duyệt</strong><small>Cần xem xét</small></div>
+                      </Link>
+                    )}
+                    {newContactCount + newOrderCount + pendingReviewCount === 0 && (
+                      <div className="admin-dropdown-empty">
+                        <AdminIcon name="bell" />
+                        <p>Không có thông báo mới</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Admin profile dropdown */}
+            <div className="admin-profile-wrap" ref={profileRef}>
+              <button type="button" className={`admin-user-menu${isProfileOpen ? ' is-open' : ''}`} onClick={() => { setIsProfileOpen((v) => !v); setIsNotifOpen(false) }}>
+                <span className="admin-profile-avatar">{adminInitial}</span>
+                <span className="admin-user-copy"><strong>{adminName}</strong><small>{currentUser?.role === 'ADMIN' ? 'Quản trị viên' : 'Tài khoản'}</small></span>
+                <AdminIcon name="chevronDown" />
+              </button>
+              {isProfileOpen && (
+                <div className="admin-dropdown admin-profile-dropdown">
+                  <div className="admin-dropdown-profile-header">
+                    <span className="admin-profile-avatar admin-profile-avatar-lg">{adminInitial}</span>
+                    <div>
+                      <strong>{adminName}</strong>
+                      <small>{currentUser?.email}</small>
+                      <span className="admin-role-badge">{currentUser?.role === 'ADMIN' ? 'Quản trị viên' : 'Tài khoản'}</span>
+                    </div>
+                  </div>
+                  <div className="admin-dropdown-divider" />
+                  <Link to="/admin/cai-dat" className="admin-dropdown-action" onClick={() => setIsProfileOpen(false)}>
+                    <AdminIcon name="settings" />
+                    <span>Cài đặt hệ thống</span>
+                  </Link>
+                  <Link to="/admin/bao-cao" className="admin-dropdown-action" onClick={() => setIsProfileOpen(false)}>
+                    <AdminIcon name="report" />
+                    <span>Báo cáo</span>
+                  </Link>
+                  <Link to="/" className="admin-dropdown-action" onClick={() => setIsProfileOpen(false)}>
+                    <AdminIcon name="home" />
+                    <span>Về trang chủ</span>
+                  </Link>
+                  <div className="admin-dropdown-divider" />
+                  <button type="button" className="admin-dropdown-action admin-dropdown-logout" onClick={handleLogout}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+                    <span>Đăng xuất</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
