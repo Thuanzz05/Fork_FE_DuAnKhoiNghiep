@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { addCartItem } from '../utils/cart'
 import { formatPrice } from '../data/products'
-import type { NewsArticle } from '../data/news'
+import { normalizeNewsArticle, type NewsArticle } from '../data/news'
 import { useCatalog } from '../hooks/useCatalog'
 import { api } from '../services/api'
 
@@ -83,7 +83,7 @@ function HomePage() {
 
   useEffect(() => {
     api.get<{ articles: NewsArticle[] }>('/news')
-      .then((data) => setArticles(data.articles))
+      .then((data) => setArticles(data.articles.map(normalizeNewsArticle)))
       .catch(() => setArticles([]))
   }, [])
 

@@ -47,6 +47,12 @@
   color: var(--admin-brand);
 }
 
+.admin-report-export:disabled,
+.admin-report-print:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
 .admin-report-export svg,
 .admin-report-print svg {
   width: 16px;
@@ -106,6 +112,18 @@
   align-items: center;
   margin-right: 3px;
   color: #29845d;
+}
+
+.admin-report-metric p.is-down b {
+  color: #b53740;
+}
+
+.admin-report-metric p.is-down b svg {
+  transform: rotate(180deg);
+}
+
+.admin-report-metric p.is-neutral b {
+  color: #8d8283;
 }
 
 .admin-report-metric p svg {
@@ -373,9 +391,231 @@
   object-fit: cover;
 }
 
+.admin-report-product-avatar {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  place-items: center;
+  border: 1px solid #eadfe0;
+  border-radius: 6px;
+  background: #f8edef;
+  color: var(--admin-brand);
+  font-size: 15px;
+  font-weight: 850;
+}
+
 .admin-report-product-cell strong {
   max-width: 300px;
   line-height: 1.45;
+}
+
+.admin-report-comparison-panel {
+  margin-bottom: 16px;
+}
+
+.admin-report-comparison-table {
+  width: 100%;
+}
+
+.admin-report-comparison-head,
+.admin-report-comparison-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.5fr) repeat(3, minmax(120px, .7fr));
+  align-items: center;
+  gap: 16px;
+}
+
+.admin-report-comparison-head {
+  min-height: 38px;
+  padding: 0 20px;
+  background: #fcfafa;
+  color: #8b7f80;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .35px;
+  text-transform: uppercase;
+}
+
+.admin-report-comparison-row {
+  min-height: 72px;
+  padding: 10px 20px;
+  border-top: 1px solid #f0e9ea;
+  color: #817576;
+  font-size: 11px;
+}
+
+.admin-report-comparison-row > strong {
+  color: #302627;
+  font-size: 14px;
+}
+
+.admin-report-comparison-label {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.admin-report-comparison-label .admin-stat-icon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+}
+
+.admin-report-comparison-label .admin-stat-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.admin-report-comparison-label strong {
+  color: #4a3e3f;
+  font-size: 11px;
+}
+
+.admin-report-change {
+  display: inline-flex;
+  width: fit-content;
+  min-width: 66px;
+  min-height: 27px;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 0 8px;
+  border-radius: 14px;
+  background: #e5f3ed;
+  color: #287552;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.admin-report-change svg {
+  width: 11px;
+  height: 11px;
+}
+
+.admin-report-change.is-down {
+  background: #fae8e9;
+  color: #a62f38;
+}
+
+.admin-report-change.is-down svg {
+  transform: rotate(180deg);
+}
+
+.admin-report-change.is-neutral {
+  background: #f0eded;
+  color: #817576;
+}
+
+.admin-report-state {
+  display: flex;
+  min-height: 230px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  color: #776b6c;
+}
+
+.admin-report-state > svg {
+  width: 34px;
+  height: 34px;
+  color: var(--admin-brand);
+}
+
+.admin-report-state strong {
+  font-size: 13px;
+}
+
+.admin-report-state p {
+  max-width: 520px;
+  margin: 0;
+  color: #978b8c;
+  font-size: 10px;
+  text-align: center;
+}
+
+.admin-report-state.is-error {
+  border-color: #ecc9cc;
+  background: #fff8f8;
+  color: #9e2932;
+}
+
+.admin-report-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #ecdfe0;
+  border-top-color: var(--admin-brand);
+  border-radius: 50%;
+  animation: admin-report-spin .7s linear infinite;
+}
+
+@keyframes admin-report-spin {
+  to { transform: rotate(360deg); }
+}
+
+.admin-report-inline-empty {
+  margin: 0;
+  color: #968a8b;
+  font-size: 10px;
+  text-align: center;
+}
+
+.admin-report-table-empty {
+  height: 92px;
+  color: #95898a !important;
+  text-align: center !important;
+}
+
+.admin-report-status {
+  display: inline-flex;
+  min-height: 25px;
+  align-items: center;
+  padding: 0 9px;
+  border-radius: 13px;
+  background: #eef1f4;
+  color: #57636d;
+  font-size: 8px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.admin-report-status.is-da_giao {
+  background: #e5f3ed;
+  color: #287552;
+}
+
+.admin-report-status.is-cho_xac_nhan {
+  background: #fff1d9;
+  color: #936018;
+}
+
+.admin-report-status.is-da_huy {
+  background: #fae8e9;
+  color: #a62f38;
+}
+
+.admin-report-status.is-da_xac_nhan,
+.admin-report-status.is-dang_chuan_bi,
+.admin-report-status.is-dang_giao {
+  background: #e7f0fa;
+  color: #3475b8;
+}
+
+.admin-report-stock-panel {
+  margin-bottom: 16px;
+}
+
+.admin-report-stock-value {
+  display: inline-grid;
+  min-width: 32px;
+  height: 25px;
+  place-items: center;
+  border-radius: 13px;
+  background: #fae8e9;
+  color: #a62f38;
+  font-size: 9px;
+  font-weight: 800;
 }
 
 @media (max-width: 1180px) {
@@ -419,6 +659,25 @@
   .admin-report-metrics {
     grid-template-columns: minmax(0, 1fr);
     gap: 11px;
+  }
+
+  .admin-report-comparison-panel {
+    overflow: hidden;
+  }
+
+  .admin-report-comparison-panel .admin-panel-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-report-comparison-table {
+    overflow-x: auto;
+  }
+
+  .admin-report-comparison-head,
+  .admin-report-comparison-row {
+    width: 660px;
+    grid-template-columns: 220px repeat(3, 125px);
   }
 
   .admin-report-metric {
@@ -550,6 +809,28 @@
     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
     gap: 3mm;
     margin-bottom: 3mm;
+  }
+
+  .admin-report-comparison-panel {
+    margin-bottom: 3mm;
+    break-inside: avoid;
+  }
+
+  .admin-report-comparison-head,
+  .admin-report-comparison-row {
+    grid-template-columns: minmax(50mm, 1.5fr) repeat(3, minmax(28mm, .7fr));
+    gap: 3mm;
+    padding-right: 4mm;
+    padding-left: 4mm;
+  }
+
+  .admin-report-comparison-row {
+    min-height: 14mm;
+  }
+
+  .admin-report-comparison-label .admin-stat-icon {
+    width: 8mm;
+    height: 8mm;
   }
 
   .admin-report-metric {
