@@ -6,7 +6,7 @@ import { usePagination } from '../../hooks/usePagination'
 import { api } from '../../services/api'
 import './AdminPromotionsPage.css'
 
-type PromotionType = 'percentage' | 'fixed' | 'shipping' | 'gift'
+type PromotionType = 'percentage' | 'fixed' | 'shipping'
 type PromotionStatus = 'active' | 'scheduled' | 'expired' | 'disabled'
 type PromotionSort = 'newest' | 'ending' | 'usage' | 'code'
 
@@ -44,7 +44,6 @@ const promotionTypes: Record<PromotionType, { label: string }> = {
   percentage: { label: 'Giảm theo %' },
   fixed: { label: 'Giảm tiền mặt' },
   shipping: { label: 'Miễn phí vận chuyển' },
-  gift: { label: 'Quà tặng' },
 }
 
 const promotionStatuses: Record<PromotionStatus, { label: string }> = {
@@ -232,8 +231,9 @@ function AdminPromotionsPage() {
       const payload = {
         code: promotionData.code, name: promotionData.name, description: promotionData.description,
         type: promotionData.type === 'percentage' ? 'PHAN_TRAM' : promotionData.type === 'shipping' ? 'MIEN_PHI_VAN_CHUYEN' : 'SO_TIEN',
-        value: promotionData.value, minimumOrder: promotionData.minimumOrder,
-        maximumDiscount: promotionData.maximumDiscount, maximumUses: promotionData.usageLimit || null,
+        value: promotionData.type === 'shipping' ? 0 : promotionData.value, minimumOrder: promotionData.minimumOrder,
+        maximumDiscount: promotionData.type === 'percentage' ? promotionData.maximumDiscount : null,
+        maximumUses: promotionData.usageLimit || null, maximumUsesPerCustomer: 1,
         startsAt: `${promotionData.startDate} 00:00:00`, endsAt: `${promotionData.endDate} 23:59:59`,
         status: promotionData.enabled ? 'HOAT_DONG' : 'TAM_DUNG', productIds: [],
       }
@@ -330,7 +330,7 @@ function AdminPromotionsPage() {
                 <label><span>Mã khuyến mãi *</span><input required maxLength={24} value={form.code} onChange={(event) => updateField('code', event.target.value.toLocaleUpperCase('vi-VN').replace(/\s+/g, ''))} /></label>
                 <label><span>Tên chương trình *</span><input required value={form.name} onChange={(event) => updateField('name', event.target.value)} /></label>
                 <label><span>Loại ưu đãi *</span><select value={form.type} onChange={(event) => updateField('type', event.target.value as PromotionType)}>{Object.entries(promotionTypes).map(([value, meta]) => <option value={value} key={value}>{meta.label}</option>)}</select></label>
-                <label><span>{form.type === 'percentage' ? 'Phần trăm giảm' : form.type === 'gift' ? 'Giá trị quy đổi' : 'Giá trị giảm'}</span><input min="0" type="number" value={form.value} onChange={(event) => updateField('value', event.target.value)} disabled={form.type === 'gift'} /></label>
+                <label><span>{form.type === 'percentage' ? 'Phần trăm giảm' : 'Giá trị giảm'}</span><input min="0" max={form.type === 'percentage' ? 100 : undefined} type="number" value={form.value} onChange={(event) => updateField('value', event.target.value)} disabled={form.type === 'shipping'} /></label>
                 <label><span>Giá trị đơn tối thiểu *</span><input required min="0" type="number" value={form.minimumOrder} onChange={(event) => updateField('minimumOrder', event.target.value)} /></label>
                 <label><span>Giảm tối đa</span><input min="0" type="number" value={form.maximumDiscount} onChange={(event) => updateField('maximumDiscount', event.target.value)} disabled={form.type !== 'percentage'} /></label>
                 <label><span>Ngày bắt đầu *</span><input required type="date" value={form.startDate} onChange={(event) => updateField('startDate', event.target.value)} /></label>

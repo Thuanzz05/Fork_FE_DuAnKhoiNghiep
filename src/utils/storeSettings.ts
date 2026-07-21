@@ -67,6 +67,9 @@ type PublicStoreSettings = {
   storeName: string; logoUrl?: string; description?: string; hotline?: string; email?: string
   address?: string; workingHours?: string; shippingFee: number; freeShippingThreshold: number
   facebookUrl?: string; instagramUrl?: string; tiktokUrl?: string
+  legalName?: string; supportEmail?: string; mapEmbedUrl?: string; orderPrefix?: string
+  codEnabled?: boolean; bankTransferEnabled?: boolean; youtubeUrl?: string
+  notificationEmail?: string; sendOrderConfirmation?: boolean; maintenanceMode?: boolean
 }
 
 const mapApiSettings = (data: PublicStoreSettings): StoreSettings => ({
@@ -83,6 +86,11 @@ const mapApiSettings = (data: PublicStoreSettings): StoreSettings => ({
   facebookUrl: data.facebookUrl || '',
   instagramUrl: data.instagramUrl || '',
   tiktokUrl: data.tiktokUrl || '',
+  legalName: data.legalName || '', supportEmail: data.supportEmail || '', mapEmbedUrl: data.mapEmbedUrl || '',
+  orderPrefix: data.orderPrefix || 'RBB', codEnabled: data.codEnabled ?? true,
+  bankTransferEnabled: data.bankTransferEnabled ?? true, youtubeUrl: data.youtubeUrl || '',
+  notificationEmail: data.notificationEmail || '', sendOrderConfirmation: data.sendOrderConfirmation ?? true,
+  maintenanceMode: data.maintenanceMode ?? false,
 })
 
 export const getStoreSettings = (): StoreSettings => {

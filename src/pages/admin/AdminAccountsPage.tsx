@@ -6,7 +6,7 @@ import { usePagination } from '../../hooks/usePagination'
 import { api } from '../../services/api'
 import './AdminAccountsPage.css'
 
-type AccountRole = 'admin' | 'staff' | 'customer'
+type AccountRole = 'admin' | 'customer'
 type AccountStatus = 'active' | 'locked'
 type AccountSort = 'newest' | 'name' | 'spending'
 
@@ -39,7 +39,6 @@ interface AccountFormState {
 
 const roleMeta: Record<AccountRole, { label: string }> = {
   admin: { label: 'Quản trị viên' },
-  staff: { label: 'Nhân viên' },
   customer: { label: 'Khách hàng' },
 }
 
@@ -160,13 +159,7 @@ function AdminAccountsPage() {
 
   const activeCount = accounts.filter((account) => account.status === 'active').length
   const lockedCount = accounts.filter((account) => account.status === 'locked').length
-  const staffCount = accounts.filter((account) => account.role === 'staff' || account.role === 'admin').length
-
-  const openCreateForm = () => {
-    setEditingAccount(null)
-    setForm(emptyForm)
-    setIsFormOpen(true)
-  }
+  const adminCount = accounts.filter((account) => account.role === 'admin').length
 
   const openEditForm = (account: ManagedAccount) => {
     setEditingAccount(account)
@@ -243,22 +236,21 @@ function AdminAccountsPage() {
         <div>
           <p>QUẢN LÝ NGƯỜI DÙNG</p>
           <h1>Quản lý tài khoản</h1>
-          <span>Theo dõi khách hàng, nhân viên và quyền truy cập hệ thống.</span>
+          <span>Theo dõi khách hàng, quản trị viên và quyền truy cập hệ thống.</span>
         </div>
-        <button type="button" className="admin-account-primary" onClick={openCreateForm}><AdminIcon name="userPlus" />Thêm tài khoản</button>
       </div>
 
       <section className="admin-account-summary" aria-label="Tổng quan tài khoản">
         <article><span className="is-red"><AdminIcon name="customers" /></span><div><small>Tổng tài khoản</small><strong>{accounts.length}</strong></div></article>
         <article><span className="is-green"><AdminIcon name="userPlus" /></span><div><small>Đang hoạt động</small><strong>{activeCount}</strong></div></article>
-        <article><span className="is-blue"><AdminIcon name="settings" /></span><div><small>Quản trị & nhân viên</small><strong>{staffCount}</strong></div></article>
+        <article><span className="is-blue"><AdminIcon name="settings" /></span><div><small>Quản trị viên</small><strong>{adminCount}</strong></div></article>
         <article><span className="is-orange"><AdminIcon name="lock" /></span><div><small>Tài khoản bị khóa</small><strong>{lockedCount}</strong></div></article>
       </section>
 
       <section className="admin-accounts-panel">
         <div className="admin-accounts-toolbar">
           <div>
-            <label><span>Vai trò</span><select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value as 'all' | AccountRole)} aria-label="Lọc theo vai trò"><option value="all">Tất cả vai trò</option><option value="customer">Khách hàng</option><option value="staff">Nhân viên</option><option value="admin">Quản trị viên</option></select></label>
+            <label><span>Vai trò</span><select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value as 'all' | AccountRole)} aria-label="Lọc theo vai trò"><option value="all">Tất cả vai trò</option><option value="customer">Khách hàng</option><option value="admin">Quản trị viên</option></select></label>
             <label><span>Trạng thái</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | AccountStatus)} aria-label="Lọc theo trạng thái"><option value="all">Tất cả trạng thái</option><option value="active">Hoạt động</option><option value="locked">Đã khóa</option></select></label>
             <label><span>Sắp xếp</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as AccountSort)} aria-label="Sắp xếp tài khoản"><option value="newest">Mới đăng ký</option><option value="name">Theo tên A-Z</option><option value="spending">Chi tiêu cao nhất</option></select></label>
           </div>
@@ -298,7 +290,7 @@ function AdminAccountsPage() {
                 <label><span>Tên *</span><input required value={form.firstName} onChange={(event) => updateField('firstName', event.target.value)} /></label>
                 <label><span>Email *</span><input required type="email" value={form.email} onChange={(event) => updateField('email', event.target.value)} /></label>
                 <label><span>Số điện thoại *</span><input required type="tel" pattern="[0-9]{9,11}" value={form.phone} onChange={(event) => updateField('phone', event.target.value)} /></label>
-                <label><span>Vai trò *</span><select value={form.role} onChange={(event) => updateField('role', event.target.value as AccountRole)}><option value="customer">Khách hàng</option><option value="staff">Nhân viên</option><option value="admin">Quản trị viên</option></select></label>
+                <label><span>Vai trò *</span><select value={form.role} onChange={(event) => updateField('role', event.target.value as AccountRole)}><option value="customer">Khách hàng</option><option value="admin">Quản trị viên</option></select></label>
                 <label><span>Trạng thái *</span><select value={form.status} onChange={(event) => updateField('status', event.target.value as AccountStatus)}><option value="active">Hoạt động</option><option value="locked">Đã khóa</option></select></label>
                 {!editingAccount ? <label className="is-wide"><span>Mật khẩu tạm thời *</span><input required type="password" minLength={6} value={form.password} onChange={(event) => updateField('password', event.target.value)} /></label> : null}
                 <label className="is-wide"><span>Đường dẫn avatar</span><input placeholder="Để trống để dùng avatar chữ cái" value={form.avatar} onChange={(event) => updateField('avatar', event.target.value)} /></label>

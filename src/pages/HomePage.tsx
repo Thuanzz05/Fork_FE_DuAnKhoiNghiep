@@ -285,6 +285,7 @@ function HomePage() {
                     <button
                       type="button"
                       className="large-card-btn-add"
+                      disabled={(featuredCombo.stock ?? 0) <= 0}
                       onClick={() => handleAddToCart(featuredCombo.id)}
                       aria-label={`Thêm ${featuredCombo.name} vào giỏ hàng`}
                     >
@@ -382,6 +383,7 @@ function HomePage() {
                     <button
                       type="button"
                       className="card-cart-btn-new"
+                      disabled={(item.stock ?? 0) <= 0}
                       onClick={() => handleAddToCart(item.id)}
                       aria-label="Thêm vào giỏ hàng"
                     >

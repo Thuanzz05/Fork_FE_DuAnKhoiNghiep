@@ -21,6 +21,8 @@ interface InventoryProduct {
   categorySlug: string
   unit: string
   stock: number
+  reservedStock: number
+  availableStock: number
   minimumStock: number
   costPrice: number
   location: string
@@ -42,6 +44,8 @@ interface StockVoucher {
   note: string
   createdBy: string
   items: VoucherItem[]
+  quantity: number
+  total: number
 }
 
 interface VoucherLineForm {
@@ -69,8 +73,8 @@ const stockStatusMeta: Record<StockStatus, { label: string; tone: string }> = {
 }
 
 const getStockStatus = (product: InventoryProduct): StockStatus => {
-  if (product.stock === 0) return 'out'
-  if (product.stock <= product.minimumStock) return 'low'
+  if (product.availableStock === 0) return 'out'
+  if (product.availableStock <= product.minimumStock) return 'low'
   return 'good'
 }
 
@@ -120,17 +124,20 @@ function AdminInventoryPage() {
       setInventory(data.products.map((item) => ({
         id: String(item.id), sku: String(item.sku), name: String(item.name), image: String(item.image || ''),
         category: '', categorySlug: '', unit: 'Sản phẩm', stock: Number(item.stock),
+        reservedStock: Number(item.reservedStock), availableStock: Number(item.availableStock),
         minimumStock: Number(item.minimumStock), costPrice: Number(item.costPrice), location: 'Kho chính',
         updatedAt: new Date().toISOString(),
       })))
       setSuppliers(data.suppliers)
       const imports = data.imports.map((item) => ({
         id: String(item.id), code: String(item.code), type: 'in' as const, createdAt: String(item.date),
-        partner: String(item.supplierName || ''), note: String(item.note || ''), createdBy: String(item.createdBy || ''), items: [],
+        partner: String(item.supplierName || ''), note: String(item.note || ''), createdBy: String(item.createdBy || ''),
+        items: [], quantity: Number(item.quantity), total: Number(item.total),
       }))
       const exports = data.exports.map((item) => ({
         id: String(item.id), code: String(item.code), type: 'out' as const, createdAt: String(item.date),
-        partner: String(item.recipient || ''), note: String(item.note || ''), createdBy: String(item.createdBy || ''), items: [],
+        partner: String(item.recipient || ''), note: String(item.note || ''), createdBy: String(item.createdBy || ''),
+        items: [], quantity: Number(item.quantity), total: Number(item.total),
       }))
       setVouchers([...imports, ...exports])
     } catch {
@@ -199,8 +206,8 @@ function AdminInventoryPage() {
       .sort((a, b) => {
         if (voucherSort === 'oldest') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         if (voucherSort === 'quantity') {
-          const quantityA = a.items.reduce((total, item) => total + item.quantity, 0)
-          const quantityB = b.items.reduce((total, item) => total + item.quantity, 0)
+          const quantityA = a.quantity
+          const quantityB = b.quantity
           return quantityB - quantityA
         }
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -280,7 +287,7 @@ function AdminInventoryPage() {
     if (voucherForm.type === 'out') {
       const insufficientItem = parsedItems.find((item) => {
         const product = inventory.find((entry) => entry.id === item.productId)
-        return !product || item.quantity > product.stock
+        return !product || item.quantity > product.availableStock
       })
       if (insufficientItem) {
         const product = inventory.find((entry) => entry.id === insufficientItem.productId)
@@ -303,6 +310,8 @@ function AdminInventoryPage() {
       note: voucherForm.note.trim(),
       createdBy: 'Quản trị viên',
       items: parsedItems,
+      quantity: parsedItems.reduce((sum, item) => sum + item.quantity, 0),
+      total: parsedItems.reduce((sum, item) => sum + item.quantity * item.unitCost, 0),
     }
 
     try {
@@ -335,8 +344,8 @@ function AdminInventoryPage() {
     }
   }
 
-  const voucherTotal = (voucher: StockVoucher) => voucher.items.reduce((total, item) => total + item.quantity * item.unitCost, 0)
-  const voucherQuantity = (voucher: StockVoucher) => voucher.items.reduce((total, item) => total + item.quantity, 0)
+  const voucherTotal = (voucher: StockVoucher) => voucher.total
+  const voucherQuantity = (voucher: StockVoucher) => voucher.quantity
 
   return (
     <AdminLayout
@@ -378,7 +387,7 @@ function AdminInventoryPage() {
             </div>
             <div className="admin-inventory-table-wrap">
               <table className="admin-inventory-stock-table">
-                <thead><tr><th>Sản phẩm</th><th>Vị trí</th><th>Giá vốn</th><th>Tồn hiện tại</th><th>Tồn tối thiểu</th><th>Giá trị tồn</th><th>Trạng thái</th></tr></thead>
+                <thead><tr><th>Sản phẩm</th><th>Vị trí</th><th>Giá vốn</th><th>Tồn vật lý</th><th>Giữ chỗ</th><th>Khả dụng</th><th>Tồn tối thiểu</th><th>Trạng thái</th></tr></thead>
                 <tbody>{paginatedInventory.map((product) => {
                   const status = stockStatusMeta[getStockStatus(product)]
                   return <tr key={product.id}>
@@ -386,8 +395,9 @@ function AdminInventoryPage() {
                     <td><div className="admin-inventory-location"><strong>{product.location}</strong><span>Kho chính</span></div></td>
                     <td>{formatPrice(product.costPrice)}</td>
                     <td><strong className="admin-inventory-stock-number">{product.stock}</strong> {product.unit}</td>
+                    <td><strong>{product.reservedStock}</strong> {product.unit}</td>
+                    <td><strong className="admin-inventory-stock-number">{product.availableStock}</strong> {product.unit}</td>
                     <td>{product.minimumStock} {product.unit}</td>
-                    <td><strong>{formatPrice(product.stock * product.costPrice)}</strong></td>
                     <td><span className={`admin-inventory-status is-${status.tone}`}><i />{status.label}</span></td>
                   </tr>
                 })}</tbody>

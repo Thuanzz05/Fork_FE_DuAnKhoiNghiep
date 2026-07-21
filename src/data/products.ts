@@ -15,6 +15,7 @@ export interface Product {
   mainIngredients: string[]
   tags: string[]
   isCombo?: boolean
+  stock?: number
 }
 
 export const categories: Array<{ name: string; slug: string }> = []

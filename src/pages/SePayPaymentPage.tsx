@@ -13,6 +13,7 @@ interface PaymentInformation {
   paymentStatus: 'CHUA_THANH_TOAN' | 'DA_THANH_TOAN' | 'THAT_BAI' | 'DA_HOAN_TIEN'
   transactionStatus: 'CHO_THANH_TOAN' | 'DA_THANH_TOAN' | 'HET_HAN' | 'DA_HUY'
   paidAt: string | null
+  expiresAt: string | null
   bank: {
     code: string
     name: string
@@ -54,13 +55,13 @@ function SePayPaymentPage() {
 
     void loadPayment()
     const interval = window.setInterval(() => {
-      if (payment?.paymentStatus !== 'DA_THANH_TOAN') void loadPayment()
+      if (payment?.paymentStatus !== 'DA_THANH_TOAN' && payment?.transactionStatus === 'CHO_THANH_TOAN') void loadPayment()
     }, 4000)
     return () => {
       disposed = true
       window.clearInterval(interval)
     }
-  }, [navigate, orderId, payment?.paymentStatus])
+  }, [navigate, orderId, payment?.paymentStatus, payment?.transactionStatus])
 
   const copyValue = async (label: string, value: string) => {
     await navigator.clipboard.writeText(value)
@@ -69,16 +70,19 @@ function SePayPaymentPage() {
   }
 
   const isPaid = payment?.paymentStatus === 'DA_THANH_TOAN'
+  const isExpired = payment?.transactionStatus === 'HET_HAN' || payment?.transactionStatus === 'DA_HUY'
 
   return (
     <main className="sepay-page">
       <div className="sepay-container">
         <div className="sepay-heading">
           <span>THANH TOÁN CHUYỂN KHOẢN</span>
-          <h1>{isPaid ? 'Thanh toán thành công' : 'Quét mã để thanh toán'}</h1>
+          <h1>{isPaid ? 'Thanh toán thành công' : isExpired ? 'Đã hết hạn thanh toán' : 'Quét mã để thanh toán'}</h1>
           <p>
             {isPaid
               ? 'Giao dịch đã được xác nhận tự động. Cửa hàng sẽ sớm xử lý đơn của bạn.'
+              : isExpired
+                ? 'Đơn hàng đã được hủy và số lượng giữ chỗ đã được hoàn lại.'
               : 'Mở ứng dụng ngân hàng, quét mã VietQR và giữ nguyên số tiền cùng nội dung chuyển khoản.'}
           </p>
         </div>
@@ -91,14 +95,16 @@ function SePayPaymentPage() {
             <div className="sepay-qr-column">
               {isPaid ? (
                 <div className="sepay-success-icon" aria-hidden="true">✓</div>
+              ) : isExpired ? (
+                <div className="sepay-success-icon" aria-hidden="true">×</div>
               ) : (
                 <img src={payment.qrUrl} alt={`Mã QR thanh toán đơn ${payment.orderCode}`} className="sepay-qr" />
               )}
               <div className={`sepay-status ${isPaid ? 'success' : 'waiting'}`}>
                 <span className="status-dot" />
-                {isPaid ? 'Đã nhận thanh toán' : 'Đang chờ ngân hàng xác nhận'}
+                {isPaid ? 'Đã nhận thanh toán' : isExpired ? 'Giao dịch đã hết hạn' : 'Đang chờ ngân hàng xác nhận'}
               </div>
-              {!isPaid && <small>Trạng thái được kiểm tra tự động mỗi 4 giây</small>}
+              {!isPaid && !isExpired && <small>Trạng thái được kiểm tra tự động mỗi 4 giây</small>}
             </div>
 
             <div className="sepay-details">
@@ -140,7 +146,7 @@ function SePayPaymentPage() {
                 </div>
               </dl>
 
-              {!isPaid && (
+              {!isPaid && !isExpired && (
                 <div className="sepay-warning">
                   Không sửa số tiền hoặc nội dung chuyển khoản. Hệ thống chỉ xác nhận khi thông tin khớp hoàn toàn.
                 </div>

@@ -61,6 +61,10 @@ function AppContent() {
     return () => window.removeEventListener('auth-updated', updateAuth)
   }, [])
 
+  if (storeSettings.maintenanceMode && !isAdminRoute) {
+    return <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', textAlign: 'center', padding: 24 }}><div><h1>Rubeanora đang bảo trì</h1><p>Chúng tôi sẽ hoạt động trở lại trong thời gian sớm nhất.</p></div></main>
+  }
+
   return (
     <>
       <ScrollToTop />

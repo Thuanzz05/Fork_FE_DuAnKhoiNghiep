@@ -9,6 +9,7 @@ export interface CartItem {
 export interface CartToastDetail {
   productId: string
   quantity: number
+  error?: string
 }
 
 let cartItems: CartItem[] = []
@@ -96,15 +97,18 @@ export const addCartItem = (productId: string, quantity = 1) => {
     nextItems = [...currentItems, { productId, quantity: addedQuantity }]
   }
 
-  const savedItems = saveCartItems(nextItems)
-  emitCartToast({ productId, quantity: addedQuantity })
   const userId = getCurrentUser()?.id
   if (getAccessToken() && userId) {
     void api.post<ApiCartResponse>('/customers/me/cart/items', { productId, quantity: addedQuantity })
-      .then((result) => syncApiItemsForUser(result.items, userId))
-      .catch(() => undefined)
+      .then((result) => {
+        syncApiItemsForUser(result.items, userId)
+        emitCartToast({ productId, quantity: addedQuantity })
+      })
+      .catch((error) => emitCartToast({ productId, quantity: 0, error: error instanceof Error ? error.message : 'Không thể thêm vào giỏ hàng' }))
+    return currentItems
   }
-
+  const savedItems = saveCartItems(nextItems)
+  emitCartToast({ productId, quantity: addedQuantity })
   return savedItems
 }
 
@@ -116,16 +120,21 @@ export const addCartItemAndSync = async (productId: string, quantity = 1) => {
     ? currentItems.map((item) => item.productId === productId ? { ...item, quantity: item.quantity + addedQuantity } : item)
     : [...currentItems, { productId, quantity: addedQuantity }]
 
-  const savedItems = saveCartItems(nextItems)
-  emitCartToast({ productId, quantity: addedQuantity })
   const userId = getCurrentUser()?.id
-  if (!getAccessToken() || !userId) return savedItems
+  if (!getAccessToken() || !userId) {
+    const savedItems = saveCartItems(nextItems)
+    emitCartToast({ productId, quantity: addedQuantity })
+    return savedItems
+  }
 
   const remoteItems = await api.post<ApiCartResponse>('/customers/me/cart/items', { productId, quantity: addedQuantity })
-  return syncApiItemsForUser(remoteItems.items, userId)
+  const savedItems = syncApiItemsForUser(remoteItems.items, userId)
+  emitCartToast({ productId, quantity: addedQuantity })
+  return savedItems
 }
 
 export const updateCartItemQuantity = (productId: string, quantity: number) => {
+  const previousItems = getCartItems()
   const items = saveCartItems(
     getCartItems().map((item) =>
       item.productId === productId ? { ...item, quantity: Math.max(1, Math.floor(quantity)) } : item,
@@ -135,18 +144,25 @@ export const updateCartItemQuantity = (productId: string, quantity: number) => {
   if (getAccessToken() && userId) {
     void api.patch<ApiCartResponse>(`/customers/me/cart/items/${productId}`, { quantity })
       .then((result) => syncApiItemsForUser(result.items, userId))
-      .catch(() => undefined)
+      .catch((error) => {
+        saveCartItems(previousItems)
+        emitCartToast({ productId, quantity: 0, error: error instanceof Error ? error.message : 'Không thể cập nhật giỏ hàng' })
+      })
   }
   return items
 }
 
 export const removeCartItem = (productId: string) => {
+  const previousItems = getCartItems()
   const items = saveCartItems(getCartItems().filter((item) => item.productId !== productId))
   const userId = getCurrentUser()?.id
   if (getAccessToken() && userId) {
     void api.delete<ApiCartResponse>(`/customers/me/cart/items/${productId}`)
       .then((result) => syncApiItemsForUser(result.items, userId))
-      .catch(() => undefined)
+      .catch((error) => {
+        saveCartItems(previousItems)
+        emitCartToast({ productId, quantity: 0, error: error instanceof Error ? error.message : 'Không thể xóa sản phẩm' })
+      })
   }
   return items
 }

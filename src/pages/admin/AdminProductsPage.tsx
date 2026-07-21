@@ -3,7 +3,7 @@ import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
 import Pagination from '../../components/Pagination'
 import { formatPrice, type Product } from '../../data/products'
 import { usePagination } from '../../hooks/usePagination'
-import { api } from '../../services/api'
+import { api, apiRequest, resolveApiUrl } from '../../services/api'
 import './AdminProductsPage.css'
 
 type ProductStatus = 'active' | 'low' | 'out'
@@ -11,12 +11,13 @@ type ProductStatus = 'active' | 'low' | 'out'
 interface ManagedProduct extends Product {
   sku: string
   stock: number
+  minimumStock: number
 }
 
 type AdminProductRow = {
   id: string; categoryId: string; categoryName: string; productCode: string; sku: string
   name: string; slug: string; productType: 'DON' | 'COMBO'; mainImage: string
-  listPrice: number; salePrice: number; stock: number; description?: string
+  listPrice: number; salePrice: number; stock: number; minimumStock: number; description?: string
   ingredients?: string; benefits?: string; specification?: string; origin?: string
 }
 
@@ -27,7 +28,7 @@ const mapAdminProduct = (item: AdminProductRow): ManagedProduct => ({
   category: item.categoryName, categorySlug: '', image: item.mainImage || '', price: item.salePrice,
   originalPrice: item.listPrice > item.salePrice ? item.listPrice : undefined,
   discount: item.listPrice > item.salePrice ? Math.round((item.listPrice - item.salePrice) * 100 / item.listPrice) : undefined,
-  weight: item.specification || '', origin: item.origin || '', stock: item.stock,
+  weight: item.specification || '', origin: item.origin || '', stock: item.stock, minimumStock: item.minimumStock,
   description: item.description || '', mainIngredients: item.ingredients?.split(',').filter(Boolean) || [],
   tags: item.benefits?.split(',').filter(Boolean) || [], isCombo: item.productType === 'COMBO',
 })
@@ -66,9 +67,9 @@ const emptyForm: ProductFormState = {
   isCombo: false,
 }
 
-const getProductStatus = (stock: number): ProductStatus => {
-  if (stock === 0) return 'out'
-  if (stock <= 10) return 'low'
+const getProductStatus = (product: ManagedProduct): ProductStatus => {
+  if (product.stock === 0) return 'out'
+  if (product.stock <= product.minimumStock) return 'low'
   return 'active'
 }
 
@@ -151,7 +152,7 @@ function AdminProductsPage() {
       const matchesKeyword = !keyword || [product.name, product.nameEn, product.sku, product.category]
         .some((value) => value.toLocaleLowerCase('vi-VN').includes(keyword))
       const matchesCategory = categoryFilter === 'all' || product.categorySlug === categoryFilter
-      const matchesStatus = statusFilter === 'all' || getProductStatus(product.stock) === statusFilter
+      const matchesStatus = statusFilter === 'all' || getProductStatus(product) === statusFilter
       return matchesKeyword && matchesCategory && matchesStatus
     })
   }, [categoryFilter, productList, searchValue, statusFilter])
@@ -163,7 +164,7 @@ function AdminProductsPage() {
   )
 
   const activeCount = productList.filter((product) => product.stock > 10).length
-  const lowStockCount = productList.filter((product) => product.stock > 0 && product.stock <= 10).length
+  const lowStockCount = productList.filter((product) => product.stock > 0 && product.stock <= product.minimumStock).length
   const inventoryValue = productList.reduce((total, product) => total + product.price * product.stock, 0)
 
   const openCreateForm = () => {
@@ -198,7 +199,7 @@ function AdminProductsPage() {
     setForm((current) => ({ ...current, [field]: value }))
   }
 
-  const handleImageFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleImageFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
@@ -208,13 +209,23 @@ function AdminProductsPage() {
       return
     }
 
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result !== 'string') return
-      updateField('image', reader.result)
-      setSelectedImageName(file.name)
+    if (file.size > 5 * 1024 * 1024) {
+      setToast('Ảnh sản phẩm không được vượt quá 5MB')
+      event.target.value = ''
+      return
     }
-    reader.readAsDataURL(file)
+    try {
+      const uploaded = await apiRequest<{ url: string }>('/admin/uploads/images', {
+        method: 'POST', headers: { 'Content-Type': file.type, 'X-File-Name': encodeURIComponent(file.name) }, body: file,
+      })
+      updateField('image', resolveApiUrl(uploaded.url))
+      setSelectedImageName(file.name)
+      setToast('Đã tải ảnh sản phẩm lên thành công')
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : 'Không thể tải ảnh sản phẩm')
+    } finally {
+      event.target.value = ''
+    }
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -227,14 +238,13 @@ function AdminProductsPage() {
     const sku = editingProduct?.sku || `RBN-${Date.now().toString().slice(-8)}`
     const payload = {
       categoryId: 'id' in selectedCategory ? Number(selectedCategory.id) : Number.NaN,
-      productCode: editingProduct?.nameEn || sku,
+      productCode: form.nameEn.trim() || sku,
       sku, name: form.name.trim(), slug: makeSlug(form.name),
       productType: form.isCombo ? 'COMBO' : 'DON', mainImage: form.image.trim(),
-      listPrice: originalPrice || price, salePrice: price, costPrice: Math.round(price * 0.6),
-      stock: Math.max(0, Number(form.stock)), minimumStock: 5,
+      listPrice: originalPrice || price, salePrice: price,
+      minimumStock: editingProduct?.minimumStock ?? 5,
       description: form.description.trim(), ingredients: form.mainIngredients,
       benefits: form.tags, specification: form.weight.trim(), origin: form.origin.trim(),
-      status: Number(form.stock) > 0 ? 'DANG_BAN' : 'NHAP',
     }
 
     if (!Number.isFinite(payload.categoryId)) {
@@ -330,7 +340,7 @@ function AdminProductsPage() {
             </thead>
             <tbody>
               {paginatedProducts.map((product) => {
-                const status = getProductStatus(product.stock)
+                const status = getProductStatus(product)
                 return (
                   <tr key={product.id}>
                     <td>
@@ -412,7 +422,7 @@ function AdminProductsPage() {
                 <label><span>Giá gốc</span><input min="0" type="number" value={form.originalPrice} onChange={(event) => updateField('originalPrice', event.target.value)} /></label>
                 <label><span>Khối lượng / dung tích *</span><input required value={form.weight} onChange={(event) => updateField('weight', event.target.value)} /></label>
                 <label><span>Xuất xứ *</span><input required value={form.origin} onChange={(event) => updateField('origin', event.target.value)} /></label>
-                <label><span>Số lượng tồn kho *</span><input required min="0" type="number" value={form.stock} onChange={(event) => updateField('stock', event.target.value)} /></label>
+                <div><span>Tồn kho</span><p>Chỉ thay đổi qua phiếu nhập, phiếu xuất hoặc đơn hàng.</p></div>
                 <label className="admin-checkbox-field"><input type="checkbox" checked={form.isCombo} onChange={(event) => updateField('isCombo', event.target.checked)} /><span>Đây là sản phẩm combo</span></label>
                 <label className="is-wide"><span>Mô tả sản phẩm *</span><textarea required rows={4} value={form.description} onChange={(event) => updateField('description', event.target.value)} /></label>
                 <label className="is-wide"><span>Thành phần chính</span><input placeholder="Phân tách bằng dấu phẩy" value={form.mainIngredients} onChange={(event) => updateField('mainIngredients', event.target.value)} /></label>

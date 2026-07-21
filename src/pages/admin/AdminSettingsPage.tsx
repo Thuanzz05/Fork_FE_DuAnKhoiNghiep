@@ -7,7 +7,7 @@ import {
   saveStoreSettings,
   type StoreSettings,
 } from '../../utils/storeSettings'
-import { api } from '../../services/api'
+import { api, apiRequest, resolveApiUrl } from '../../services/api'
 import './AdminSettingsPage.css'
 
 type SettingsSection = 'general' | 'contact' | 'sales' | 'notifications' | 'social'
@@ -47,6 +47,9 @@ function AdminSettingsPage() {
       storeName: string; logoUrl?: string; description?: string; hotline?: string; email?: string
       address?: string; workingHours?: string; shippingFee: number; freeShippingThreshold: number
       facebookUrl?: string; instagramUrl?: string; tiktokUrl?: string
+      legalName?: string; supportEmail?: string; mapEmbedUrl?: string; orderPrefix?: string
+      codEnabled?: boolean; bankTransferEnabled?: boolean; youtubeUrl?: string
+      notificationEmail?: string; sendOrderConfirmation?: boolean; maintenanceMode?: boolean
     }>('/admin/settings').then((data) => {
       const next = {
         ...getStoreSettings(), storeName: data.storeName, logo: data.logoUrl || '',
@@ -54,6 +57,11 @@ function AdminSettingsPage() {
         contactEmail: data.email || '', address: data.address || '', businessHours: data.workingHours || '',
         standardShippingFee: data.shippingFee, freeShippingThreshold: data.freeShippingThreshold,
         facebookUrl: data.facebookUrl || '', instagramUrl: data.instagramUrl || '', tiktokUrl: data.tiktokUrl || '',
+        legalName: data.legalName || '', supportEmail: data.supportEmail || '', mapEmbedUrl: data.mapEmbedUrl || '',
+        orderPrefix: data.orderPrefix || 'RBB', codEnabled: data.codEnabled ?? true,
+        bankTransferEnabled: data.bankTransferEnabled ?? true, youtubeUrl: data.youtubeUrl || '',
+        notificationEmail: data.notificationEmail || '', sendOrderConfirmation: data.sendOrderConfirmation ?? true,
+        maintenanceMode: data.maintenanceMode ?? false,
       }
       setSettings(next)
       setSavedSettings(next)
@@ -71,7 +79,7 @@ function AdminSettingsPage() {
     setSettings((current) => ({ ...current, [field]: value }))
   }
 
-  const handleLogoChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleLogoChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
     if (!file.type.startsWith('image/')) {
@@ -84,13 +92,18 @@ function AdminSettingsPage() {
       event.target.value = ''
       return
     }
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result !== 'string') return
-      updateField('logo', reader.result)
+    try {
+      const uploaded = await apiRequest<{ url: string }>('/admin/uploads/images', {
+        method: 'POST', headers: { 'Content-Type': file.type, 'X-File-Name': encodeURIComponent(file.name) }, body: file,
+      })
+      updateField('logo', resolveApiUrl(uploaded.url))
       setSelectedLogoName(file.name)
+      setNotice({ message: 'Đã tải logo lên thành công', type: 'success' })
+    } catch (error) {
+      setNotice({ message: error instanceof Error ? error.message : 'Không thể tải logo', type: 'error' })
+    } finally {
+      event.target.value = ''
     }
-    reader.readAsDataURL(file)
   }
 
   const handleSave = async () => {
@@ -130,6 +143,12 @@ function AdminSettingsPage() {
         freeShippingThreshold: normalizedSettings.freeShippingThreshold,
         facebookUrl: normalizedSettings.facebookUrl, instagramUrl: normalizedSettings.instagramUrl,
         tiktokUrl: normalizedSettings.tiktokUrl,
+        legalName: normalizedSettings.legalName, supportEmail: normalizedSettings.supportEmail,
+        mapEmbedUrl: normalizedSettings.mapEmbedUrl, orderPrefix: normalizedSettings.orderPrefix,
+        codEnabled: normalizedSettings.codEnabled, bankTransferEnabled: normalizedSettings.bankTransferEnabled,
+        youtubeUrl: normalizedSettings.youtubeUrl, notificationEmail: normalizedSettings.notificationEmail,
+        sendOrderConfirmation: normalizedSettings.sendOrderConfirmation,
+        maintenanceMode: normalizedSettings.maintenanceMode,
       })
       saveStoreSettings(normalizedSettings)
       setSettings(normalizedSettings)
@@ -215,7 +234,6 @@ function AdminSettingsPage() {
             <div className="admin-settings-section">
               <header><div><span>THÔNG BÁO</span><h2>Cảnh báo vận hành</h2><p>Chọn các sự kiện cần gửi thông báo cho cửa hàng và khách hàng.</p></div></header>
               <div className="admin-settings-form-grid"><label className="is-wide"><span>Email nhận thông báo *</span><input type="email" value={settings.notificationEmail} onChange={(event) => updateField('notificationEmail', event.target.value)} /><small>Thông báo quản trị sẽ được gửi về địa chỉ này khi nối backend.</small></label></div>
-              <div className="admin-settings-subsection"><h3>Thông báo cho quản trị viên</h3><div className="admin-settings-toggle-list"><SettingToggle checked={settings.notifyNewOrder} onChange={(value) => updateField('notifyNewOrder', value)} label="Có đơn hàng mới" description="Nhận thông báo ngay khi khách xác nhận đặt hàng." /><SettingToggle checked={settings.notifyLowStock} onChange={(value) => updateField('notifyLowStock', value)} label="Sản phẩm sắp hết hàng" description="Cảnh báo khi tồn kho của sản phẩm xuống mức thấp." /><SettingToggle checked={settings.notifyNewReview} onChange={(value) => updateField('notifyNewReview', value)} label="Có đánh giá mới" description="Nhận thông báo để kiểm duyệt và phản hồi khách hàng." /></div></div>
               <div className="admin-settings-subsection"><h3>Thông báo cho khách hàng</h3><SettingToggle checked={settings.sendOrderConfirmation} onChange={(value) => updateField('sendOrderConfirmation', value)} label="Xác nhận đơn hàng qua email" description="Gửi thông tin tóm tắt sau khi khách đặt hàng thành công." /></div>
             </div>
           ) : null}

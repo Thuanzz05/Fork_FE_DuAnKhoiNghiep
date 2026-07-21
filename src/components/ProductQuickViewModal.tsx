@@ -90,8 +90,8 @@ function ProductQuickViewModal({ product, onClose }: ProductQuickViewModalProps)
                 +
               </button>
             </div>
-            <button type="button" className="quick-view-add" onClick={() => addCartItem(product.id, quantity)}>
-              Thêm vào giỏ hàng
+            <button type="button" className="quick-view-add" disabled={(product.stock ?? 0) <= 0} onClick={() => addCartItem(product.id, quantity)}>
+              {(product.stock ?? 0) <= 0 ? 'Hết hàng' : 'Thêm vào giỏ hàng'}
             </button>
           </div>
 

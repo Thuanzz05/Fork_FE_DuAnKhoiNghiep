@@ -231,10 +231,10 @@ function ProductDetailPage() {
           </div>
 
           <div className="product-buy-actions">
-            <button className="buy-now-button" type="button" onClick={() => void handleBuyNow()}>Mua ngay</button>
-            <button className="add-cart-button" type="button" onClick={handleAddToCart}>
+            <button className="buy-now-button" type="button" disabled={(product.stock ?? 0) <= 0} onClick={() => void handleBuyNow()}>{(product.stock ?? 0) <= 0 ? 'Hết hàng' : 'Mua ngay'}</button>
+            <button className="add-cart-button" type="button" disabled={(product.stock ?? 0) <= 0} onClick={handleAddToCart}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5" /><circle cx="18" cy="20" r="1.5" /><path d="M3 4h2l2.4 10.8a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L21 8H6" /></svg>
-              Thêm vào giỏ
+              {(product.stock ?? 0) <= 0 ? 'Hết hàng' : 'Thêm vào giỏ'}
             </button>
           </div>
 

@@ -354,6 +354,7 @@ function ProductsPage() {
                       className="product-action"
                       title="Thêm vào giỏ hàng"
                       aria-label="Thêm vào giỏ hàng"
+                      disabled={(product.stock ?? 0) <= 0}
                       onClick={() => handleAddToCart(product.id)}
                     >
                       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -546,8 +547,8 @@ function ProductsPage() {
                     +
                   </button>
                 </div>
-                <button type="button" className="quick-view-add" onClick={() => handleAddToCart(quickViewProduct.id, quickViewQuantity)}>
-                  Thêm vào giỏ hàng
+                <button type="button" className="quick-view-add" disabled={(quickViewProduct.stock ?? 0) <= 0} onClick={() => handleAddToCart(quickViewProduct.id, quickViewQuantity)}>
+                  {(quickViewProduct.stock ?? 0) <= 0 ? 'Hết hàng' : 'Thêm vào giỏ hàng'}
                 </button>
               </div>
 

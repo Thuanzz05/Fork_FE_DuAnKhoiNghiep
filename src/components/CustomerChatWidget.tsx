@@ -10,7 +10,7 @@ type BotMessage = { id: string; content: string; sentAt: string; direction: 'BOT
 type ChatMode = 'BOT' | 'HUMAN'
 type SupportResult = { conversations: Conversation[] }
 type SubmitResult = { id: string; status: string; continued?: boolean }
-type ChatbotResult = { answer: string }
+type ChatbotResult = { answer: string; products?: Array<{ id: string; name: string; slug: string; price: number; stock: number }> }
 const emptyForm: ChatForm = { fullName: '', email: '', phone: '', message: '' }
 const quickQuestions = [
   'Phí vận chuyển là bao nhiêu?',
@@ -78,11 +78,11 @@ function CustomerChatWidget() {
   }, [user])
 
   useEffect(() => {
+    if (!user || !isOpen || mode !== 'HUMAN') return
     void loadMessages()
-    if (!user) return
     const timer = window.setInterval(() => {
       if (document.visibilityState === 'visible') void loadMessages()
-    }, 3000)
+    }, 15000)
     const refreshWhenActive = () => {
       if (document.visibilityState === 'visible') void loadMessages()
     }
@@ -93,7 +93,14 @@ function CustomerChatWidget() {
       window.removeEventListener('focus', refreshWhenActive)
       document.removeEventListener('visibilitychange', refreshWhenActive)
     }
-  }, [loadMessages, user])
+  }, [isOpen, loadMessages, mode, user])
+
+  useEffect(() => {
+    if (!user || !isOpen || mode !== 'BOT') return
+    void apiRequest<{ messages: BotMessage[] }>('/customers/me/chatbot/history')
+      .then((data) => setBotMessages(data.messages || []))
+      .catch(() => undefined)
+  }, [isOpen, mode, user])
 
   const unreadCount = useMemo(() => conversations.reduce((total, conversation) => (
     total + conversation.replies.filter((reply) => reply.direction !== 'CUSTOMER' && !reply.readAt).length
@@ -135,8 +142,9 @@ function CustomerChatWidget() {
         const sentAt = new Date().toISOString()
         setBotMessages((items) => [...items, { id: `customer-${Date.now()}`, content: sentMessage, sentAt, direction: 'CUSTOMER' }])
         setForm((current) => ({ ...current, message: '' }))
-        const result = await apiRequest<ChatbotResult>('/contact/chatbot', { method: 'POST', body: JSON.stringify({ message: sentMessage }) })
-        setBotMessages((items) => [...items, { id: `bot-${Date.now()}`, content: result.answer, sentAt: new Date().toISOString(), direction: 'BOT' }])
+        const result = await apiRequest<ChatbotResult>(user ? '/customers/me/chatbot' : '/contact/chatbot', { method: 'POST', body: JSON.stringify({ message: sentMessage }) })
+        const productText = result.products?.length ? `\n${result.products.map((product) => `• ${product.name} – ${product.price.toLocaleString('vi-VN')}đ: /san-pham/${product.slug}`).join('\n')}` : ''
+        setBotMessages((items) => [...items, { id: `bot-${Date.now()}`, content: `${result.answer}${productText}`, sentAt: new Date().toISOString(), direction: 'BOT' }])
         return
       }
 

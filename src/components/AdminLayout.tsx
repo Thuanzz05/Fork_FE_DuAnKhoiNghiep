@@ -155,7 +155,7 @@ function AdminLayout({
     const refresh = () => {
       if (document.visibilityState === 'visible') void loadNotificationCounts()
     }
-    const timer = window.setInterval(refresh, 3000)
+    const timer = window.setInterval(refresh, 15000)
     window.addEventListener('focus', refresh)
     window.addEventListener('admin-contacts-updated', refresh)
     window.addEventListener('admin-orders-updated', refresh)

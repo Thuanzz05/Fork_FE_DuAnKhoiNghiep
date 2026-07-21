@@ -6,11 +6,11 @@ export type OrderStatus =
   | 'DANG_GIAO_HANG'
   | 'DA_GIAO_HANG'
   | 'DA_HUY'
-  | 'TRA_HANG'
 
 export type PaymentStatus = 'CHUA_THANH_TOAN' | 'DA_THANH_TOAN' | 'THAT_BAI' | 'DA_HOAN_TIEN'
+export type RefundStatus = 'YEU_CAU_HOAN_TIEN' | 'DANG_HOAN_TIEN' | 'DA_HOAN_TIEN' | 'HOAN_TIEN_THAT_BAI'
 
-export type PaymentMethod = 'COD' | 'CHUYEN_KHOAN' | 'MOMO' | 'VNPAY' | 'ZALOPAY'
+export type PaymentMethod = 'COD' | 'CHUYEN_KHOAN'
 
 export interface OrderItem {
   productId: string
@@ -38,8 +38,15 @@ export interface Order {
   paymentStatus: PaymentStatus
   createdAt: string
   cancelReason?: string
+  refundRequestId?: string | null
+  refundStatus?: RefundStatus | null
+  refundAmount?: number | null
+  refundReason?: string | null
+  refundAdminNote?: string | null
   isReviewed?: boolean
   items: OrderItem[]
+  lineCount?: number
+  itemCount?: number
 }
 
 let memoryOrders: Order[] = []

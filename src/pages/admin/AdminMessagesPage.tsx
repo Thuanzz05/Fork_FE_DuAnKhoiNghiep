@@ -73,7 +73,7 @@ function AdminMessagesPage() {
     void load()
     const timer = window.setInterval(() => {
       if (document.visibilityState === 'visible') void load()
-    }, 3000)
+    }, 15000)
     const refreshWhenActive = () => {
       if (document.visibilityState === 'visible') void load()
     }

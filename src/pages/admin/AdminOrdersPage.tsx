@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
 import Pagination from '../../components/Pagination'
 import { formatPrice } from '../../data/products'
-import { usePagination } from '../../hooks/usePagination'
 import { api } from '../../services/api'
 import {
   type Order,
   type OrderStatus,
   type PaymentMethod,
   type PaymentStatus,
+  type RefundStatus,
 } from '../../utils/orders'
 import './AdminOrdersPage.css'
 
@@ -22,7 +22,6 @@ const orderStatusMeta: Record<OrderStatus, { label: string; tone: string }> = {
   DANG_GIAO_HANG: { label: 'Đang giao hàng', tone: 'shipping' },
   DA_GIAO_HANG: { label: 'Đã giao hàng', tone: 'completed' },
   DA_HUY: { label: 'Đã hủy', tone: 'cancelled' },
-  TRA_HANG: { label: 'Trả hàng', tone: 'returned' },
 }
 
 const paymentStatusMeta: Record<PaymentStatus, { label: string; tone: string }> = {
@@ -32,12 +31,25 @@ const paymentStatusMeta: Record<PaymentStatus, { label: string; tone: string }> 
   DA_HOAN_TIEN: { label: 'Đã hoàn tiền', tone: 'refunded' },
 }
 
+const refundStatusMeta: Record<RefundStatus, string> = {
+  YEU_CAU_HOAN_TIEN: 'Yêu cầu hoàn tiền',
+  DANG_HOAN_TIEN: 'Đang hoàn tiền',
+  DA_HOAN_TIEN: 'Đã hoàn tiền',
+  HOAN_TIEN_THAT_BAI: 'Hoàn tiền thất bại',
+}
+
 const paymentMethodMeta: Record<PaymentMethod, string> = {
   COD: 'Thanh toán khi nhận hàng',
   CHUYEN_KHOAN: 'Chuyển khoản',
-  MOMO: 'Ví MoMo',
-  VNPAY: 'VNPay',
-  ZALOPAY: 'ZaloPay',
+}
+
+const allowedOrderTransitions: Record<OrderStatus, OrderStatus[]> = {
+  CHO_XAC_NHAN: ['CHO_XAC_NHAN', 'DA_XAC_NHAN', 'DA_HUY'],
+  DA_XAC_NHAN: ['DA_XAC_NHAN', 'DANG_DONG_GOI', 'DA_HUY'],
+  DANG_DONG_GOI: ['DANG_DONG_GOI', 'DANG_GIAO_HANG', 'DA_HUY'],
+  DANG_GIAO_HANG: ['DANG_GIAO_HANG', 'DA_GIAO_HANG'],
+  DA_GIAO_HANG: ['DA_GIAO_HANG'],
+  DA_HUY: ['DA_HUY'],
 }
 
 const buildInitialOrders = (): Order[] => []
@@ -52,6 +64,12 @@ const formatDateTime = (value: string) => new Date(value).toLocaleString('vi-VN'
 
 function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>(buildInitialOrders)
+  const [deliveredRevenue, setDeliveredRevenue] = useState(0)
+  const [serverPage, setServerPage] = useState(1)
+  const [serverTotalPages, setServerTotalPages] = useState(1)
+  const [serverTotal, setServerTotal] = useState(0)
+  const [pendingTotal, setPendingTotal] = useState(0)
+  const [processingTotal, setProcessingTotal] = useState(0)
 
   const mapOrderStatus = (status: string): OrderStatus => ({
     DANG_CHUAN_BI: 'DANG_DONG_GOI', DANG_GIAO: 'DANG_GIAO_HANG', DA_GIAO: 'DA_GIAO_HANG',
@@ -62,15 +80,35 @@ function AdminOrdersPage() {
 
   const loadOrders = async () => {
     try {
-      const list = await api.get<{ items: Array<{ id: string }>; pagination: unknown }>('/admin/orders?limit=100')
-      const details = await Promise.all(list.items.map((item) => api.get<Record<string, any>>(`/admin/orders/${item.id}`)))
-      setOrders(details.map((item) => ({
+      const [list, dashboard] = await Promise.all([
+        api.get<{ items: Array<Record<string, any>>; pagination: { total: number; totalPages: number } }>(`/admin/orders?${new URLSearchParams({
+          page: String(serverPage), limit: '6',
+          ...(searchValue.trim() ? { search: searchValue.trim() } : {}),
+          ...(orderStatusFilter !== 'all' ? { status: toBackendStatus(orderStatusFilter) } : {}),
+          ...(paymentStatusFilter !== 'all' ? { paymentStatus: paymentStatusFilter } : {}),
+          ...(paymentMethodFilter !== 'all' ? { paymentMethod: paymentMethodFilter } : {}),
+          ...(periodFilter !== 'all' ? { period: periodFilter } : {}),
+          sort: sortBy,
+        })}`),
+        api.get<{ summary: { pending_orders: number; processing_orders: number; delivered_revenue: number } }>('/admin/dashboard'),
+      ])
+      setDeliveredRevenue(Number(dashboard.summary.delivered_revenue))
+      setPendingTotal(Number(dashboard.summary.pending_orders))
+      setProcessingTotal(Number(dashboard.summary.processing_orders))
+      setServerTotal(list.pagination.total)
+      setServerTotalPages(Math.max(list.pagination.totalPages, 1))
+      setOrders(list.items.map((item) => ({
         id: String(item.id), orderCode: String(item.orderCode), userId: String(item.customerId),
         recipientName: String(item.recipientName), phone: String(item.phone), shippingAddress: String(item.shippingAddress),
         customerNote: item.customerNote, totalProductPrice: Number(item.subtotal), discountAmount: Number(item.discount),
         shippingFee: Number(item.shippingFee), totalPayment: Number(item.total), paymentMethod: item.paymentMethod as PaymentMethod,
         orderStatus: mapOrderStatus(String(item.orderStatus)), paymentStatus: item.paymentStatus as PaymentStatus,
         createdAt: String(item.createdAt), cancelReason: item.cancelReason,
+        lineCount: Number(item.lineCount), itemCount: Number(item.itemCount),
+        refundRequestId: item.refundRequestId == null ? null : String(item.refundRequestId),
+        refundStatus: item.refundStatus as RefundStatus | null,
+        refundAmount: item.refundAmount == null ? null : Number(item.refundAmount),
+        refundReason: item.refundReason, refundAdminNote: item.refundAdminNote,
         items: (item.items || []).map((line: Record<string, any>) => ({
           productId: String(line.productId), productName: String(line.name), productImage: String(line.image || ''),
           price: Number(line.unitPrice), quantity: Number(line.quantity), weight: '',
@@ -81,7 +119,6 @@ function AdminOrdersPage() {
     }
   }
 
-  useEffect(() => { void loadOrders() }, [])
   const [searchValue, setSearchValue] = useState('')
   const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | OrderStatus>('all')
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<'all' | PaymentStatus>('all')
@@ -91,7 +128,14 @@ function AdminOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [draftOrderStatus, setDraftOrderStatus] = useState<OrderStatus>('CHO_XAC_NHAN')
   const [draftPaymentStatus, setDraftPaymentStatus] = useState<PaymentStatus>('CHUA_THANH_TOAN')
+  const [createRefundRequest, setCreateRefundRequest] = useState(false)
+  const [draftRefundStatus, setDraftRefundStatus] = useState<RefundStatus | ''>('')
+  const [refundAdminNote, setRefundAdminNote] = useState('')
   const [notice, setNotice] = useState('')
+
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { void loadOrders() }, [serverPage, searchValue, orderStatusFilter, paymentStatusFilter, paymentMethodFilter, periodFilter, sortBy])
+  useEffect(() => { setServerPage(1) }, [searchValue, orderStatusFilter, paymentStatusFilter, paymentMethodFilter, periodFilter, sortBy])
 
   useEffect(() => {
     if (!notice) return
@@ -136,24 +180,42 @@ function AdminOrdersPage() {
     })
   }, [orderStatusFilter, orders, paymentMethodFilter, paymentStatusFilter, periodFilter, searchValue, sortBy])
 
-  const { currentPage, totalPages, pageItems: paginatedOrders, setCurrentPage } = usePagination(
-    filteredOrders,
-    6,
-    `${searchValue}|${orderStatusFilter}|${paymentStatusFilter}|${paymentMethodFilter}|${periodFilter}|${sortBy}`,
-  )
+  const currentPage = serverPage
+  const totalPages = serverTotalPages
+  const paginatedOrders = filteredOrders
+  const setCurrentPage = setServerPage
 
-  const pendingCount = orders.filter((order) => order.orderStatus === 'CHO_XAC_NHAN').length
-  const processingCount = orders.filter((order) => ['DA_XAC_NHAN', 'DANG_DONG_GOI', 'DANG_GIAO_HANG'].includes(order.orderStatus)).length
-  const deliveredRevenue = orders.filter((order) => order.orderStatus === 'DA_GIAO_HANG').reduce((total, order) => total + order.totalPayment, 0)
-
-  const openOrderDetail = (order: Order) => {
-    setSelectedOrder(order)
-    setDraftOrderStatus(order.orderStatus)
-    setDraftPaymentStatus(order.paymentStatus)
+  const openOrderDetail = async (order: Order) => {
+    try {
+      const item = await api.get<Record<string, any>>(`/admin/orders/${order.id}`)
+      const detailedOrder: Order = {
+        ...order,
+        items: (item.items || []).map((line: Record<string, any>) => ({
+          productId: String(line.productId), productName: String(line.name), productImage: String(line.image || ''),
+          price: Number(line.unitPrice), quantity: Number(line.quantity), weight: '',
+        })),
+      }
+      setSelectedOrder(detailedOrder)
+      setDraftOrderStatus(detailedOrder.orderStatus)
+      setDraftPaymentStatus(detailedOrder.paymentStatus)
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Không thể tải chi tiết đơn hàng')
+      return
+    }
+    setCreateRefundRequest(false)
+    setDraftRefundStatus(order.refundStatus || '')
+    setRefundAdminNote(order.refundAdminNote || '')
   }
 
   const saveOrderUpdate = async () => {
     if (!selectedOrder) return
+    const cancellingPaidOrder = draftOrderStatus === 'DA_HUY'
+      && selectedOrder.orderStatus !== 'DA_HUY'
+      && selectedOrder.paymentStatus === 'DA_THANH_TOAN'
+    if (cancellingPaidOrder && !createRefundRequest) {
+      setNotice('Đơn đã thanh toán: phải chọn tạo yêu cầu hoàn tiền trước khi hủy')
+      return
+    }
     const updatedOrder: Order = {
       ...selectedOrder,
       orderStatus: draftOrderStatus,
@@ -162,8 +224,12 @@ function AdminOrdersPage() {
     }
     try {
       await api.patch(`/admin/orders/${selectedOrder.id}`, {
-        orderStatus: toBackendStatus(draftOrderStatus), paymentStatus: draftPaymentStatus,
+        orderStatus: toBackendStatus(draftOrderStatus),
         cancelReason: draftOrderStatus === 'DA_HUY' ? updatedOrder.cancelReason : undefined,
+        refundAction: cancellingPaidOrder && createRefundRequest ? 'TAO_YEU_CAU' : undefined,
+        refundStatus: selectedOrder.refundStatus && draftRefundStatus !== selectedOrder.refundStatus
+          ? draftRefundStatus : undefined,
+        refundAdminNote: refundAdminNote.trim() || undefined,
       })
       await loadOrders()
       setSelectedOrder(updatedOrder)
@@ -187,9 +253,9 @@ function AdminOrdersPage() {
       </div>
 
       <section className="admin-order-summary" aria-label="Tổng quan đơn hàng">
-        <article><span className="is-red"><AdminIcon name="orders" /></span><div><small>Tổng đơn hàng</small><strong>{orders.length}</strong></div></article>
-        <article><span className="is-orange"><AdminIcon name="calendar" /></span><div><small>Chờ xác nhận</small><strong>{pendingCount}</strong></div></article>
-        <article><span className="is-blue"><AdminIcon name="box" /></span><div><small>Đang xử lý</small><strong>{processingCount}</strong></div></article>
+        <article><span className="is-red"><AdminIcon name="orders" /></span><div><small>Tổng đơn hàng</small><strong>{serverTotal}</strong></div></article>
+        <article><span className="is-orange"><AdminIcon name="calendar" /></span><div><small>Chờ xác nhận</small><strong>{pendingTotal}</strong></div></article>
+        <article><span className="is-blue"><AdminIcon name="box" /></span><div><small>Đang xử lý</small><strong>{processingTotal}</strong></div></article>
         <article><span className="is-green"><AdminIcon name="revenue" /></span><div><small>Doanh thu đã giao</small><strong>{formatPrice(deliveredRevenue)}</strong></div></article>
       </section>
 
@@ -202,7 +268,7 @@ function AdminOrdersPage() {
             <label><span>Thời gian</span><select value={periodFilter} onChange={(event) => setPeriodFilter(event.target.value as OrderPeriod)} aria-label="Lọc thời gian đơn hàng"><option value="all">Tất cả thời gian</option><option value="today">Hôm nay</option><option value="7days">7 ngày gần đây</option><option value="30days">30 ngày gần đây</option></select></label>
             <label><span>Sắp xếp</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as OrderSort)} aria-label="Sắp xếp đơn hàng"><option value="newest">Mới nhất</option><option value="oldest">Cũ nhất</option><option value="highest">Giá trị cao nhất</option></select></label>
           </div>
-          <span>Hiển thị <strong>{filteredOrders.length}</strong> / {orders.length} đơn</span>
+          <span>Hiển thị <strong>{filteredOrders.length}</strong> / {serverTotal} đơn</span>
         </div>
 
         <div className="admin-orders-management-table-wrap">
@@ -217,7 +283,7 @@ function AdminOrdersPage() {
                   <tr key={order.id}>
                     <td><div className="admin-order-code"><strong>{order.orderCode}</strong><span>{formatDateTime(order.createdAt)}</span></div></td>
                     <td><div className="admin-order-customer"><span>{order.recipientName.split(/\s+/).map((part) => part.charAt(0)).slice(-2).join('')}</span><div><strong>{order.recipientName}</strong><small>{order.phone}</small></div></div></td>
-                    <td><div className="admin-order-products"><img src={order.items[0]?.productImage} alt="" /><div><strong>{order.items[0]?.productName}</strong><span>{totalQuantity} sản phẩm{order.items.length > 1 ? ` · +${order.items.length - 1} loại khác` : ''}</span></div></div></td>
+                    <td><div className="admin-order-products"><div><strong>{order.lineCount ?? order.items.length} dòng sản phẩm</strong><span>{order.itemCount ?? totalQuantity} sản phẩm</span></div></div></td>
                     <td><div className="admin-order-payment"><strong>{paymentMethodMeta[order.paymentMethod]}</strong><span className={`is-${paymentStatus.tone}`}>{paymentStatus.label}</span></div></td>
                     <td><strong className="admin-order-management-total">{formatPrice(order.totalPayment)}</strong></td>
                     <td><span className={`admin-order-management-status is-${orderStatus.tone}`}><i />{orderStatus.label}</span></td>
@@ -229,7 +295,7 @@ function AdminOrdersPage() {
           </table>
           {filteredOrders.length === 0 ? <div className="admin-orders-management-empty"><AdminIcon name="search" /><strong>Không tìm thấy đơn hàng</strong><span>Hãy thử từ khóa hoặc bộ lọc khác.</span></div> : null}
         </div>
-        <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filteredOrders.length} pageSize={6} itemLabel="đơn hàng" onPageChange={setCurrentPage} />
+        <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={serverTotal} pageSize={6} itemLabel="đơn hàng" onPageChange={setCurrentPage} />
       </section>
 
       {selectedOrder ? (
@@ -242,7 +308,21 @@ function AdminOrdersPage() {
                 <section className="admin-order-customer-detail"><h3>Thông tin nhận hàng</h3><div><p><span>Người nhận</span><strong>{selectedOrder.recipientName}</strong></p><p><span>Số điện thoại</span><strong>{selectedOrder.phone}</strong></p><p><span>Địa chỉ</span><strong>{selectedOrder.shippingAddress}</strong></p>{selectedOrder.customerNote ? <p><span>Ghi chú</span><strong>{selectedOrder.customerNote}</strong></p> : null}{selectedOrder.cancelReason ? <p className="is-warning"><span>Lý do hủy/trả</span><strong>{selectedOrder.cancelReason}</strong></p> : null}</div></section>
               </div>
               <aside className="admin-order-detail-aside">
-                <section><h3>Cập nhật trạng thái</h3><label><span>Trạng thái đơn hàng</span><select value={draftOrderStatus} onChange={(event) => setDraftOrderStatus(event.target.value as OrderStatus)}>{Object.entries(orderStatusMeta).map(([value, meta]) => <option value={value} key={value}>{meta.label}</option>)}</select></label><label><span>Trạng thái thanh toán</span><select value={draftPaymentStatus} onChange={(event) => setDraftPaymentStatus(event.target.value as PaymentStatus)}>{Object.entries(paymentStatusMeta).map(([value, meta]) => <option value={value} key={value}>{meta.label}</option>)}</select></label><button type="button" onClick={saveOrderUpdate}>Lưu cập nhật</button></section>
+                <section>
+                  <h3>Cập nhật trạng thái</h3>
+                  <label><span>Trạng thái đơn hàng</span><select value={draftOrderStatus} onChange={(event) => setDraftOrderStatus(event.target.value as OrderStatus)}>{allowedOrderTransitions[selectedOrder.orderStatus].map((value) => <option value={value} key={value}>{orderStatusMeta[value].label}</option>)}</select></label>
+                  <label><span>Trạng thái thanh toán</span><input value={paymentStatusMeta[draftPaymentStatus].label} readOnly /></label>
+                  {draftOrderStatus === 'DA_HUY' && selectedOrder.orderStatus !== 'DA_HUY' && selectedOrder.paymentStatus === 'DA_THANH_TOAN' ? (
+                    <label><span>Xử lý tiền đã thanh toán</span><select value={createRefundRequest ? 'TAO_YEU_CAU' : ''} onChange={(event) => setCreateRefundRequest(event.target.value === 'TAO_YEU_CAU')}><option value="">-- Bắt buộc chọn --</option><option value="TAO_YEU_CAU">Tạo yêu cầu hoàn tiền</option></select></label>
+                  ) : null}
+                  {selectedOrder.refundStatus ? (
+                    <>
+                      <label><span>Quy trình hoàn tiền</span><select value={draftRefundStatus} onChange={(event) => setDraftRefundStatus(event.target.value as RefundStatus)}>{Object.entries(refundStatusMeta).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
+                      <label><span>Ghi chú hoàn tiền</span><textarea value={refundAdminNote} onChange={(event) => setRefundAdminNote(event.target.value)} placeholder="Mã giao dịch hoàn, lý do thất bại..." /></label>
+                    </>
+                  ) : null}
+                  <button type="button" onClick={saveOrderUpdate}>Lưu cập nhật</button>
+                </section>
                 <section className="admin-order-payment-summary"><h3>Thanh toán</h3><p><span>Tiền hàng</span><strong>{formatPrice(selectedOrder.totalProductPrice)}</strong></p><p><span>Giảm giá</span><strong>-{formatPrice(selectedOrder.discountAmount)}</strong></p><p><span>Phí vận chuyển</span><strong>{formatPrice(selectedOrder.shippingFee)}</strong></p><p className="is-total"><span>Tổng thanh toán</span><strong>{formatPrice(selectedOrder.totalPayment)}</strong></p><small>{paymentMethodMeta[selectedOrder.paymentMethod]}</small></section>
               </aside>
             </div>

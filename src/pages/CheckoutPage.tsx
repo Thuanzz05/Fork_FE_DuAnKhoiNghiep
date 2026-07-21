@@ -18,6 +18,14 @@ interface CreateOrderResponse {
   paymentRequired: boolean
 }
 
+interface CheckoutQuote {
+  subtotal: number
+  discountAmount: number
+  shippingFee: number
+  totalPayment: number
+  appliedPromotion: { code: string; description: string } | null
+}
+
 type AdministrativeUnit = {
   code: string
   name: string
@@ -74,7 +82,7 @@ function CheckoutPage() {
   // Voucher states
   const [voucherCode, setVoucherCode] = useState('')
   const [appliedVoucher, setAppliedVoucher] = useState<string | null>(null)
-  const [voucherDiscount, setVoucherDiscount] = useState(0)
+  const [checkoutQuote, setCheckoutQuote] = useState<CheckoutQuote | null>(null)
   const [voucherNotice, setVoucherNotice] = useState({ message: '', type: '' })
 
   const loadProvinces = async () => {
@@ -200,40 +208,42 @@ function CheckoutPage() {
       .filter((item): item is { product: typeof products[0]; quantity: number } => Boolean(item))
   }, [products, selectedIds])
 
-  // Billing calculations
-  const totalProductPrice = useMemo(() => {
-    return checkoutItems.reduce((total, item) => total + item.product.price * item.quantity, 0)
-  }, [checkoutItems])
+  const totalProductPrice = checkoutQuote?.subtotal ?? 0
+  const voucherDiscount = checkoutQuote?.discountAmount ?? 0
+  const shippingFee = checkoutQuote?.shippingFee ?? 0
+  const totalPayment = checkoutQuote?.totalPayment ?? 0
 
-  const originalShippingFee = storeSettings.freeShippingEnabled && totalProductPrice >= storeSettings.freeShippingThreshold
-    ? 0
-    : storeSettings.standardShippingFee
+  const loadCheckoutQuote = async (promotionCode?: string) => {
+    const quote = await api.post<CheckoutQuote>('/customers/me/checkout/quote', {
+      productIds: selectedIds,
+      promotionCode,
+    })
+    setCheckoutQuote(quote)
+    setAppliedVoucher(quote.appliedPromotion?.code ?? null)
+    return quote
+  }
 
-  const shippingFee = useMemo(() => {
-    if (appliedVoucher === 'FREESHIP') return 0
-    return originalShippingFee
-  }, [appliedVoucher, originalShippingFee])
-
-  const totalPayment = useMemo(() => {
-    const finalAmount = totalProductPrice + shippingFee - voucherDiscount
-    return Math.max(0, finalAmount)
-  }, [totalProductPrice, shippingFee, voucherDiscount])
+  useEffect(() => {
+    if (!selectedIds.length) return
+    setAppliedVoucher(null)
+    void api.post<CheckoutQuote>('/customers/me/checkout/quote', { productIds: selectedIds })
+      .then(setCheckoutQuote)
+      .catch((error) => {
+        setCheckoutQuote(null)
+        setVoucherNotice({ message: error instanceof Error ? error.message : 'Không thể tính đơn hàng.', type: 'error' })
+      })
+  }, [selectedIds])
 
   // Voucher apply handler
   const handleApplyVoucher = async () => {
     const code = voucherCode.trim().toUpperCase()
     if (!code) return
     try {
-      const quote = await api.post<{ discountAmount: number; shippingFee: number }>('/customers/me/checkout/quote', {
-        productIds: selectedIds,
-        promotionCode: code,
-      })
-      setAppliedVoucher(code)
-      setVoucherDiscount(Number(quote.discountAmount))
+      await loadCheckoutQuote(code)
       setVoucherNotice({ message: `Áp dụng mã ${code} thành công!`, type: 'success' })
     } catch (error) {
       setAppliedVoucher(null)
-      setVoucherDiscount(0)
+      await loadCheckoutQuote().catch(() => setCheckoutQuote(null))
       setVoucherNotice({ message: error instanceof Error ? error.message : 'Không thể áp dụng mã.', type: 'error' })
     }
   }
@@ -244,6 +254,10 @@ function CheckoutPage() {
 
     if (!user) return
     if (checkoutItems.length === 0) return
+    if (!checkoutQuote) {
+      setVoucherNotice({ message: 'Chưa tải được báo giá từ máy chủ.', type: 'error' })
+      return
+    }
 
     if (!recipientName.trim() || !phone.trim() || !shippingAddress.trim()
       || (useCustomAddress && (!provinceCode || !wardCode || !addressDetail.trim()))) {
@@ -261,6 +275,9 @@ function CheckoutPage() {
         phone: phone.trim(),
         email: user.email,
         shippingAddress: shippingAddress.trim(),
+        provinceCode, provinceName: provinces.find((item) => item.code === provinceCode)?.name,
+        wardCode, wardName: wards.find((item) => item.code === wardCode)?.name,
+        detail: addressDetail.trim(),
         customerNote: customerNote.trim() || undefined,
         paymentMethod,
         promotionCode: appliedVoucher || undefined,
@@ -541,16 +558,7 @@ function CheckoutPage() {
                 </div>
                 <div className="invoice-row">
                   <span>Phí vận chuyển:</span>
-                  {appliedVoucher === 'FREESHIP' ? (
-                    <span>
-                      <del style={{ marginRight: '6px', color: '#999' }}>
-                        {formatPrice(originalShippingFee)}
-                      </del>
-                      0đ
-                    </span>
-                  ) : (
-                    <span>{formatPrice(shippingFee)}</span>
-                  )}
+                  <span>{formatPrice(shippingFee)}</span>
                 </div>
                 {voucherDiscount > 0 && (
                   <div className="invoice-row discount">

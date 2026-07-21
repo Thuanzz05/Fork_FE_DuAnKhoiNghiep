@@ -5,7 +5,7 @@ import { usePagination } from '../../hooks/usePagination'
 import { api, apiRequest, resolveApiUrl } from '../../services/api'
 import './AdminArticlesPage.css'
 
-type ArticleStatus = 'published' | 'draft' | 'scheduled'
+type ArticleStatus = 'published' | 'draft'
 type ArticleSort = 'updated' | 'newest' | 'views' | 'title'
 
 interface ManagedArticle {
@@ -42,7 +42,6 @@ const articleCategories = ['Kiến thức làm đẹp', 'Chăm sóc da', 'Hướ
 const statusMeta: Record<ArticleStatus, { label: string; tone: string }> = {
   published: { label: 'Đã đăng', tone: 'published' },
   draft: { label: 'Bản nháp', tone: 'draft' },
-  scheduled: { label: 'Đã lên lịch', tone: 'scheduled' },
 }
 
 const initialArticles: ManagedArticle[] = []
@@ -186,7 +185,7 @@ function AdminArticlesPage() {
           id: Number(item.id), title: String(item.title), category: String(item.category || articleCategories[0]),
           excerpt: String(item.summary || ''), lead: parsedContent.lead, content: parsedContent.content,
           image: normalizeArticleImagePath(item.imageUrl), author: String(item.authorName || 'Rubeanora'),
-          status: item.status === 'DA_DANG' ? 'published' : item.status === 'DANG_AN' ? 'scheduled' : 'draft',
+          status: item.status === 'DA_DANG' ? 'published' : 'draft',
           publishedAt: String(item.publishedAt || item.createdAt), updatedAt: String(item.updatedAt),
           views: Number(item.views || 0), featured: Boolean(item.featured),
         }
@@ -258,7 +257,6 @@ function AdminArticlesPage() {
 
   const publishedCount = articles.filter((article) => article.status === 'published').length
   const draftCount = articles.filter((article) => article.status === 'draft').length
-  const scheduledCount = articles.filter((article) => article.status === 'scheduled').length
   const totalViews = articles.reduce((total, article) => total + article.views, 0)
 
   const updateField = <K extends keyof ArticleFormState>(field: K, value: ArticleFormState[K]) => {
@@ -340,7 +338,7 @@ function AdminArticlesPage() {
           sections: buildArticleSections(form.content),
         }),
         imageUrl: normalizeArticleImagePath(form.image), featured: form.featured,
-        status: form.status === 'published' ? 'DA_DANG' : form.status === 'scheduled' ? 'DANG_AN' : 'NHAP',
+        status: form.status === 'published' ? 'DA_DANG' : 'NHAP',
         publishedAt: toDatabaseDateTime(form.publishedAt),
       }
       if (editingArticle) await api.put(`/admin/articles/${editingArticle.id}`, payload)
@@ -375,7 +373,7 @@ function AdminArticlesPage() {
       <section className="admin-article-summary" aria-label="Tổng quan bài viết">
         <article><span className="is-red"><AdminIcon name="news" /></span><div><small>Tổng bài viết</small><strong>{articles.length}</strong></div></article>
         <article><span className="is-green"><AdminIcon name="play" /></span><div><small>Đã đăng</small><strong>{publishedCount}</strong></div></article>
-        <article><span className="is-orange"><AdminIcon name="edit" /></span><div><small>Nháp / Lên lịch</small><strong>{draftCount + scheduledCount}</strong></div></article>
+        <article><span className="is-orange"><AdminIcon name="edit" /></span><div><small>Bản nháp</small><strong>{draftCount}</strong></div></article>
         <article><span className="is-blue"><AdminIcon name="eye" /></span><div><small>Tổng lượt xem</small><strong>{totalViews.toLocaleString('vi-VN')}</strong></div></article>
       </section>
 
@@ -383,7 +381,7 @@ function AdminArticlesPage() {
         <div className="admin-articles-toolbar">
           <div>
             <label><span>Danh mục</span><select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} aria-label="Lọc bài viết theo danh mục"><option value="all">Tất cả danh mục</option>{articleCategories.map((category) => <option value={category} key={category}>{category}</option>)}</select></label>
-            <label><span>Trạng thái</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | ArticleStatus)} aria-label="Lọc trạng thái bài viết"><option value="all">Tất cả trạng thái</option><option value="published">Đã đăng</option><option value="draft">Bản nháp</option><option value="scheduled">Đã lên lịch</option></select></label>
+            <label><span>Trạng thái</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | ArticleStatus)} aria-label="Lọc trạng thái bài viết"><option value="all">Tất cả trạng thái</option><option value="published">Đã đăng</option><option value="draft">Bản nháp</option></select></label>
             <label><span>Sắp xếp</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as ArticleSort)} aria-label="Sắp xếp bài viết"><option value="updated">Mới cập nhật</option><option value="newest">Ngày đăng mới nhất</option><option value="views">Lượt xem cao nhất</option><option value="title">Tên bài viết</option></select></label>
           </div>
           <span>Hiển thị <strong>{filteredArticles.length}</strong> / {articles.length} bài</span>
@@ -398,7 +396,7 @@ function AdminArticlesPage() {
                 <td><div className="admin-article-cell"><img src={article.image} alt="" /><div><strong>{article.title}</strong><span>{article.excerpt}</span><small>Bởi {article.author} · Cập nhật {formatDateTime(article.updatedAt)}</small></div></div></td>
                 <td><span className="admin-article-category">{article.category}</span></td>
                 <td><span className={`admin-article-status is-${status.tone}`}><i />{status.label}</span></td>
-                <td><div className="admin-article-date"><strong>{formatDateTime(article.publishedAt)}</strong>{article.status === 'scheduled' ? <span>Đang chờ đăng</span> : null}</div></td>
+                <td><div className="admin-article-date"><strong>{formatDateTime(article.publishedAt)}</strong></div></td>
                 <td><strong className="admin-article-views">{article.views.toLocaleString('vi-VN')}</strong></td>
                 <td><span className={`admin-article-featured${article.featured ? ' is-featured' : ''}`}>{article.featured ? 'Nổi bật' : 'Thông thường'}</span></td>
                 <td><div className="admin-article-actions"><button type="button" onClick={() => openEditForm(article)} aria-label={`Sửa bài ${article.title}`} title="Sửa bài viết"><AdminIcon name="edit" /></button><button type="button" className="is-danger" onClick={() => setDeletingArticle(article)} aria-label={`Xóa bài ${article.title}`} title="Xóa bài viết"><AdminIcon name="trash" /></button></div></td>
@@ -418,8 +416,8 @@ function AdminArticlesPage() {
               <div className="admin-article-form-grid">
                 <label className="is-wide"><span>Tiêu đề bài viết *</span><input required maxLength={180} value={form.title} onChange={(event) => updateField('title', event.target.value)} /></label>
                 <label><span>Danh mục *</span><select required value={form.category} onChange={(event) => updateField('category', event.target.value)}>{articleCategories.map((category) => <option value={category} key={category}>{category}</option>)}</select></label>
-                <label><span>Tác giả *</span><input required value={form.author} onChange={(event) => updateField('author', event.target.value)} /></label>
-                <label><span>Trạng thái *</span><select value={form.status} onChange={(event) => updateField('status', event.target.value as ArticleStatus)}><option value="published">Đã đăng</option><option value="draft">Bản nháp</option><option value="scheduled">Đã lên lịch</option></select></label>
+                <label><span>Tác giả</span><input value={form.author} readOnly /></label>
+                <label><span>Trạng thái *</span><select value={form.status} onChange={(event) => updateField('status', event.target.value as ArticleStatus)}><option value="published">Đã đăng</option><option value="draft">Bản nháp</option></select></label>
                 <label><span>Ngày đăng *</span><input required type="datetime-local" value={form.publishedAt} onChange={(event) => updateField('publishedAt', event.target.value)} /></label>
                 <label className="is-wide"><span>Ảnh đại diện *</span><div className="admin-article-image-field"><div className="admin-article-image-preview">{form.image ? <img src={form.image} alt="Ảnh xem trước" /> : <AdminIcon name="upload" />}</div><div><div className="admin-article-image-input"><input required placeholder="/images/... hoặc đường dẫn ảnh" value={form.image} onChange={(event) => { updateField('image', event.target.value); setSelectedImageName('') }} /><button type="button" disabled={isImageUploading} onClick={() => imageFileInputRef.current?.click()}><AdminIcon name="upload" />{isImageUploading ? 'Đang tải ảnh...' : 'Chọn ảnh từ máy'}</button><input ref={imageFileInputRef} className="admin-article-hidden-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" tabIndex={-1} onChange={handleImageFileChange} /></div><small>{isImageUploading ? 'Đang tải ảnh lên máy chủ...' : selectedImageName ? `Đã tải lên: ${selectedImageName}` : 'Ảnh ngang, dung lượng tối đa 5MB.'}</small></div></div></label>
                 <label className="is-wide"><span>Mô tả ngắn *</span><textarea required rows={3} maxLength={320} value={form.excerpt} onChange={(event) => updateField('excerpt', event.target.value)} /><small>{form.excerpt.length}/320 ký tự</small></label>

@@ -34,13 +34,13 @@ function CartToast() {
       <button type="button" className="cart-toast-close" aria-label="Đóng thông báo" onClick={() => setToastDetail(null)}>
         ×
       </button>
-      <strong>Tuyệt vời</strong>
+      <strong>{toastDetail.error ? 'Không thể cập nhật giỏ hàng' : 'Tuyệt vời'}</strong>
       <p>
-        Bạn vừa thêm {toastDetail.quantity} sản phẩm vào giỏ hàng thành công bấm{' '}
+        {toastDetail.error ? toastDetail.error : <>Bạn vừa thêm {toastDetail.quantity} sản phẩm vào giỏ hàng thành công bấm{' '}
         <Link to="/gio-hang" onClick={() => setToastDetail(null)}>
           vào đây
         </Link>{' '}
-        để tới trang giỏ hàng
+        để tới trang giỏ hàng</>}
       </p>
     </div>
   )

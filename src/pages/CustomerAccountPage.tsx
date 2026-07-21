@@ -11,6 +11,7 @@ import {
   removeUserAddress,
   updateProfile,
 } from '../utils/auth'
+import { apiRequest, resolveApiUrl } from '../services/api'
 import './CustomerAccountPage.css'
 
 type AdministrativeUnit = {
@@ -108,32 +109,29 @@ function CustomerAccountPage() {
     }
   }
 
-  const handleAvatarChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
-    if (file.size > 1.5 * 1024 * 1024) {
-      setProfileNotice('Ảnh đại diện cần nhỏ hơn 1,5 MB.')
+    if (file.size > 500 * 1024) {
+      setProfileNotice('Ảnh đại diện cần nhỏ hơn 500 KB.')
       return
     }
-
-    const reader = new FileReader()
-    reader.onload = async () => {
-      if (typeof reader.result !== 'string') return
-      try {
+    try {
+        const uploaded = await apiRequest<{ url: string }>('/customers/me/uploads/images', {
+          method: 'POST', headers: { 'Content-Type': file.type, 'X-File-Name': encodeURIComponent(file.name) }, body: file,
+        })
         const nextUser = await updateProfile({
           firstName: user.firstName,
           lastName: user.lastName,
           email: user.email,
           phone: user.phone,
-          avatar: reader.result,
+          avatar: resolveApiUrl(uploaded.url),
         })
         setUser(nextUser)
         setProfileNotice('Ảnh đại diện đã được cập nhật.')
-      } catch (error) {
+    } catch (error) {
         setProfileNotice(error instanceof Error ? error.message : 'Không thể cập nhật ảnh đại diện.')
-      }
     }
-    reader.readAsDataURL(file)
     event.target.value = ''
   }
 

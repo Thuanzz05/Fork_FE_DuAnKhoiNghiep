@@ -67,8 +67,6 @@ function CustomerOrdersPage() {
         return 'Đã giao hàng'
       case 'DA_HUY':
         return 'Đã hủy'
-      case 'TRA_HANG':
-        return 'Trả hàng/Hoàn tiền'
       default:
         return status
     }
@@ -87,8 +85,6 @@ function CustomerOrdersPage() {
         return 'status-completed'
       case 'DA_HUY':
         return 'status-cancelled'
-      case 'TRA_HANG':
-        return 'status-refunded'
       default:
         return ''
     }
@@ -100,12 +96,6 @@ function CustomerOrdersPage() {
         return 'Thanh toán khi nhận hàng (COD)'
       case 'CHUYEN_KHOAN':
         return 'Chuyển khoản ngân hàng'
-      case 'MOMO':
-        return 'Ví MoMo'
-      case 'VNPAY':
-        return 'VNPAY'
-      case 'ZALOPAY':
-        return 'ZaloPay'
       default:
         return method
     }
