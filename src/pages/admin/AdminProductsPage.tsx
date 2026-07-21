@@ -19,6 +19,7 @@ type AdminProductRow = {
   name: string; slug: string; productType: 'DON' | 'COMBO'; mainImage: string
   listPrice: number; salePrice: number; stock: number; minimumStock: number; description?: string
   ingredients?: string; benefits?: string; specification?: string; origin?: string
+  status?: 'DANG_BAN' | 'NGUNG_BAN' | 'HET_HANG'
 }
 
 type AdminCategoryRow = { id: string; name: string; slug: string }
@@ -97,6 +98,7 @@ function AdminProductsPage() {
   const [editingProduct, setEditingProduct] = useState<ManagedProduct | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [deletingProduct, setDeletingProduct] = useState<ManagedProduct | null>(null)
+  const [forceDelete, setForceDelete] = useState(false)
   const [form, setForm] = useState<ProductFormState>(emptyForm)
   const [toast, setToast] = useState('')
   const [selectedImageName, setSelectedImageName] = useState('')
@@ -109,13 +111,23 @@ function AdminProductsPage() {
         api.get<AdminProductRow[]>('/admin/products'),
         api.get<AdminCategoryRow[]>('/admin/categories'),
       ])
-      setProductList(productRows.map((item) => ({
+      
+      // Lọc bỏ sản phẩm đã ngừng bán (xóa mềm)
+      const activeProducts = productRows.filter(row => row.status !== 'NGUNG_BAN')
+      
+      const mappedProducts = activeProducts.map((item) => ({
           ...mapAdminProduct(item),
           categorySlug: categoryRows.find((category) => category.id === item.categoryId)?.slug || '',
-        })))
+        }))
+      
+      setProductList(mappedProducts)
       setApiCategories(categoryRows)
-    } catch {
+      
+      return mappedProducts
+    } catch (error) {
+      console.error('Failed to load products:', error)
       // Giữ dữ liệu giao diện dự phòng khi chưa đăng nhập admin hoặc DB chưa có dữ liệu.
+      return productList
     }
   }
 
@@ -169,7 +181,10 @@ function AdminProductsPage() {
 
   const openCreateForm = () => {
     setEditingProduct(null)
-    setForm(emptyForm)
+    setForm({
+      ...emptyForm,
+      categorySlug: availableCategories.length > 0 ? availableCategories[0].slug : '',
+    })
     setSelectedImageName('')
     setIsFormOpen(true)
   }
@@ -231,20 +246,28 @@ function AdminProductsPage() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const selectedCategory = availableCategories.find((category) => category.slug === form.categorySlug)
-    if (!selectedCategory) return
+    if (!selectedCategory) {
+      setToast('Vui lòng chọn danh mục cho sản phẩm')
+      return
+    }
 
     const price = Number(form.price)
     const originalPrice = Number(form.originalPrice) || undefined
-    const sku = editingProduct?.sku || `RBN-${Date.now().toString().slice(-8)}`
+    const timestamp = Date.now()
+    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase()
+    const sku = editingProduct?.sku || `RBN-${timestamp.toString().slice(-8)}-${randomSuffix}`
+    const slug = editingProduct ? editingProduct.slug : `${makeSlug(form.name)}-${timestamp.toString().slice(-6)}`
+    
     const payload = {
       categoryId: 'id' in selectedCategory ? Number(selectedCategory.id) : Number.NaN,
       productCode: form.nameEn.trim() || sku,
-      sku, name: form.name.trim(), slug: makeSlug(form.name),
+      sku, name: form.name.trim(), slug,
       productType: form.isCombo ? 'COMBO' : 'DON', mainImage: form.image.trim(),
       listPrice: originalPrice || price, salePrice: price,
       minimumStock: editingProduct?.minimumStock ?? 5,
       description: form.description.trim(), ingredients: form.mainIngredients,
       benefits: form.tags, specification: form.weight.trim(), origin: form.origin.trim(),
+      status: 'DANG_BAN',
     }
 
     if (!Number.isFinite(payload.categoryId)) {
@@ -260,19 +283,75 @@ function AdminProductsPage() {
       setIsFormOpen(false)
       return
     } catch (error) {
-      setToast(error instanceof Error ? error.message : 'Không thể lưu sản phẩm')
+      let errorMessage = 'Không thể lưu sản phẩm'
+      
+      if (error instanceof Error) {
+        const statusMatch = error.message.match(/\((\d+)\)/)
+        const status = statusMatch ? Number.parseInt(statusMatch[1]) : 0
+        
+        if (status === 409) {
+          errorMessage = 'Sản phẩm đã tồn tại. Vui lòng kiểm tra tên hoặc mã sản phẩm'
+        } else if (status === 400) {
+          errorMessage = 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin'
+        } else if (status === 403) {
+          errorMessage = 'Bạn không có quyền thực hiện thao tác này'
+        } else if (error.message && !error.message.includes('(')) {
+          errorMessage = error.message
+        }
+      }
+      
+      setToast(errorMessage)
     }
   }
 
   const confirmDelete = async () => {
     if (!deletingProduct) return
+    const productIdToDelete = deletingProduct.id
+    const productNameToDelete = deletingProduct.name
+    
     try {
-      await api.delete(`/admin/products/${deletingProduct.id}`)
-      await loadAdminProducts()
-      setToast(`Đã ngừng bán ${deletingProduct.name}`)
+      // Nếu chọn xóa cứng, gọi endpoint /force
+      if (forceDelete) {
+        await api.delete<{ success?: boolean; message?: string }>(`/admin/products/${productIdToDelete}/force`)
+      } else {
+        await api.delete<{ success?: boolean; message?: string }>(`/admin/products/${productIdToDelete}`)
+      }
+      
+      // Reload và lọc sản phẩm đã xóa mềm
+      const updatedProducts = await loadAdminProducts()
+      const stillExists = updatedProducts.some(p => p.id === productIdToDelete)
+      
+      if (stillExists) {
+        setToast('Lỗi: Sản phẩm vẫn còn trong danh sách')
+      } else {
+        setToast(`Đã xóa ${productNameToDelete} ${forceDelete ? 'vĩnh viễn' : 'thành công'}`)
+      }
+      
       setDeletingProduct(null)
+      setForceDelete(false)
     } catch (error) {
-      setToast(error instanceof Error ? error.message : 'Không thể cập nhật sản phẩm')
+      let errorMessage = 'Không thể xóa sản phẩm'
+      
+      if (error instanceof Error) {
+        const statusMatch = error.message.match(/\((\d+)\)/)
+        const status = statusMatch ? Number.parseInt(statusMatch[1]) : 0
+        
+        if (status === 400) {
+          errorMessage = 'Không thể xóa sản phẩm đã có trong đơn hàng hoặc có ràng buộc dữ liệu'
+        } else if (status === 404) {
+          errorMessage = 'Sản phẩm không tồn tại hoặc đã bị xóa'
+        } else if (status === 403) {
+          errorMessage = 'Bạn không có quyền xóa sản phẩm này'
+        } else if (status === 409) {
+          errorMessage = 'Không thể xóa sản phẩm do xung đột dữ liệu'
+        } else if (error.message && !error.message.includes('(')) {
+          errorMessage = error.message
+        }
+      }
+      
+      setToast(errorMessage)
+      setDeletingProduct(null)
+      setForceDelete(false)
     }
   }
 
@@ -387,7 +466,10 @@ function AdminProductsPage() {
               <div className="admin-product-form-grid">
                 <label className="is-wide"><span>Tên sản phẩm *</span><input required value={form.name} onChange={(event) => updateField('name', event.target.value)} /></label>
                 <label><span>Tên tiếng Anh *</span><input required value={form.nameEn} onChange={(event) => updateField('nameEn', event.target.value)} /></label>
-                <label><span>Danh mục *</span><select required value={form.categorySlug} onChange={(event) => updateField('categorySlug', event.target.value)}>{availableCategories.map((category) => <option value={category.slug} key={category.slug}>{category.name}</option>)}</select></label>
+                <label><span>Danh mục *</span><select required value={form.categorySlug} onChange={(event) => updateField('categorySlug', event.target.value)}>
+                  <option value="" disabled>-- Chọn danh mục --</option>
+                  {availableCategories.map((category) => <option value={category.slug} key={category.slug}>{category.name}</option>)}
+                </select></label>
                 <label className="is-wide">
                   <span>Hình ảnh sản phẩm *</span>
                   <div className="admin-image-field">
@@ -439,8 +521,17 @@ function AdminProductsPage() {
           <section className="admin-delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="admin-delete-title">
             <span><AdminIcon name="trash" /></span>
             <h2 id="admin-delete-title">Xóa sản phẩm?</h2>
-            <p>Bạn sắp xóa <strong>{deletingProduct.name}</strong>. Thao tác này chỉ áp dụng tạm thời trên frontend.</p>
-            <div><button type="button" className="admin-secondary-button" onClick={() => setDeletingProduct(null)}>Hủy</button><button type="button" className="admin-danger-button" onClick={confirmDelete}>Xóa sản phẩm</button></div>
+            <p>Bạn sắp xóa <strong>{deletingProduct.name}</strong>. {forceDelete ? 'Sản phẩm sẽ bị xóa vĩnh viễn khỏi database.' : 'Sản phẩm sẽ bị ẩn và có thể khôi phục.'}</p>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '12px 0', cursor: 'pointer' }}>
+              <input 
+                type="checkbox" 
+                checked={forceDelete} 
+                onChange={(e) => setForceDelete(e.target.checked)}
+                style={{ cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '14px' }}>Xóa vĩnh viễn (không thể khôi phục)</span>
+            </label>
+            <div><button type="button" className="admin-secondary-button" onClick={() => { setDeletingProduct(null); setForceDelete(false); }}>Hủy</button><button type="button" className="admin-danger-button" onClick={confirmDelete}>{forceDelete ? 'Xóa vĩnh viễn' : 'Xóa sản phẩm'}</button></div>
           </section>
         </div>
       ) : null}

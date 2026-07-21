@@ -111,8 +111,12 @@ function AdminSettingsPage() {
       setNotice({ message: 'Vui lòng nhập tên cửa hàng, hotline và email liên hệ', type: 'error' })
       return
     }
-    if (!/^\S+@\S+\.\S+$/.test(settings.contactEmail) || !/^\S+@\S+\.\S+$/.test(settings.notificationEmail)) {
-      setNotice({ message: 'Địa chỉ email chưa đúng định dạng', type: 'error' })
+    if (!/^\S+@\S+\.\S+$/.test(settings.contactEmail)) {
+      setNotice({ message: 'Địa chỉ email liên hệ chưa đúng định dạng', type: 'error' })
+      return
+    }
+    if (settings.notificationEmail.trim() && !/^\S+@\S+\.\S+$/.test(settings.notificationEmail)) {
+      setNotice({ message: 'Địa chỉ email nhận thông báo chưa đúng định dạng', type: 'error' })
       return
     }
     if (![settings.codEnabled, settings.bankTransferEnabled].some(Boolean)) {
@@ -240,14 +244,20 @@ function AdminSettingsPage() {
 
           {activeSection === 'social' ? (
             <div className="admin-settings-section">
-              <header><div><span>MẠNG XÃ HỘI</span><h2>Kênh truyền thông</h2><p>Các liên kết này được sử dụng tại khu vực mạng xã hội ở Footer.</p></div></header>
+              <header><div><span>MẠNG XÃ HỘI</span><h2>Kênh truyền thông</h2><p>Các liên kết này được sử dụng tại khu vực mạng xã hội ở Footer. Bật/tắt để hiển thị hoặc ẩn từng kênh.</p></div></header>
               <div className="admin-settings-form-grid">
-                <label><span>Facebook</span><input type="url" value={settings.facebookUrl} onChange={(event) => updateField('facebookUrl', event.target.value)} placeholder="https://facebook.com/..." /></label>
-                <label><span>Instagram</span><input type="url" value={settings.instagramUrl} onChange={(event) => updateField('instagramUrl', event.target.value)} placeholder="https://instagram.com/..." /></label>
-                <label><span>YouTube</span><input type="url" value={settings.youtubeUrl} onChange={(event) => updateField('youtubeUrl', event.target.value)} placeholder="https://youtube.com/..." /></label>
-                <label><span>TikTok</span><input type="url" value={settings.tiktokUrl} onChange={(event) => updateField('tiktokUrl', event.target.value)} placeholder="https://tiktok.com/..." /></label>
+                <label><span>Facebook</span><input type="url" value={settings.facebookUrl} onChange={(event) => updateField('facebookUrl', event.target.value)} placeholder="https://facebook.com/..." disabled={!settings.facebookEnabled} /></label>
+                <label><span>Instagram</span><input type="url" value={settings.instagramUrl} onChange={(event) => updateField('instagramUrl', event.target.value)} placeholder="https://instagram.com/..." disabled={!settings.instagramEnabled} /></label>
+                <label><span>YouTube</span><input type="url" value={settings.youtubeUrl} onChange={(event) => updateField('youtubeUrl', event.target.value)} placeholder="https://youtube.com/..." disabled={!settings.youtubeEnabled} /></label>
+                <label><span>TikTok</span><input type="url" value={settings.tiktokUrl} onChange={(event) => updateField('tiktokUrl', event.target.value)} placeholder="https://tiktok.com/..." disabled={!settings.tiktokEnabled} /></label>
               </div>
-              <div className="admin-settings-social-preview"><strong>Xem trước liên kết</strong><div>{[{ label: 'Facebook', url: settings.facebookUrl }, { label: 'Instagram', url: settings.instagramUrl }, { label: 'YouTube', url: settings.youtubeUrl }, { label: 'TikTok', url: settings.tiktokUrl }].map((item) => <a key={item.label} href={item.url || '#'} target="_blank" rel="noreferrer" className={!item.url ? 'is-disabled' : ''}>{item.label}<span>↗</span></a>)}</div></div>
+              <div className="admin-settings-subsection"><h3>Hiển thị trên Footer</h3><div className="admin-settings-toggle-list">
+                <SettingToggle checked={settings.facebookEnabled} onChange={(value) => updateField('facebookEnabled', value)} label="Facebook" description={settings.facebookUrl || 'Chưa có liên kết'} />
+                <SettingToggle checked={settings.instagramEnabled} onChange={(value) => updateField('instagramEnabled', value)} label="Instagram" description={settings.instagramUrl || 'Chưa có liên kết'} />
+                <SettingToggle checked={settings.youtubeEnabled} onChange={(value) => updateField('youtubeEnabled', value)} label="YouTube" description={settings.youtubeUrl || 'Chưa có liên kết'} />
+                <SettingToggle checked={settings.tiktokEnabled} onChange={(value) => updateField('tiktokEnabled', value)} label="TikTok" description={settings.tiktokUrl || 'Chưa có liên kết'} />
+              </div></div>
+              <div className="admin-settings-social-preview"><strong>Xem trước liên kết</strong><div>{[{ label: 'Facebook', url: settings.facebookUrl, enabled: settings.facebookEnabled }, { label: 'Instagram', url: settings.instagramUrl, enabled: settings.instagramEnabled }, { label: 'YouTube', url: settings.youtubeUrl, enabled: settings.youtubeEnabled }, { label: 'TikTok', url: settings.tiktokUrl, enabled: settings.tiktokEnabled }].filter((item) => item.enabled).map((item) => <a key={item.label} href={item.url || '#'} target="_blank" rel="noreferrer" className={!item.url ? 'is-disabled' : ''}>{item.label}<span>↗</span></a>)}</div></div>
             </div>
           ) : null}
 
