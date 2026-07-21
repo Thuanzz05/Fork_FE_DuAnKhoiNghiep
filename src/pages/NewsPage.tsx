@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Pagination from '../components/Pagination'
-import type { NewsArticle } from '../data/news'
+import { normalizeNewsArticle, type NewsArticle } from '../data/news'
 import { usePagination } from '../hooks/usePagination'
 import { api } from '../services/api'
 import './NewsPage.css'
@@ -36,7 +36,7 @@ function NewsPage() {
     api.get<{ articles: Array<Partial<NewsArticle> & Pick<NewsArticle, 'id' | 'title' | 'excerpt' | 'image' | 'date'>> }>('/news')
       .then((data) => {
         if (!active) return
-        setArticles(data.articles.map((item) => ({ ...item, lead: '', body: [] })))
+        setArticles(data.articles.map((item) => normalizeNewsArticle({ ...item, lead: '', body: [] })))
         setContentState('ready')
       })
       .catch(() => active && setContentState('error'))

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
-import type { NewsArticle } from '../data/news'
+import { normalizeNewsArticle, type NewsArticle } from '../data/news'
 import { api } from '../services/api'
 import './NewsDetailPage.css'
 
@@ -16,8 +16,8 @@ function NewsDetailPage() {
     setLoading(true)
     api.get<{ article: NewsArticle; relatedArticles: NewsArticle[] }>(`/news/${id}`)
       .then((data) => {
-        setArticle(data.article)
-        setRelatedArticles(data.relatedArticles)
+        setArticle(normalizeNewsArticle(data.article))
+        setRelatedArticles(data.relatedArticles.map(normalizeNewsArticle))
       })
       .catch(() => {
         setArticle(undefined)
