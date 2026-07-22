@@ -312,7 +312,7 @@ function AdminAccountsPage() {
 
       {deletingAccount ? (
         <div className="admin-account-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setDeletingAccount(null)}>
-          <section className="admin-account-delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="admin-account-delete-title"><span><AdminIcon name="trash" /></span><h2 id="admin-account-delete-title">Xóa tài khoản?</h2><p>Bạn sắp xóa vĩnh viễn tài khoản <strong>{getFullName(deletingAccount)}</strong> ({deletingAccount.email}). Thao tác này không thể hoàn tác.</p>{deletingAccount.orderCount > 0 ? <p className="admin-account-warning"><AdminIcon name="warning" />Tài khoản này có {deletingAccount.orderCount} đơn hàng. Không thể xóa tài khoản có đơn hàng.</p> : null}<div><button type="button" className="admin-account-secondary" onClick={() => setDeletingAccount(null)}>Hủy</button><button type="button" className="admin-account-danger" disabled={deletingAccount.orderCount > 0} onClick={confirmDelete}>Xóa vĩnh viễn</button></div></section>
+          <section className="admin-account-delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="admin-account-delete-title"><span><AdminIcon name="trash" /></span><h2 id="admin-account-delete-title">Xóa tài khoản?</h2><p>Bạn sắp xóa tài khoản <strong>{getFullName(deletingAccount)}</strong> ({deletingAccount.email}). Tài khoản sẽ bị ẩn khỏi hệ thống nhưng dữ liệu vẫn được lưu trữ.</p><div><button type="button" className="admin-account-secondary" onClick={() => setDeletingAccount(null)}>Hủy</button><button type="button" className="admin-account-danger" onClick={confirmDelete}>Xóa tài khoản</button></div></section>
         </div>
       ) : null}
 
