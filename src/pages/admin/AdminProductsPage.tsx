@@ -12,6 +12,7 @@ interface ManagedProduct extends Product {
   sku: string
   stock: number
   minimumStock: number
+  galleryImages?: string[]
 }
 
 type AdminProductRow = {
@@ -19,7 +20,7 @@ type AdminProductRow = {
   name: string; slug: string; productType: 'DON' | 'COMBO'; mainImage: string
   listPrice: number; salePrice: number; stock: number; minimumStock: number; description?: string
   ingredients?: string; benefits?: string; specification?: string; origin?: string
-  status?: 'DANG_BAN' | 'NGUNG_BAN' | 'HET_HANG'
+  status?: 'DANG_BAN' | 'NGUNG_BAN' | 'HET_HANG'; images?: string[]
 }
 
 type AdminCategoryRow = { id: string; name: string; slug: string }
@@ -32,6 +33,7 @@ const mapAdminProduct = (item: AdminProductRow): ManagedProduct => ({
   weight: item.specification || '', origin: item.origin || '', stock: item.stock, minimumStock: item.minimumStock,
   description: item.description || '', mainIngredients: item.ingredients?.split(',').filter(Boolean) || [],
   tags: item.benefits?.split(',').filter(Boolean) || [], isCombo: item.productType === 'COMBO',
+  galleryImages: item.images || [],
 })
 
 interface ProductFormState {
@@ -39,6 +41,7 @@ interface ProductFormState {
   nameEn: string
   categorySlug: string
   image: string
+  galleryImages: string[]
   price: string
   originalPrice: string
   weight: string
@@ -57,6 +60,7 @@ const emptyForm: ProductFormState = {
   nameEn: '',
   categorySlug: '',
   image: '',
+  galleryImages: [],
   price: '',
   originalPrice: '',
   weight: '',
@@ -92,6 +96,7 @@ const makeSlug = (value: string) => value
 function AdminProductsPage() {
   const [productList, setProductList] = useState<ManagedProduct[]>(initialProducts)
   const [apiCategories, setApiCategories] = useState<AdminCategoryRow[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [searchValue, setSearchValue] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<'all' | ProductStatus>('all')
@@ -102,11 +107,14 @@ function AdminProductsPage() {
   const [form, setForm] = useState<ProductFormState>(emptyForm)
   const [toast, setToast] = useState('')
   const [selectedImageName, setSelectedImageName] = useState('')
+  const [galleryImageNames, setGalleryImageNames] = useState<string[]>([])
   const imageFileInputRef = useRef<HTMLInputElement>(null)
+  const galleryFileInputRef = useRef<HTMLInputElement>(null)
   const availableCategories = apiCategories
 
   const loadAdminProducts = async () => {
     try {
+      setIsLoading(true)
       const [productRows, categoryRows] = await Promise.all([
         api.get<AdminProductRow[]>('/admin/products'),
         api.get<AdminCategoryRow[]>('/admin/categories'),
@@ -126,8 +134,13 @@ function AdminProductsPage() {
       return mappedProducts
     } catch (error) {
       console.error('Failed to load products:', error)
+      if (error instanceof Error) {
+        console.error('Error message:', error.message)
+      }
       // Giữ dữ liệu giao diện dự phòng khi chưa đăng nhập admin hoặc DB chưa có dữ liệu.
       return productList
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -186,17 +199,20 @@ function AdminProductsPage() {
       categorySlug: availableCategories.length > 0 ? availableCategories[0].slug : '',
     })
     setSelectedImageName('')
+    setGalleryImageNames([])
     setIsFormOpen(true)
   }
 
   const openEditForm = (product: ManagedProduct) => {
     setEditingProduct(product)
     setSelectedImageName('')
+    setGalleryImageNames([])
     setForm({
       name: product.name,
       nameEn: product.nameEn,
       categorySlug: product.categorySlug,
       image: product.image,
+      galleryImages: product.galleryImages || [],
       price: String(product.price),
       originalPrice: product.originalPrice ? String(product.originalPrice) : '',
       weight: product.weight,
@@ -243,6 +259,52 @@ function AdminProductsPage() {
     }
   }
 
+  const handleGalleryFilesChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (!files || files.length === 0) return
+
+    const validFiles = Array.from(files).filter(file => {
+      if (!file.type.startsWith('image/')) {
+        setToast(`${file.name} không phải là ảnh`)
+        return false
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setToast(`${file.name} vượt quá 5MB`)
+        return false
+      }
+      return true
+    })
+
+    if (validFiles.length === 0) {
+      event.target.value = ''
+      return
+    }
+
+    try {
+      const uploadPromises = validFiles.map(async (file) => {
+        const uploaded = await apiRequest<{ url: string }>('/admin/uploads/images', {
+          method: 'POST', headers: { 'Content-Type': file.type, 'X-File-Name': encodeURIComponent(file.name) }, body: file,
+        })
+        return { url: resolveApiUrl(uploaded.url), name: file.name }
+      })
+
+      const uploadedImages = await Promise.all(uploadPromises)
+      
+      updateField('galleryImages', [...form.galleryImages, ...uploadedImages.map(img => img.url)])
+      setGalleryImageNames([...galleryImageNames, ...uploadedImages.map(img => img.name)])
+      setToast(`Đã tải lên ${uploadedImages.length} ảnh thành công`)
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : 'Không thể tải ảnh')
+    } finally {
+      event.target.value = ''
+    }
+  }
+
+  const removeGalleryImage = (index: number) => {
+    updateField('galleryImages', form.galleryImages.filter((_, i) => i !== index))
+    setGalleryImageNames(galleryImageNames.filter((_, i) => i !== index))
+  }
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const selectedCategory = availableCategories.find((category) => category.slug === form.categorySlug)
@@ -263,6 +325,9 @@ function AdminProductsPage() {
       productCode: form.nameEn.trim() || sku,
       sku, name: form.name.trim(), slug,
       productType: form.isCombo ? 'COMBO' : 'DON', mainImage: form.image.trim(),
+      images: form.galleryImages.length > 0 ? form.galleryImages.map((url, index) => ({
+        url, altText: '', order: index + 1
+      })) : undefined,
       listPrice: originalPrice || price, salePrice: price,
       minimumStock: editingProduct?.minimumStock ?? 5,
       description: form.description.trim(), ingredients: form.mainIngredients,
@@ -418,36 +483,59 @@ function AdminProductsPage() {
               </tr>
             </thead>
             <tbody>
-              {paginatedProducts.map((product) => {
-                const status = getProductStatus(product)
-                return (
-                  <tr key={product.id}>
+              {isLoading ? (
+                // Loading skeleton
+                Array.from({ length: 5 }).map((_, index) => (
+                  <tr key={`skeleton-${index}`}>
                     <td>
                       <div className="admin-product-cell">
-                        <img src={product.image} alt="" />
-                        <div><strong>{product.name}</strong><span>{product.weight} · {product.origin}</span></div>
+                        <div style={{ width: '60px', height: '60px', background: '#f0f0f0', borderRadius: '4px', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ width: '60%', height: '16px', background: '#f0f0f0', borderRadius: '4px', marginBottom: '8px', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                          <div style={{ width: '40%', height: '14px', background: '#f0f0f0', borderRadius: '4px', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                        </div>
                       </div>
                     </td>
-                    <td><span className="admin-product-sku">{product.sku}</span></td>
-                    <td>{product.category}</td>
-                    <td>
-                      <div className="admin-product-price"><strong>{formatPrice(product.price)}</strong>{product.originalPrice ? <del>{formatPrice(product.originalPrice)}</del> : null}</div>
-                    </td>
-                    <td><span className={`admin-stock-value is-${status}`}>{product.stock}</span></td>
-                    <td><span className={`admin-product-status is-${status}`}><i />{statusMeta[status].label}</span></td>
-                    <td>
-                      <div className="admin-product-actions">
-                        <button type="button" onClick={() => openEditForm(product)} aria-label={`Sửa ${product.name}`} title="Sửa sản phẩm"><AdminIcon name="edit" /></button>
-                        <button type="button" className="is-danger" onClick={() => setDeletingProduct(product)} aria-label={`Xóa ${product.name}`} title="Xóa sản phẩm"><AdminIcon name="trash" /></button>
-                      </div>
-                    </td>
+                    <td><div style={{ width: '80px', height: '16px', background: '#f0f0f0', borderRadius: '4px', animation: 'pulse 1.5s ease-in-out infinite' }} /></td>
+                    <td><div style={{ width: '60px', height: '16px', background: '#f0f0f0', borderRadius: '4px', animation: 'pulse 1.5s ease-in-out infinite' }} /></td>
+                    <td><div style={{ width: '80px', height: '16px', background: '#f0f0f0', borderRadius: '4px', animation: 'pulse 1.5s ease-in-out infinite' }} /></td>
+                    <td><div style={{ width: '40px', height: '16px', background: '#f0f0f0', borderRadius: '4px', animation: 'pulse 1.5s ease-in-out infinite' }} /></td>
+                    <td><div style={{ width: '70px', height: '16px', background: '#f0f0f0', borderRadius: '4px', animation: 'pulse 1.5s ease-in-out infinite' }} /></td>
+                    <td><div style={{ width: '60px', height: '16px', background: '#f0f0f0', borderRadius: '4px', animation: 'pulse 1.5s ease-in-out infinite' }} /></td>
                   </tr>
-                )
-              })}
+                ))
+              ) : (
+                paginatedProducts.map((product) => {
+                  const status = getProductStatus(product)
+                  return (
+                    <tr key={product.id}>
+                      <td>
+                        <div className="admin-product-cell">
+                          <img src={product.image} alt="" />
+                          <div><strong>{product.name}</strong><span>{product.weight} · {product.origin}</span></div>
+                        </div>
+                      </td>
+                      <td><span className="admin-product-sku">{product.sku}</span></td>
+                      <td>{product.category}</td>
+                      <td>
+                        <div className="admin-product-price"><strong>{formatPrice(product.price)}</strong>{product.originalPrice ? <del>{formatPrice(product.originalPrice)}</del> : null}</div>
+                      </td>
+                      <td><span className={`admin-stock-value is-${status}`}>{product.stock}</span></td>
+                      <td><span className={`admin-product-status is-${status}`}><i />{statusMeta[status].label}</span></td>
+                      <td>
+                        <div className="admin-product-actions">
+                          <button type="button" onClick={() => openEditForm(product)} aria-label={`Sửa ${product.name}`} title="Sửa sản phẩm"><AdminIcon name="edit" /></button>
+                          <button type="button" className="is-danger" onClick={() => setDeletingProduct(product)} aria-label={`Xóa ${product.name}`} title="Xóa sản phẩm"><AdminIcon name="trash" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
             </tbody>
           </table>
 
-          {filteredProducts.length === 0 ? (
+          {!isLoading && filteredProducts.length === 0 ? (
             <div className="admin-products-empty"><AdminIcon name="search" /><strong>Không tìm thấy sản phẩm</strong><span>Hãy thử từ khóa hoặc bộ lọc khác.</span></div>
           ) : null}
         </div>
@@ -500,12 +588,48 @@ function AdminProductsPage() {
                   </div>
                   <small className="admin-image-hint">{selectedImageName ? `Đã chọn: ${selectedImageName}` : 'Có thể nhập đường dẫn hoặc chọn ảnh JPG, PNG, WEBP từ máy.'}</small>
                 </label>
+                <label className="is-wide">
+                  <span>Thư viện ảnh sản phẩm (tối đa 5 ảnh)</span>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                    {form.galleryImages.map((img, index) => (
+                      <div key={index} style={{ position: 'relative', width: '60px', height: '60px', border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden' }}>
+                        <img src={img} alt={`Gallery ${index + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <button 
+                          type="button" 
+                          onClick={() => removeGalleryImage(index)}
+                          style={{ position: 'absolute', top: '2px', right: '2px', background: '#f44336', color: 'white', border: 'none', borderRadius: '50%', width: '18px', height: '18px', cursor: 'pointer', fontSize: '14px', lineHeight: '1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          title="Xóa ảnh"
+                        >×</button>
+                      </div>
+                    ))}
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => galleryFileInputRef.current?.click()}
+                    disabled={form.galleryImages.length >= 5}
+                    style={{ padding: '8px 16px', fontSize: '14px', cursor: form.galleryImages.length >= 5 ? 'not-allowed' : 'pointer', opacity: form.galleryImages.length >= 5 ? 0.5 : 1, border: '1px solid #ccc', borderRadius: '4px', background: 'white' }}
+                  >
+                    📤 Thêm ảnh ({form.galleryImages.length}/5)
+                  </button>
+                  <input
+                    ref={galleryFileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    multiple
+                    onChange={handleGalleryFilesChange}
+                    style={{ display: 'none' }}
+                  />
+                  <small className="admin-image-hint">Chọn nhiều ảnh cùng lúc (mỗi ảnh tối đa 5MB)</small>
+                </label>
                 <label><span>Giá bán *</span><input required min="0" type="number" value={form.price} onChange={(event) => updateField('price', event.target.value)} /></label>
                 <label><span>Giá gốc</span><input min="0" type="number" value={form.originalPrice} onChange={(event) => updateField('originalPrice', event.target.value)} /></label>
                 <label><span>Khối lượng / dung tích *</span><input required value={form.weight} onChange={(event) => updateField('weight', event.target.value)} /></label>
                 <label><span>Xuất xứ *</span><input required value={form.origin} onChange={(event) => updateField('origin', event.target.value)} /></label>
-                <div><span>Tồn kho</span><p>Chỉ thay đổi qua phiếu nhập, phiếu xuất hoặc đơn hàng.</p></div>
-                <label className="admin-checkbox-field"><input type="checkbox" checked={form.isCombo} onChange={(event) => updateField('isCombo', event.target.checked)} /><span>Đây là sản phẩm combo</span></label>
+                <div style={{ gridColumn: 'span 2' }}><span style={{ fontSize: '14px', fontWeight: '500' }}>Tồn kho</span><p style={{ fontSize: '14px', margin: '4px 0 0 0', color: '#666' }}>Chỉ thay đổi qua phiếu nhập, phiếu xuất hoặc đơn hàng.</p></div>
+                <label className="admin-checkbox-field" title="Sản phẩm combo là bộ sản phẩm gồm nhiều món (VD: Bộ 3 món chăm sóc da)">
+                  <input type="checkbox" checked={form.isCombo} onChange={(event) => updateField('isCombo', event.target.checked)} />
+                  <span>Đây là sản phẩm combo</span>
+                </label>
                 <label className="is-wide"><span>Mô tả sản phẩm *</span><textarea required rows={4} value={form.description} onChange={(event) => updateField('description', event.target.value)} /></label>
                 <label className="is-wide"><span>Thành phần chính</span><input placeholder="Phân tách bằng dấu phẩy" value={form.mainIngredients} onChange={(event) => updateField('mainIngredients', event.target.value)} /></label>
                 <label className="is-wide"><span>Đặc điểm / thẻ sản phẩm</span><input placeholder="Phân tách bằng dấu phẩy" value={form.tags} onChange={(event) => updateField('tags', event.target.value)} /></label>
