@@ -86,7 +86,8 @@ function AdminAccountsPage() {
         (_, index) => api.get<AdminUsersResponse>(`/admin/users?page=${index + 2}&limit=100`),
       ))
       const items = [firstPage, ...otherPages].flatMap((page) => page.items)
-      setAccounts(items.map((item) => {
+      // Chỉ hiển thị tài khoản khách hàng, ẩn admin
+      setAccounts(items.filter((item) => item.role === 'KHACH_HANG').map((item) => {
         const names = item.fullName.trim().split(/\s+/)
         return {
           id: item.id, firstName: names.pop() || '', lastName: names.join(' '), email: item.email,
@@ -159,7 +160,7 @@ function AdminAccountsPage() {
 
   const activeCount = accounts.filter((account) => account.status === 'active').length
   const lockedCount = accounts.filter((account) => account.status === 'locked').length
-  const adminCount = accounts.filter((account) => account.role === 'admin').length
+  const totalSpending = accounts.reduce((sum, account) => sum + account.totalSpent, 0)
 
   const openEditForm = (account: ManagedAccount) => {
     setEditingAccount(account)
@@ -243,34 +244,34 @@ function AdminAccountsPage() {
       <div className="admin-page-heading admin-accounts-heading">
         <div>
           <p>QUẢN LÝ NGƯỜI DÙNG</p>
-          <h1>Quản lý tài khoản</h1>
-          <span>Theo dõi khách hàng, quản trị viên và quyền truy cập hệ thống.</span>
+          <h1>Quản lý khách hàng</h1>
+          <span>Theo dõi và quản lý thông tin tài khoản khách hàng của hệ thống.</span>
         </div>
       </div>
 
       <section className="admin-account-summary" aria-label="Tổng quan tài khoản">
-        <article><span className="is-red"><AdminIcon name="customers" /></span><div><small>Tổng tài khoản</small><strong>{accounts.length}</strong></div></article>
+        <article><span className="is-red"><AdminIcon name="customers" /></span><div><small>Tổng khách hàng</small><strong>{accounts.length}</strong></div></article>
         <article><span className="is-green"><AdminIcon name="userPlus" /></span><div><small>Đang hoạt động</small><strong>{activeCount}</strong></div></article>
-        <article><span className="is-blue"><AdminIcon name="settings" /></span><div><small>Quản trị viên</small><strong>{adminCount}</strong></div></article>
+        <article><span className="is-blue"><AdminIcon name="products" /></span><div><small>Tổng chi tiêu</small><strong>{formatPrice(totalSpending)}</strong></div></article>
         <article><span className="is-orange"><AdminIcon name="lock" /></span><div><small>Tài khoản bị khóa</small><strong>{lockedCount}</strong></div></article>
       </section>
 
       <section className="admin-accounts-panel">
         <div className="admin-accounts-toolbar">
           <div>
-            <label><span>Vai trò</span><select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value as 'all' | AccountRole)} aria-label="Lọc theo vai trò"><option value="all">Tất cả vai trò</option><option value="customer">Khách hàng</option><option value="admin">Quản trị viên</option></select></label>
             <label><span>Trạng thái</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | AccountStatus)} aria-label="Lọc theo trạng thái"><option value="all">Tất cả trạng thái</option><option value="active">Hoạt động</option><option value="locked">Đã khóa</option></select></label>
             <label><span>Sắp xếp</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as AccountSort)} aria-label="Sắp xếp tài khoản"><option value="newest">Mới đăng ký</option><option value="name">Theo tên A-Z</option><option value="spending">Chi tiêu cao nhất</option></select></label>
           </div>
-          <span>Hiển thị <strong>{filteredAccounts.length}</strong> / {accounts.length} tài khoản</span>
+          <span>Hiển thị <strong>{filteredAccounts.length}</strong> / {accounts.length} khách hàng</span>
         </div>
 
         <div className="admin-accounts-table-wrap">
           <table className="admin-accounts-table">
-            <thead><tr><th>Tài khoản</th><th>Điện thoại</th><th>Vai trò</th><th>Đơn hàng</th><th>Địa chỉ</th><th>Ngày tham gia</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+            <thead><tr><th>STT</th><th>Tài khoản</th><th>Điện thoại</th><th>Vai trò</th><th>Đơn hàng</th><th>Địa chỉ</th><th>Ngày tham gia</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
             <tbody>
-              {paginatedAccounts.map((account) => (
+              {paginatedAccounts.map((account, index) => (
                 <tr key={account.id}>
+                  <td><span className="admin-account-order">{(currentPage - 1) * 6 + index + 1}</span></td>
                   <td><div className="admin-account-cell"><span className={`admin-account-avatar is-${account.role}`}>{account.avatar ? <img src={account.avatar} alt="" /> : getInitials(account)}</span><div><strong>{getFullName(account)}</strong><span>{account.email}</span><small>Hoạt động: {account.lastActive}</small></div></div></td>
                   <td>{account.phone || <span className="admin-account-empty">Chưa cập nhật</span>}</td>
                   <td><span className={`admin-account-role is-${account.role}`}>{roleMeta[account.role].label}</span></td>
@@ -278,14 +279,14 @@ function AdminAccountsPage() {
                   <td>{account.addressCount} địa chỉ</td>
                   <td>{new Date(account.joinedAt).toLocaleDateString('vi-VN')}</td>
                   <td><span className={`admin-account-status is-${account.status}`}><i />{statusMeta[account.status].label}</span></td>
-                  <td><div className="admin-account-actions"><button type="button" onClick={() => openEditForm(account)} aria-label={`Sửa ${getFullName(account)}`} title="Sửa tài khoản"><AdminIcon name="edit" /></button><button type="button" disabled={account.role === 'admin'} onClick={() => toggleAccountStatus(account)} aria-label={`${account.status === 'active' ? 'Khóa' : 'Mở khóa'} ${getFullName(account)}`} title={account.role === 'admin' ? 'Không thể khóa quản trị viên chính' : account.status === 'active' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}><AdminIcon name={account.status === 'active' ? 'lock' : 'unlock'} /></button><button type="button" className="is-danger" disabled={account.role === 'admin'} onClick={() => setDeletingAccount(account)} aria-label={`Xóa ${getFullName(account)}`} title={account.role === 'admin' ? 'Không thể xóa quản trị viên chính' : 'Xóa tài khoản'}><AdminIcon name="trash" /></button></div></td>
+                  <td><div className="admin-account-actions"><button type="button" onClick={() => openEditForm(account)} aria-label={`Sửa ${getFullName(account)}`} title="Sửa tài khoản"><AdminIcon name="edit" /></button><button type="button" onClick={() => toggleAccountStatus(account)} aria-label={`${account.status === 'active' ? 'Khóa' : 'Mở khóa'} ${getFullName(account)}`} title={account.status === 'active' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}><AdminIcon name={account.status === 'active' ? 'lock' : 'unlock'} /></button><button type="button" className="is-danger" onClick={() => setDeletingAccount(account)} aria-label={`Xóa ${getFullName(account)}`} title="Xóa tài khoản"><AdminIcon name="trash" /></button></div></td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {filteredAccounts.length === 0 ? <div className="admin-accounts-empty"><AdminIcon name="search" /><strong>Không tìm thấy tài khoản</strong><span>Hãy thử từ khóa hoặc bộ lọc khác.</span></div> : null}
+          {filteredAccounts.length === 0 ? <div className="admin-accounts-empty"><AdminIcon name="search" /><strong>Không tìm thấy khách hàng</strong><span>Hãy thử từ khóa hoặc bộ lọc khác.</span></div> : null}
         </div>
-        <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filteredAccounts.length} pageSize={6} itemLabel="tài khoản" onPageChange={setCurrentPage} />
+        <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filteredAccounts.length} pageSize={6} itemLabel="khách hàng" onPageChange={setCurrentPage} />
       </section>
 
       {isFormOpen ? (
