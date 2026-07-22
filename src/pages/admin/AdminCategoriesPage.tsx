@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
 import Pagination from '../../components/Pagination'
 import { usePagination } from '../../hooks/usePagination'
@@ -65,9 +65,7 @@ function AdminCategoriesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [form, setForm] = useState<CategoryFormState>(emptyForm)
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false)
-  const [selectedImageName, setSelectedImageName] = useState('')
   const [notice, setNotice] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
-  const imageFileInputRef = useRef<HTMLInputElement>(null)
 
   const getProductCount = useCallback((slug: string) => categoryList.find((item) => item.slug === slug)?.productCount ?? 0, [categoryList])
 
@@ -136,12 +134,10 @@ function AdminCategoriesPage() {
   const activeCount = categoryList.filter((category) => category.status === 'active').length
   const hiddenCount = categoryList.length - activeCount
   const assignedProductCount = categoryList.reduce((total, category) => total + (category.productCount ?? 0), 0)
-  const editingCategoryProductCount = editingCategory ? getProductCount(editingCategory.slug) : 0
 
   const openCreateForm = () => {
     setEditingCategory(null)
     setForm({ ...emptyForm, displayOrder: String(categoryList.length + 1) })
-    setSelectedImageName('')
     setIsSlugManuallyEdited(false)
     setIsFormOpen(true)
   }
@@ -156,7 +152,6 @@ function AdminCategoriesPage() {
       status: category.status,
       displayOrder: String(category.displayOrder),
     })
-    setSelectedImageName('')
     setIsSlugManuallyEdited(true)
     setIsFormOpen(true)
   }
@@ -171,28 +166,6 @@ function AdminCategoriesPage() {
       name: value,
       slug: isSlugManuallyEdited ? current.slug : makeSlug(value),
     }))
-  }
-
-  const handleImageFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    if (!file.type.startsWith('image/')) {
-      setNotice({ message: 'Vui lòng chọn đúng định dạng ảnh', type: 'error' })
-      event.target.value = ''
-      return
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setNotice({ message: 'Ảnh danh mục không được vượt quá 5MB', type: 'error' })
-      event.target.value = ''
-      return
-    }
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result !== 'string') return
-      updateField('image', reader.result)
-      setSelectedImageName(file.name)
-    }
-    reader.readAsDataURL(file)
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
