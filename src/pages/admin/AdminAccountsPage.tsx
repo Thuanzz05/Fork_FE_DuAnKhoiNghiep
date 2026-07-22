@@ -220,9 +220,17 @@ function AdminAccountsPage() {
   }
 
   const confirmDelete = async () => {
-    if (!deletingAccount || deletingAccount.role === 'admin') return
-    await toggleAccountStatus(deletingAccount)
-    setDeletingAccount(null)
+    if (!deletingAccount) return
+    try {
+      await api.delete(`/admin/users/${deletingAccount.id}`)
+      await loadAccounts()
+      setNotice({ text: `Đã xóa tài khoản ${getFullName(deletingAccount)}`, type: 'success' })
+      setDeletingAccount(null)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Không thể xóa tài khoản'
+      setNotice({ text: errorMessage, type: 'error' })
+      setDeletingAccount(null)
+    }
   }
 
   return (
@@ -303,7 +311,7 @@ function AdminAccountsPage() {
 
       {deletingAccount ? (
         <div className="admin-account-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setDeletingAccount(null)}>
-          <section className="admin-account-delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="admin-account-delete-title"><span><AdminIcon name="trash" /></span><h2 id="admin-account-delete-title">Xóa tài khoản?</h2><p>Bạn sắp xóa tài khoản <strong>{getFullName(deletingAccount)}</strong> ({deletingAccount.email}). Thao tác này chỉ áp dụng tạm thời trên frontend.</p><div><button type="button" className="admin-account-secondary" onClick={() => setDeletingAccount(null)}>Hủy</button><button type="button" className="admin-account-danger" onClick={confirmDelete}>Xóa tài khoản</button></div></section>
+          <section className="admin-account-delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="admin-account-delete-title"><span><AdminIcon name="trash" /></span><h2 id="admin-account-delete-title">Xóa tài khoản?</h2><p>Bạn sắp xóa vĩnh viễn tài khoản <strong>{getFullName(deletingAccount)}</strong> ({deletingAccount.email}). Thao tác này không thể hoàn tác.</p>{deletingAccount.orderCount > 0 ? <p className="admin-account-warning"><AdminIcon name="warning" />Tài khoản này có {deletingAccount.orderCount} đơn hàng. Không thể xóa tài khoản có đơn hàng.</p> : null}<div><button type="button" className="admin-account-secondary" onClick={() => setDeletingAccount(null)}>Hủy</button><button type="button" className="admin-account-danger" disabled={deletingAccount.orderCount > 0} onClick={confirmDelete}>Xóa vĩnh viễn</button></div></section>
         </div>
       ) : null}
 
