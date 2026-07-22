@@ -134,6 +134,9 @@ function AdminProductsPage() {
       return mappedProducts
     } catch (error) {
       console.error('Failed to load products:', error)
+      if (error instanceof Error) {
+        console.error('Error message:', error.message)
+      }
       // Giữ dữ liệu giao diện dự phòng khi chưa đăng nhập admin hoặc DB chưa có dữ liệu.
       return productList
     } finally {
