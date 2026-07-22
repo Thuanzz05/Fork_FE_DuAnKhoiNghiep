@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
 import Pagination from '../../components/Pagination'
 import { usePagination } from '../../hooks/usePagination'
@@ -65,9 +65,7 @@ function AdminCategoriesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [form, setForm] = useState<CategoryFormState>(emptyForm)
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false)
-  const [selectedImageName, setSelectedImageName] = useState('')
   const [notice, setNotice] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
-  const imageFileInputRef = useRef<HTMLInputElement>(null)
 
   const getProductCount = useCallback((slug: string) => categoryList.find((item) => item.slug === slug)?.productCount ?? 0, [categoryList])
 
@@ -136,12 +134,10 @@ function AdminCategoriesPage() {
   const activeCount = categoryList.filter((category) => category.status === 'active').length
   const hiddenCount = categoryList.length - activeCount
   const assignedProductCount = categoryList.reduce((total, category) => total + (category.productCount ?? 0), 0)
-  const editingCategoryProductCount = editingCategory ? getProductCount(editingCategory.slug) : 0
 
   const openCreateForm = () => {
     setEditingCategory(null)
     setForm({ ...emptyForm, displayOrder: String(categoryList.length + 1) })
-    setSelectedImageName('')
     setIsSlugManuallyEdited(false)
     setIsFormOpen(true)
   }
@@ -156,7 +152,6 @@ function AdminCategoriesPage() {
       status: category.status,
       displayOrder: String(category.displayOrder),
     })
-    setSelectedImageName('')
     setIsSlugManuallyEdited(true)
     setIsFormOpen(true)
   }
@@ -171,28 +166,6 @@ function AdminCategoriesPage() {
       name: value,
       slug: isSlugManuallyEdited ? current.slug : makeSlug(value),
     }))
-  }
-
-  const handleImageFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    if (!file.type.startsWith('image/')) {
-      setNotice({ message: 'Vui lòng chọn đúng định dạng ảnh', type: 'error' })
-      event.target.value = ''
-      return
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setNotice({ message: 'Ảnh danh mục không được vượt quá 5MB', type: 'error' })
-      event.target.value = ''
-      return
-    }
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result !== 'string') return
-      updateField('image', reader.result)
-      setSelectedImageName(file.name)
-    }
-    reader.readAsDataURL(file)
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -250,8 +223,16 @@ function AdminCategoriesPage() {
 
   const confirmDelete = async () => {
     if (!deletingCategory) return
-    await toggleStatus(deletingCategory)
-    setDeletingCategory(null)
+    try {
+      await api.delete(`/admin/categories/${deletingCategory.id}`)
+      await loadCategories()
+      setNotice({ message: `Đã xóa danh mục ${deletingCategory.name}`, type: 'success' })
+      setDeletingCategory(null)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Không thể xóa danh mục'
+      setNotice({ message: errorMessage, type: 'error' })
+      setDeletingCategory(null)
+    }
   }
 
   return (
@@ -279,13 +260,12 @@ function AdminCategoriesPage() {
 
         <div className="admin-categories-table-wrap">
           <table className="admin-categories-table">
-            <thead><tr><th>Thứ tự</th><th>Danh mục</th><th>Đường dẫn</th><th>Sản phẩm</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead>
-            <tbody>{paginatedCategories.map((category) => {
+            <thead><tr><th>STT</th><th>Danh mục</th><th>Sản phẩm</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead>
+            <tbody>{paginatedCategories.map((category, index) => {
               const productCount = getProductCount(category.slug)
               return <tr key={category.id}>
-                <td><span className="admin-category-order">{category.displayOrder}</span></td>
-                <td><div className="admin-category-cell"><div className="admin-category-thumb">{category.image ? <img src={category.image} alt="" /> : <AdminIcon name="folder" />}</div><div><strong>{category.name}</strong><span>{category.description || 'Chưa có mô tả cho danh mục này.'}</span></div></div></td>
-                <td><code>/san-pham?danh-muc={category.slug}</code></td>
+                <td><span className="admin-category-order">{index + 1}</span></td>
+                <td><div className="admin-category-cell"><div><strong>{category.name}</strong><span>{category.description || 'Chưa có mô tả cho danh mục này.'}</span></div></div></td>
                 <td><span className="admin-category-product-count"><strong>{productCount}</strong> sản phẩm</span></td>
                 <td><button type="button" className={`admin-category-status is-${category.status}`} onClick={() => toggleStatus(category)}><i />{category.status === 'active' ? 'Đang hiển thị' : 'Đang ẩn'}</button></td>
                 <td>{formatDate(category.createdAt)}</td>
@@ -305,11 +285,8 @@ function AdminCategoriesPage() {
             <form onSubmit={handleSubmit}>
               <div className="admin-category-form-grid">
                 <label><span>Tên danh mục *</span><input required maxLength={80} value={form.name} onChange={(event) => handleNameChange(event.target.value)} placeholder="Ví dụ: Serum" /></label>
-                <label><span>Đường dẫn *</span><div className="admin-category-slug-field"><b>/</b><input required readOnly={editingCategoryProductCount > 0} value={form.slug} onChange={(event) => { setIsSlugManuallyEdited(true); updateField('slug', event.target.value) }} placeholder="serum" /></div>{editingCategoryProductCount > 0 ? <small>Không thể đổi vì đang có {editingCategoryProductCount} sản phẩm.</small> : null}</label>
-                <label><span>Thứ tự hiển thị *</span><input required type="number" min="1" value={form.displayOrder} onChange={(event) => updateField('displayOrder', event.target.value)} /></label>
                 <label><span>Trạng thái</span><select value={form.status} onChange={(event) => updateField('status', event.target.value as CategoryStatus)}><option value="active">Đang hiển thị</option><option value="hidden">Đang ẩn</option></select></label>
                 <label className="is-wide"><span>Mô tả</span><textarea rows={4} maxLength={300} value={form.description} onChange={(event) => updateField('description', event.target.value)} placeholder="Mô tả ngắn về nhóm sản phẩm..." /><small>{form.description.length}/300 ký tự</small></label>
-                <label className="is-wide"><span>Ảnh danh mục</span><div className="admin-category-image-field"><div className="admin-category-image-preview">{form.image ? <img src={form.image} alt="Ảnh xem trước" /> : <AdminIcon name="upload" />}</div><div><div className="admin-category-image-input"><input placeholder="/images/... hoặc đường dẫn ảnh" value={form.image} onChange={(event) => { updateField('image', event.target.value); setSelectedImageName('') }} /><button type="button" onClick={() => imageFileInputRef.current?.click()}><AdminIcon name="upload" />Chọn ảnh từ máy</button><input ref={imageFileInputRef} className="admin-category-hidden-file" type="file" accept="image/png,image/jpeg,image/webp" tabIndex={-1} onChange={handleImageFileChange} /></div><small>{selectedImageName ? `Đã chọn: ${selectedImageName}` : 'Ảnh JPG, PNG hoặc WEBP, tối đa 5MB.'}</small></div></div></label>
               </div>
               <footer><button type="button" className="admin-category-secondary" onClick={() => setIsFormOpen(false)}>Hủy</button><button type="submit" className="admin-category-primary">{editingCategory ? 'Lưu thay đổi' : 'Thêm danh mục'}</button></footer>
             </form>

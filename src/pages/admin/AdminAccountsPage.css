@@ -219,7 +219,36 @@
 
 .admin-accounts-table th:first-child,
 .admin-accounts-table td:first-child {
+  width: 50px;
+  text-align: center;
+}
+
+.admin-accounts-table th:nth-child(2),
+.admin-accounts-table td:nth-child(2) {
   width: 30%;
+}
+
+.admin-accounts-table th:nth-child(3),
+.admin-accounts-table td:nth-child(3) {
+  padding-left: 4px;
+}
+
+.admin-accounts-table th:nth-child(4),
+.admin-accounts-table td:nth-child(4) {
+  padding-left: 4px;
+}
+
+.admin-account-order {
+  display: inline-flex;
+  min-width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: #f7f3f3;
+  color: #6d6263;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .admin-account-cell {
