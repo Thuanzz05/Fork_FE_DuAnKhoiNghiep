@@ -104,7 +104,6 @@ function AdminAccountsPage() {
 
   useEffect(() => { void loadAccounts() }, [])
   const [searchValue, setSearchValue] = useState('')
-  const [roleFilter, setRoleFilter] = useState<'all' | AccountRole>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | AccountStatus>('all')
   const [sortBy, setSortBy] = useState<AccountSort>('newest')
   const [editingAccount, setEditingAccount] = useState<ManagedAccount | null>(null)
@@ -140,9 +139,8 @@ function AdminAccountsPage() {
     const result = accounts.filter((account) => {
       const matchesKeyword = !keyword || [getFullName(account), account.email, account.phone, account.id]
         .some((value) => value.toLocaleLowerCase('vi-VN').includes(keyword))
-      const matchesRole = roleFilter === 'all' || account.role === roleFilter
       const matchesStatus = statusFilter === 'all' || account.status === statusFilter
-      return matchesKeyword && matchesRole && matchesStatus
+      return matchesKeyword && matchesStatus
     })
 
     return result.sort((first, second) => {
@@ -150,12 +148,12 @@ function AdminAccountsPage() {
       if (sortBy === 'spending') return second.totalSpent - first.totalSpent
       return new Date(second.joinedAt).getTime() - new Date(first.joinedAt).getTime()
     })
-  }, [accounts, roleFilter, searchValue, sortBy, statusFilter])
+  }, [accounts, searchValue, sortBy, statusFilter])
 
   const { currentPage, totalPages, pageItems: paginatedAccounts, setCurrentPage } = usePagination(
     filteredAccounts,
     6,
-    `${searchValue}|${roleFilter}|${statusFilter}|${sortBy}`,
+    `${searchValue}|${statusFilter}|${sortBy}`,
   )
 
   const activeCount = accounts.filter((account) => account.status === 'active').length
