@@ -3,6 +3,7 @@ import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
 import Pagination from '../../components/Pagination'
 import { usePagination } from '../../hooks/usePagination'
 import { api, apiRequest, resolveApiUrl } from '../../services/api'
+import { getCurrentUser } from '../../utils/auth'
 import './AdminArticlesPage.css'
 
 type ArticleStatus = 'published' | 'draft'
@@ -10,6 +11,7 @@ type ArticleSort = 'updated' | 'newest' | 'views' | 'title'
 
 interface ManagedArticle {
   id: number
+  authorId: string
   title: string
   category: string
   excerpt: string
@@ -31,10 +33,17 @@ interface ArticleFormState {
   lead: string
   content: string
   image: string
-  author: string
+  authorId: string
   status: ArticleStatus
   publishedAt: string
   featured: boolean
+}
+
+interface ArticleAuthor {
+  id: string
+  name: string
+  email: string
+  status: 'HOAT_DONG' | 'BI_KHOA'
 }
 
 const articleCategories = ['Kiến thức làm đẹp', 'Chăm sóc da', 'Hướng dẫn sử dụng', 'Câu chuyện thương hiệu']
@@ -53,7 +62,7 @@ const emptyForm: ArticleFormState = {
   lead: '',
   content: '',
   image: '',
-  author: 'Red Bean Beauty',
+  authorId: '',
   status: 'draft',
   publishedAt: new Date().toISOString().slice(0, 16),
   featured: false,
@@ -175,6 +184,7 @@ const formatDateTime = (value: string) => new Intl.DateTimeFormat('vi-VN', {
 
 function AdminArticlesPage() {
   const [articles, setArticles] = useState<ManagedArticle[]>(initialArticles)
+  const [authors, setAuthors] = useState<ArticleAuthor[]>([])
 
   const loadArticles = async () => {
     try {
@@ -182,7 +192,8 @@ function AdminArticlesPage() {
       setArticles(rows.map((item) => {
         const parsedContent = parseStoredArticleContent(item.content)
         return {
-          id: Number(item.id), title: String(item.title), category: String(item.category || articleCategories[0]),
+          id: Number(item.id), authorId: item.authorId == null ? '' : String(item.authorId),
+          title: String(item.title), category: String(item.category || articleCategories[0]),
           excerpt: String(item.summary || ''), lead: parsedContent.lead, content: parsedContent.content,
           image: normalizeArticleImagePath(item.imageUrl), author: String(item.authorName || 'Rubeanora'),
           status: item.status === 'DA_DANG' ? 'published' : 'draft',
@@ -195,7 +206,30 @@ function AdminArticlesPage() {
     }
   }
 
-  useEffect(() => { void loadArticles() }, [])
+  const loadAuthors = async () => {
+    try {
+      type AdminUserRow = {
+        id: string
+        fullName: string
+        email: string
+        role: 'ADMIN' | 'KHACH_HANG'
+        status: 'HOAT_DONG' | 'BI_KHOA'
+      }
+      type AdminUsersResponse = { items: AdminUserRow[]; pagination: { totalPages: number } }
+      const firstPage = await api.get<AdminUsersResponse>('/admin/users?page=1&limit=100&role=ADMIN')
+      const otherPages = await Promise.all(Array.from(
+        { length: Math.max(firstPage.pagination.totalPages - 1, 0) },
+        (_, index) => api.get<AdminUsersResponse>(`/admin/users?page=${index + 2}&limit=100&role=ADMIN`),
+      ))
+      setAuthors([firstPage, ...otherPages].flatMap((page) => page.items)
+        .filter((item) => item.role === 'ADMIN')
+        .map((item) => ({ id: item.id, name: item.fullName, email: item.email, status: item.status })))
+    } catch {
+      setAuthors([])
+    }
+  }
+
+  useEffect(() => { void Promise.all([loadArticles(), loadAuthors()]) }, [])
   const [searchValue, setSearchValue] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<'all' | ArticleStatus>('all')
@@ -265,9 +299,13 @@ function AdminArticlesPage() {
   }
 
   const openCreateForm = () => {
+    const currentAdminId = getCurrentUser()?.id ?? ''
+    const defaultAuthorId = authors.some((author) => author.id === currentAdminId)
+      ? currentAdminId
+      : (authors.find((author) => author.status === 'HOAT_DONG')?.id ?? authors[0]?.id ?? '')
     setEditingArticle(null)
     setSelectedImageName('')
-    setForm(emptyForm)
+    setForm({ ...emptyForm, authorId: defaultAuthorId })
     setIsFormOpen(true)
   }
 
@@ -281,7 +319,7 @@ function AdminArticlesPage() {
       lead: article.lead,
       content: article.content,
       image: article.image,
-      author: article.author,
+      authorId: article.authorId,
       status: article.status,
       publishedAt: toDateTimeLocalValue(article.publishedAt),
       featured: article.featured,
@@ -339,6 +377,7 @@ function AdminArticlesPage() {
           sections: buildArticleSections(form.content),
         }),
         imageUrl: normalizeArticleImagePath(form.image), featured: form.featured,
+        authorId: form.authorId,
         status: form.status === 'published' ? 'DA_DANG' : 'NHAP',
         publishedAt: toDatabaseDateTime(form.publishedAt),
       }
@@ -420,7 +459,7 @@ function AdminArticlesPage() {
               <div className="admin-article-form-grid">
                 <label className="is-wide"><span>Tiêu đề bài viết *</span><input required maxLength={180} value={form.title} onChange={(event) => updateField('title', event.target.value)} /></label>
                 <label><span>Danh mục *</span><select required value={form.category} onChange={(event) => updateField('category', event.target.value)}>{articleCategories.map((category) => <option value={category} key={category}>{category}</option>)}</select></label>
-                <label><span>Tác giả</span><input value={form.author} readOnly /></label>
+                <label><span>Tác giả *</span><select required value={form.authorId} onChange={(event) => updateField('authorId', event.target.value)}><option value="" disabled>Chọn tác giả</option>{authors.map((author) => <option value={author.id} key={author.id}>{author.name} — {author.email}{author.status === 'BI_KHOA' ? ' (đã khóa)' : ''}</option>)}</select></label>
                 <label><span>Trạng thái *</span><select value={form.status} onChange={(event) => updateField('status', event.target.value as ArticleStatus)}><option value="published">Đã đăng</option><option value="draft">Bản nháp</option></select></label>
                 <label><span>Ngày đăng *</span><input required type="datetime-local" value={form.publishedAt} onChange={(event) => updateField('publishedAt', event.target.value)} /></label>
                 <label className="is-wide"><span>Ảnh đại diện *</span><div className="admin-article-image-field"><div className="admin-article-image-preview">{form.image ? <img src={form.image} alt="Ảnh xem trước" /> : <AdminIcon name="upload" />}</div><div><div className="admin-article-image-input"><input required placeholder="/images/... hoặc đường dẫn ảnh" value={form.image} onChange={(event) => { updateField('image', event.target.value); setSelectedImageName('') }} /><button type="button" disabled={isImageUploading} onClick={() => imageFileInputRef.current?.click()}><AdminIcon name="upload" />{isImageUploading ? 'Đang tải ảnh...' : 'Chọn ảnh từ máy'}</button><input ref={imageFileInputRef} className="admin-article-hidden-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" tabIndex={-1} onChange={handleImageFileChange} /></div><small>{isImageUploading ? 'Đang tải ảnh lên máy chủ...' : selectedImageName ? `Đã tải lên: ${selectedImageName}` : 'Ảnh ngang, dung lượng tối đa 5MB.'}</small></div></div></label>

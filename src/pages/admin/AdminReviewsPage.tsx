@@ -63,7 +63,7 @@ function AdminReviewsPage() {
     try {
       const data = await api.get<{ items: Array<Record<string, any>> }>('/admin/reviews?limit=100')
       setReviews(data.items.map((item) => ({
-        id: String(item.id), orderId: '', productId: String(item.productId), userId: String(item.userId),
+        id: String(item.id), orderId: String(item.orderCode || ''), productId: String(item.productId), userId: String(item.userId),
         userName: String(item.userName), rating: Number(item.rating), comment: String(item.content || ''),
         createdAt: String(item.createdAt),
         status: item.status === 'DA_DUYET' ? 'approved' : item.status === 'TU_CHOI' ? 'hidden' : 'pending',
@@ -208,7 +208,7 @@ function AdminReviewsPage() {
               const product = getProduct(review.productId)
               const status = statusMeta[review.status]
               return <tr key={review.id}>
-                <td><div className="admin-review-customer-cell"><span>{getInitials(review.userName)}</span><div><strong>{review.userName}{review.verifiedPurchase ? <em>Đã mua hàng</em> : null}</strong><p>{review.comment || 'Khách hàng không để lại nội dung.'}</p><small>Đơn hàng: {review.orderId}</small></div></div></td>
+                <td><div className="admin-review-customer-cell"><span>{getInitials(review.userName)}</span><div><strong>{review.userName}{review.verifiedPurchase ? <em>Đã mua hàng</em> : null}</strong><p>{review.comment || 'Khách hàng không để lại nội dung.'}</p>{review.orderId ? <small>Đơn hàng: {review.orderId}</small> : null}</div></div></td>
                 <td><div className="admin-review-product-cell">{product ? <img src={product.image} alt="" /> : <span><AdminIcon name="products" /></span>}<div><strong>{product?.name ?? 'Sản phẩm không còn tồn tại'}</strong><small>{product?.category ?? 'Chưa xác định'}</small></div></div></td>
                 <td><div className="admin-review-rating"><RatingStars rating={review.rating} /><strong>{review.rating}.0</strong></div></td>
                 <td><span className={`admin-review-status is-${status.tone}`}><i />{status.label}</span></td>
@@ -233,7 +233,7 @@ function AdminReviewsPage() {
                 <div className="admin-review-detail-rating"><RatingStars rating={selectedReview.rating} /><strong>{selectedReview.rating}/5</strong></div>
               </div>
               <blockquote>{selectedReview.comment || 'Khách hàng không để lại nội dung.'}</blockquote>
-              <div className="admin-review-detail-product">{getProduct(selectedReview.productId) ? <img src={getProduct(selectedReview.productId)?.image} alt="" /> : null}<div><span>SẢN PHẨM ĐƯỢC ĐÁNH GIÁ</span><strong>{getProduct(selectedReview.productId)?.name ?? 'Sản phẩm không còn tồn tại'}</strong><small>Mã đơn: {selectedReview.orderId}</small></div></div>
+              <div className="admin-review-detail-product">{getProduct(selectedReview.productId) ? <img src={getProduct(selectedReview.productId)?.image} alt="" /> : null}<div><span>SẢN PHẨM ĐƯỢC ĐÁNH GIÁ</span><strong>{getProduct(selectedReview.productId)?.name ?? 'Sản phẩm không còn tồn tại'}</strong>{selectedReview.orderId ? <small>Mã đơn: {selectedReview.orderId}</small> : null}</div></div>
               <div className="admin-review-moderation-form">
                 <label><span>Trạng thái hiển thị</span><select value={draftStatus} onChange={(event) => setDraftStatus(event.target.value as ReviewModerationStatus)}><option value="pending">Chờ duyệt</option><option value="approved">Duyệt và hiển thị</option><option value="hidden">Ẩn khỏi cửa hàng</option></select></label>
                 <label><span>Phản hồi của cửa hàng</span><textarea rows={5} maxLength={500} value={draftReply} onChange={(event) => setDraftReply(event.target.value)} placeholder="Nhập lời cảm ơn hoặc hỗ trợ khách hàng..." /><small>{draftReply.length}/500 ký tự</small></label>

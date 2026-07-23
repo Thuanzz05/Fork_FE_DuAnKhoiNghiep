@@ -11,6 +11,8 @@ import './ProductDetailPage.css'
 
 type DetailTab = 'details' | 'brand' | 'returns'
 
+const INITIAL_VISIBLE_REVIEWS = 3
+
 const getReviewerInitials = (name: string) => name
   .trim()
   .split(/\s+/)
@@ -47,6 +49,7 @@ function ProductDetailPage() {
   const [detailPromotions, setDetailPromotions] = useState<CatalogPromotion[]>([])
   const [wishlistToastOpen, setWishlistToastOpen] = useState(false)
   const [productReviews, setProductReviews] = useState<ProductReview[]>([])
+  const [showAllReviews, setShowAllReviews] = useState(false)
   const storeSettings = useStoreSettings()
 
   useEffect(() => {
@@ -54,6 +57,7 @@ function ProductDetailPage() {
     setActiveImage(product.gallery?.[0] || product.image)
     setQuantity(1)
     setActiveTab('details')
+    setShowAllReviews(false)
   }, [product])
 
   useEffect(() => {
@@ -94,6 +98,9 @@ function ProductDetailPage() {
   const averageRating = productReviews.length
     ? productReviews.reduce((total, review) => total + review.rating, 0) / productReviews.length
     : 0
+  const visibleProductReviews = showAllReviews
+    ? productReviews
+    : productReviews.slice(0, INITIAL_VISIBLE_REVIEWS)
 
   const changeGalleryImage = (direction: 'previous' | 'next') => {
     const currentIndex = Math.max(0, gallery.indexOf(activeImage))
@@ -337,30 +344,48 @@ function ProductDetailPage() {
           </aside>
 
           <div className="product-review-list">
-            {productReviews.length > 0 ? productReviews.map((review) => (
-              <article className="product-review-card" key={review.id}>
-                <div className="reviewer-avatar" aria-hidden="true">{getReviewerInitials(review.userName)}</div>
-                <div className="product-review-content">
-                  <div className="product-review-topline">
-                    <div>
-                      <strong>{review.userName}</strong>
-                      {review.verifiedPurchase ? <span>Đã mua hàng</span> : null}
-                    </div>
-                    <time dateTime={review.createdAt}>{formatReviewDate(review.createdAt)}</time>
-                  </div>
-                  <ReviewStars rating={review.rating} />
-                  <p>{review.comment}</p>
+            {productReviews.length > 0 ? (
+              <>
+                {visibleProductReviews.map((review) => (
+                  <article className="product-review-card" key={review.id}>
+                    <div className="reviewer-avatar" aria-hidden="true">{getReviewerInitials(review.userName)}</div>
+                    <div className="product-review-content">
+                      <div className="product-review-topline">
+                        <div>
+                          <strong>{review.userName}</strong>
+                          {review.verifiedPurchase ? <span>Đã mua hàng</span> : null}
+                        </div>
+                        <time dateTime={review.createdAt}>{formatReviewDate(review.createdAt)}</time>
+                      </div>
+                      <ReviewStars rating={review.rating} />
+                      <p>{review.comment}</p>
 
-                  {review.reply ? (
-                    <div className="store-review-reply">
-                      <strong>Phản hồi từ {storeSettings.storeName}</strong>
-                      <p>{review.reply}</p>
-                      {review.replyAt ? <time dateTime={review.replyAt}>{formatReviewDate(review.replyAt)}</time> : null}
+                      {review.reply ? (
+                        <div className="store-review-reply">
+                          <strong>Phản hồi từ {storeSettings.storeName}</strong>
+                          <p>{review.reply}</p>
+                          {review.replyAt ? <time dateTime={review.replyAt}>{formatReviewDate(review.replyAt)}</time> : null}
+                        </div>
+                      ) : null}
                     </div>
-                  ) : null}
-                </div>
-              </article>
-            )) : (
+                  </article>
+                ))}
+
+                {productReviews.length > INITIAL_VISIBLE_REVIEWS ? (
+                  <div className="product-review-list-actions">
+                    <button
+                      type="button"
+                      className="product-review-toggle"
+                      aria-expanded={showAllReviews}
+                      onClick={() => setShowAllReviews((current) => !current)}
+                    >
+                      {showAllReviews ? 'Thu gọn đánh giá' : `Xem tất cả ${productReviews.length} đánh giá`}
+                      <span aria-hidden="true">{showAllReviews ? '↑' : '↓'}</span>
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            ) : (
               <div className="product-reviews-empty">
                 <strong>Chưa có đánh giá được duyệt</strong>
                 <p>Đánh giá từ khách hàng đã mua sản phẩm sẽ xuất hiện tại đây sau khi được cửa hàng xác nhận.</p>

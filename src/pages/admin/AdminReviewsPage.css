@@ -178,6 +178,7 @@
 .admin-reviews-table {
   width: 100%;
   min-width: 1190px;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 12px;
 }
@@ -208,12 +209,39 @@
 
 .admin-reviews-table th:first-child,
 .admin-reviews-table td:first-child {
-  width: 34%;
+  width: 30%;
+}
+
+.admin-reviews-table th:nth-child(2),
+.admin-reviews-table td:nth-child(2) {
+  width: 22%;
+}
+
+.admin-reviews-table th:nth-child(3),
+.admin-reviews-table td:nth-child(3) {
+  width: 9%;
+}
+
+.admin-reviews-table th:nth-child(4),
+.admin-reviews-table td:nth-child(4),
+.admin-reviews-table th:nth-child(5),
+.admin-reviews-table td:nth-child(5) {
+  width: 10%;
+}
+
+.admin-reviews-table th:nth-child(6),
+.admin-reviews-table td:nth-child(6) {
+  width: 9%;
+}
+
+.admin-reviews-table th:nth-child(7),
+.admin-reviews-table td:nth-child(7) {
+  width: 10%;
 }
 
 .admin-review-customer-cell {
   display: flex;
-  min-width: 345px;
+  min-width: 0;
   align-items: flex-start;
   gap: 10px;
 }
@@ -261,7 +289,7 @@
 .admin-review-customer-cell p {
   display: -webkit-box;
   overflow: hidden;
-  max-width: 350px;
+  max-width: 300px;
   margin: 0;
   color: #716667;
   font-size: 11px;
@@ -277,7 +305,7 @@
 
 .admin-review-product-cell {
   display: flex;
-  min-width: 210px;
+  min-width: 0;
   align-items: center;
   gap: 9px;
 }
