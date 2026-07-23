@@ -290,15 +290,15 @@ function AdminAccountsPage() {
       {isFormOpen ? (
         <div className="admin-account-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setIsFormOpen(false)}>
           <section className="admin-account-modal" role="dialog" aria-modal="true" aria-labelledby="admin-account-modal-title">
-            <header><div><span>{editingAccount ? editingAccount.id : 'TÀI KHOẢN MỚI'}</span><h2 id="admin-account-modal-title">{editingAccount ? 'Chỉnh sửa tài khoản' : 'Thêm tài khoản'}</h2></div><button type="button" onClick={() => setIsFormOpen(false)} aria-label="Đóng"><AdminIcon name="close" /></button></header>
+            <header><div><h2 id="admin-account-modal-title">{editingAccount ? 'Chỉnh sửa tài khoản' : 'Thêm tài khoản'}</h2></div><button type="button" onClick={() => setIsFormOpen(false)} aria-label="Đóng"><AdminIcon name="close" /></button></header>
             <form onSubmit={handleSubmit}>
               <div className="admin-account-form-grid">
-                <label><span>Họ và tên đệm *</span><input required value={form.lastName} onChange={(event) => updateField('lastName', event.target.value)} /></label>
-                <label><span>Tên *</span><input required value={form.firstName} onChange={(event) => updateField('firstName', event.target.value)} /></label>
-                <label><span>Email *</span><input required type="email" value={form.email} onChange={(event) => updateField('email', event.target.value)} /></label>
-                <label><span>Số điện thoại *</span><input required type="tel" pattern="[0-9]{9,11}" value={form.phone} onChange={(event) => updateField('phone', event.target.value)} /></label>
-                <label><span>Vai trò *</span><select value={form.role} onChange={(event) => updateField('role', event.target.value as AccountRole)}><option value="customer">Khách hàng</option><option value="admin">Quản trị viên</option></select></label>
-                <label><span>Trạng thái *</span><select value={form.status} onChange={(event) => updateField('status', event.target.value as AccountStatus)}><option value="active">Hoạt động</option><option value="locked">Đã khóa</option></select></label>
+                <label><span>Họ và tên đệm</span><input value={form.lastName} onChange={(event) => updateField('lastName', event.target.value)} /></label>
+                <label><span>Tên</span><input value={form.firstName} onChange={(event) => updateField('firstName', event.target.value)} /></label>
+                <label><span>Email</span><input type="email" value={form.email} onChange={(event) => updateField('email', event.target.value)} /></label>
+                <label><span>Số điện thoại</span><input type="tel" pattern="[0-9]{9,11}" value={form.phone} onChange={(event) => updateField('phone', event.target.value)} /></label>
+                <label><span>Vai trò</span><select value={form.role} onChange={(event) => updateField('role', event.target.value as AccountRole)}><option value="customer">Khách hàng</option><option value="admin">Quản trị viên</option></select></label>
+                <label><span>Trạng thái</span><select value={form.status} onChange={(event) => updateField('status', event.target.value as AccountStatus)}><option value="active">Hoạt động</option><option value="locked">Đã khóa</option></select></label>
                 {!editingAccount ? <label className="is-wide"><span>Mật khẩu tạm thời *</span><input required type="password" minLength={6} value={form.password} onChange={(event) => updateField('password', event.target.value)} /></label> : null}
                 <label className="is-wide"><span>Đường dẫn avatar</span><input placeholder="Để trống để dùng avatar chữ cái" value={form.avatar} onChange={(event) => updateField('avatar', event.target.value)} /></label>
               </div>
