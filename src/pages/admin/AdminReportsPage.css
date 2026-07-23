@@ -215,6 +215,10 @@
   fill: #3f8d70;
 }
 
+.admin-report-bar.is-profit.is-loss {
+  fill: #d36a42;
+}
+
 .admin-report-bar-group:hover .admin-report-bar {
   opacity: .76;
 }
@@ -493,12 +497,12 @@
   height: 11px;
 }
 
-.admin-report-change.is-down {
+.admin-report-change.is-unfavorable {
   background: #fae8e9;
   color: #a62f38;
 }
 
-.admin-report-change.is-down svg {
+.admin-report-change.is-decrease svg {
   transform: rotate(180deg);
 }
 

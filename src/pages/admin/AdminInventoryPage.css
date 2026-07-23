@@ -239,7 +239,7 @@
 }
 
 .admin-inventory-voucher-table {
-  min-width: 1080px;
+  min-width: 1220px;
 }
 
 .admin-inventory-stock-table th,
@@ -344,7 +344,8 @@
 }
 
 .admin-inventory-status,
-.admin-inventory-voucher-type {
+.admin-inventory-voucher-type,
+.admin-inventory-voucher-status {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -362,11 +363,23 @@
   background: currentColor;
 }
 
+.admin-inventory-voucher-status i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
 .admin-inventory-status.is-good { background: #e5f4ec; color: #177950; }
 .admin-inventory-status.is-low { background: #fff0dc; color: #a85a10; }
 .admin-inventory-status.is-out { background: #f8e5e7; color: #a52d36; }
 .admin-inventory-voucher-type.is-in { background: #e5f4ec; color: #177950; }
-.admin-inventory-voucher-type.is-out { background: #f8e5e7; color: #a52d36; }
+.admin-inventory-voucher-type.is-sale { background: #e8eff9; color: #356da5; }
+.admin-inventory-voucher-type.is-waste { background: #f8e5e7; color: #a52d36; }
+.admin-inventory-voucher-type.is-other { background: #f2eded; color: #665b5c; }
+.admin-inventory-voucher-status.is-completed { background: #e5f4ec; color: #177950; }
+.admin-inventory-voucher-status.is-draft { background: #fff0dc; color: #a85a10; }
+.admin-inventory-voucher-status.is-cancelled { background: #f2eded; color: #827677; }
 
 .admin-inventory-view-button {
   display: grid;
@@ -414,7 +427,8 @@
 }
 
 .admin-inventory-voucher-modal,
-.admin-inventory-detail-modal {
+.admin-inventory-detail-modal,
+.admin-inventory-supplier-modal {
   display: grid;
   width: min(900px, 100%);
   max-height: calc(100vh - 40px);
@@ -429,8 +443,18 @@
   width: min(760px, 100%);
 }
 
+.admin-inventory-supplier-backdrop {
+  z-index: 110;
+  background: rgba(35, 24, 25, .68);
+}
+
+.admin-inventory-supplier-modal {
+  width: min(640px, 100%);
+}
+
 .admin-inventory-voucher-modal > header,
-.admin-inventory-detail-modal > header {
+.admin-inventory-detail-modal > header,
+.admin-inventory-supplier-modal > header {
   display: flex;
   min-height: 72px;
   align-items: center;
@@ -448,8 +472,16 @@
   letter-spacing: .8px;
 }
 
+.admin-inventory-supplier-modal > header span {
+  color: var(--admin-brand);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .8px;
+}
+
 .admin-inventory-voucher-modal h2,
-.admin-inventory-detail-modal h2 {
+.admin-inventory-detail-modal h2,
+.admin-inventory-supplier-modal h2 {
   margin: 3px 0 0;
   color: #302627;
   font-size: 20px;
@@ -460,8 +492,16 @@
   font-size: 10px;
 }
 
+.admin-inventory-supplier-modal > header small {
+  display: block;
+  margin-top: 3px;
+  color: #958a8b;
+  font-size: 9px;
+}
+
 .admin-inventory-voucher-modal > header button,
-.admin-inventory-detail-modal > header button {
+.admin-inventory-detail-modal > header button,
+.admin-inventory-supplier-modal > header button {
   display: grid;
   width: 34px;
   height: 34px;
@@ -473,13 +513,15 @@
 }
 
 .admin-inventory-voucher-modal > header button:hover,
-.admin-inventory-detail-modal > header button:hover {
+.admin-inventory-detail-modal > header button:hover,
+.admin-inventory-supplier-modal > header button:hover {
   background: #f2e4e5;
   color: var(--admin-brand);
 }
 
 .admin-inventory-voucher-modal > header svg,
-.admin-inventory-detail-modal > header svg {
+.admin-inventory-detail-modal > header svg,
+.admin-inventory-supplier-modal > header svg {
   width: 17px;
 }
 
@@ -530,6 +572,38 @@
   grid-column: 1 / -1;
 }
 
+.admin-inventory-supplier-field {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+
+.admin-inventory-supplier-field > button {
+  display: inline-flex;
+  height: 39px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  border: 1px solid #d9c9ca;
+  border-radius: 6px;
+  background: #fff8f8;
+  color: var(--admin-brand);
+  font-size: 9px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.admin-inventory-supplier-field > button:hover {
+  border-color: #c9868c;
+  background: #fbedee;
+}
+
+.admin-inventory-supplier-field > button svg {
+  width: 13px;
+}
+
 .admin-inventory-voucher-form-head label span,
 .admin-inventory-voucher-lines label span,
 .admin-inventory-voucher-lines article > div span {
@@ -539,6 +613,7 @@
 }
 
 .admin-inventory-voucher-form-head input,
+.admin-inventory-voucher-form-head select,
 .admin-inventory-voucher-lines input,
 .admin-inventory-voucher-lines select {
   width: 100%;
@@ -553,10 +628,86 @@
 }
 
 .admin-inventory-voucher-form-head input:focus,
+.admin-inventory-voucher-form-head select:focus,
 .admin-inventory-voucher-lines input:focus,
 .admin-inventory-voucher-lines select:focus {
   border-color: #cf9297;
   box-shadow: 0 0 0 3px rgba(181, 55, 64, .07);
+}
+
+.admin-inventory-supplier-modal form {
+  overflow-y: auto;
+}
+
+.admin-inventory-supplier-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+  padding: 18px 20px;
+}
+
+.admin-inventory-supplier-grid label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-inventory-supplier-grid label.is-wide {
+  grid-column: 1 / -1;
+}
+
+.admin-inventory-supplier-grid label span {
+  color: #655a5b;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.admin-inventory-supplier-grid input,
+.admin-inventory-supplier-grid select,
+.admin-inventory-supplier-grid textarea {
+  width: 100%;
+  padding: 0 10px;
+  border: 1px solid #ded5d6;
+  border-radius: 6px;
+  outline: 0;
+  background: #ffffff;
+  color: #443a3b;
+  font: inherit;
+  font-size: 11px;
+}
+
+.admin-inventory-supplier-grid input,
+.admin-inventory-supplier-grid select {
+  height: 39px;
+}
+
+.admin-inventory-supplier-grid textarea {
+  min-height: 76px;
+  padding-top: 10px;
+  resize: vertical;
+}
+
+.admin-inventory-supplier-grid input:focus,
+.admin-inventory-supplier-grid select:focus,
+.admin-inventory-supplier-grid textarea:focus {
+  border-color: #cf9297;
+  box-shadow: 0 0 0 3px rgba(181, 55, 64, .07);
+}
+
+.admin-inventory-supplier-modal form > footer {
+  display: flex;
+  min-height: 66px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--admin-border);
+}
+
+.admin-inventory-supplier-modal form > footer button:disabled {
+  cursor: wait;
+  opacity: .6;
 }
 
 .admin-inventory-voucher-lines {
@@ -884,6 +1035,19 @@
   }
 
   .admin-inventory-voucher-form-head label.is-wide {
+    grid-column: auto;
+  }
+
+  .admin-inventory-supplier-field {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-inventory-supplier-grid {
+    grid-template-columns: 1fr;
+    padding: 15px;
+  }
+
+  .admin-inventory-supplier-grid label.is-wide {
     grid-column: auto;
   }
 

@@ -8,6 +8,10 @@ type ReportPeriod = 'week' | 'month' | 'quarter' | 'year'
 
 interface ReportStats {
   revenue: number
+  netRevenue: number
+  costOfGoodsSold: number
+  grossProfit: number
+  grossMargin: number
   orders: number
   customers: number
   units_sold: number
@@ -15,6 +19,9 @@ interface ReportStats {
 
 interface ReportChanges {
   revenue: number
+  netRevenue: number
+  costOfGoodsSold: number
+  grossProfit: number
   orders: number
   customers: number
   unitsSold: number
@@ -23,6 +30,10 @@ interface ReportChanges {
 interface RevenuePoint {
   bucket: number
   revenue: number
+  netRevenue: number
+  costOfGoodsSold: number
+  grossProfit: number
+  grossMargin: number
 }
 
 interface OrderStatusStats {
@@ -64,9 +75,9 @@ interface ReportData {
 }
 
 const emptyPeriod: ReportPeriodData = {
-  stats: { revenue: 0, orders: 0, customers: 0, units_sold: 0 },
-  previousStats: { revenue: 0, orders: 0, customers: 0, units_sold: 0 },
-  changes: { revenue: 0, orders: 0, customers: 0, unitsSold: 0 },
+  stats: { revenue: 0, netRevenue: 0, costOfGoodsSold: 0, grossProfit: 0, grossMargin: 0, orders: 0, customers: 0, units_sold: 0 },
+  previousStats: { revenue: 0, netRevenue: 0, costOfGoodsSold: 0, grossProfit: 0, grossMargin: 0, orders: 0, customers: 0, units_sold: 0 },
+  changes: { revenue: 0, netRevenue: 0, costOfGoodsSold: 0, grossProfit: 0, orders: 0, customers: 0, unitsSold: 0 },
   revenueSeries: [],
   orderStatus: { total: 0, completed: 0, processing: 0, pending: 0, cancelled: 0 },
   bestSellingProducts: [],
@@ -101,6 +112,7 @@ const orderStatusColors: Record<string, string> = {
 }
 
 const formatMoney = (value: number) => `${Math.round(Number(value || 0)).toLocaleString('vi-VN')}đ`
+const formatProfit = (value: number) => value < 0 ? `Lỗ ${formatMoney(Math.abs(value))}` : `Lãi ${formatMoney(value)}`
 
 const estimatePreviousValue = (current: number, change: number) => {
   if (current === 0 || change === 100 || change <= -100) return 0
@@ -165,6 +177,10 @@ function AdminReportsPage() {
   const report = data?.periods?.[period] ?? emptyPeriod
   const previousStats = report.previousStats ?? {
     revenue: estimatePreviousValue(report.stats.revenue, report.changes.revenue),
+    netRevenue: estimatePreviousValue(report.stats.netRevenue, report.changes.netRevenue),
+    costOfGoodsSold: estimatePreviousValue(report.stats.costOfGoodsSold, report.changes.costOfGoodsSold),
+    grossProfit: estimatePreviousValue(report.stats.grossProfit, report.changes.grossProfit),
+    grossMargin: 0,
     orders: estimatePreviousValue(report.stats.orders, report.changes.orders),
     customers: estimatePreviousValue(report.stats.customers, report.changes.customers),
     units_sold: estimatePreviousValue(report.stats.units_sold, report.changes.unitsSold),
@@ -173,11 +189,12 @@ function AdminReportsPage() {
   const comparison = periodComparison[period]
 
   const revenueSeries = useMemo(() => {
-    const values = new Map(report.revenueSeries.map((item) => [item.bucket, item.revenue]))
+    const values = new Map(report.revenueSeries.map((item) => [item.bucket, item]))
     return Array.from({ length: bucketCount[period] }, (_, index) => ({
       bucket: index + 1,
       label: getBucketLabel(period, index + 1),
-      revenue: values.get(index + 1) ?? 0,
+      netRevenue: values.get(index + 1)?.netRevenue ?? 0,
+      grossProfit: values.get(index + 1)?.grossProfit ?? 0,
     }))
   }, [period, report.revenueSeries])
 
@@ -188,10 +205,14 @@ function AdminReportsPage() {
     change: number
     icon: AdminIconName
     tone: string
+    changeSuffix?: string
+    inverseTrend?: boolean
   }> = [
-    { label: 'Doanh thu đã giao', current: formatMoney(report.stats.revenue), previous: formatMoney(previousStats.revenue), change: report.changes.revenue, icon: 'revenue', tone: 'red' },
+    { label: 'Doanh thu thuần', current: formatMoney(report.stats.netRevenue), previous: formatMoney(previousStats.netRevenue), change: report.changes.netRevenue, icon: 'revenue', tone: 'red' },
+    { label: 'Giá vốn hàng bán', current: formatMoney(report.stats.costOfGoodsSold), previous: formatMoney(previousStats.costOfGoodsSold), change: report.changes.costOfGoodsSold, inverseTrend: true, icon: 'box', tone: 'orange' },
+    { label: 'Lãi / lỗ gộp', current: formatProfit(report.stats.grossProfit), previous: formatProfit(previousStats.grossProfit), change: report.changes.grossProfit, icon: 'report', tone: report.stats.grossProfit < 0 ? 'red' : 'green' },
+    { label: 'Tỷ suất lãi gộp', current: `${report.stats.grossMargin.toLocaleString('vi-VN')}%`, previous: `${previousStats.grossMargin.toLocaleString('vi-VN')}%`, change: Math.round((report.stats.grossMargin - previousStats.grossMargin) * 10) / 10, changeSuffix: ' điểm %', icon: 'revenue', tone: report.stats.grossMargin < 0 ? 'red' : 'green' },
     { label: 'Đơn hàng phát sinh', current: report.stats.orders.toLocaleString('vi-VN'), previous: previousStats.orders.toLocaleString('vi-VN'), change: report.changes.orders, icon: 'orders', tone: 'blue' },
-    { label: 'Khách hàng mới', current: report.stats.customers.toLocaleString('vi-VN'), previous: previousStats.customers.toLocaleString('vi-VN'), change: report.changes.customers, icon: 'customers', tone: 'green' },
     { label: 'Sản phẩm đã bán', current: report.stats.units_sold.toLocaleString('vi-VN'), previous: previousStats.units_sold.toLocaleString('vi-VN'), change: report.changes.unitsSold, icon: 'box', tone: 'orange' },
   ]
 
@@ -207,13 +228,16 @@ function AdminReportsPage() {
     }
   })
 
-  const maxChartValue = Math.max(...revenueSeries.map((item) => item.revenue), 1)
-  const chartMaximum = Math.max(Math.ceil(maxChartValue / 1000) * 1000, 1000)
+  const chartMaximum = Math.max(Math.ceil(Math.max(...revenueSeries.map((item) => Math.max(item.netRevenue, item.grossProfit)), 1) / 1000) * 1000, 1000)
+  const chartMinimum = Math.min(Math.floor(Math.min(...revenueSeries.map((item) => item.grossProfit), 0) / 1000) * 1000, 0)
+  const chartRange = Math.max(chartMaximum - chartMinimum, 1)
   const plotWidth = chartWidth - chartPadding.left - chartPadding.right
   const plotHeight = chartHeight - chartPadding.top - chartPadding.bottom
   const groupWidth = plotWidth / Math.max(revenueSeries.length, 1)
-  const barWidth = Math.min(58, groupWidth * 0.48)
-  const ticks = Array.from({ length: 5 }, (_, index) => (chartMaximum / 4) * index)
+  const barWidth = Math.min(28, groupWidth * 0.24)
+  const ticks = Array.from({ length: 5 }, (_, index) => chartMinimum + (chartRange / 4) * index)
+  const chartY = (value: number) => chartPadding.top + ((chartMaximum - value) / chartRange) * plotHeight
+  const zeroY = chartY(0)
   const totalUnits = report.bestSellingProducts.reduce((sum, item) => sum + item.sold, 0)
 
   const exportCsv = () => {
@@ -225,8 +249,8 @@ function AdminReportsPage() {
       ['Chỉ số', 'Kỳ hiện tại', 'Kỳ trước', 'Thay đổi (%)'],
       ...comparisonRows.map((item) => [item.label, item.current, item.previous, item.change]),
       [],
-      ['Mốc thời gian', 'Doanh thu'],
-      ...revenueSeries.map((item) => [item.label, item.revenue]),
+      ['Mốc thời gian', 'Doanh thu thuần', 'Lãi / lỗ gộp'],
+      ...revenueSeries.map((item) => [item.label, item.netRevenue, item.grossProfit]),
       [],
       ['Trạng thái đơn hàng', 'Số lượng', 'Tỷ lệ (%)'],
       ...statusRows.map((item) => [item.label, item.count, item.share]),
@@ -315,8 +339,8 @@ function AdminReportsPage() {
                   </div>
                   <strong role="cell">{item.current}</strong>
                   <span role="cell">{item.previous}</span>
-                  <span role="cell" className={`admin-report-change${item.change < 0 ? ' is-down' : item.change === 0 ? ' is-neutral' : ''}`}>
-                    <AdminIcon name="arrowUp" />{Math.abs(item.change).toLocaleString('vi-VN')}%
+                  <span role="cell" className={`admin-report-change${item.change === 0 ? ' is-neutral' : ''}${item.change < 0 ? ' is-decrease' : ''}${item.inverseTrend ? item.change > 0 ? ' is-unfavorable' : '' : item.change < 0 ? ' is-unfavorable' : ''}`}>
+                    <AdminIcon name="arrowUp" />{Math.abs(item.change).toLocaleString('vi-VN')}{item.changeSuffix ?? '%'}
                   </span>
                 </div>
               ))}
@@ -326,13 +350,13 @@ function AdminReportsPage() {
           <section className="admin-reports-main-grid">
             <article className="admin-panel admin-report-chart-panel">
               <div className="admin-panel-header">
-                <div><h2>Doanh thu theo thời gian</h2><p>{periodLabel} · Chỉ tính đơn đã giao</p></div>
-                <div className="admin-report-legend"><span><i className="is-revenue" />Doanh thu</span></div>
+                <div><h2>Doanh thu và lãi gộp</h2><p>{periodLabel} · Chỉ tính đơn đã giao</p></div>
+                <div className="admin-report-legend"><span><i className="is-revenue" />Doanh thu thuần</span><span><i className="is-profit" />Lãi / lỗ gộp</span></div>
               </div>
-              <div className="admin-report-chart" role="img" aria-label={`Biểu đồ doanh thu ${periodLabel.toLowerCase()}`}>
+              <div className="admin-report-chart" role="img" aria-label={`Biểu đồ doanh thu thuần và lãi gộp ${periodLabel.toLowerCase()}`}>
                 <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
                   {ticks.map((tick) => {
-                    const y = chartPadding.top + plotHeight - (tick / chartMaximum) * plotHeight
+                    const y = chartY(tick)
                     return (
                       <g key={tick}>
                         <line x1={chartPadding.left} y1={y} x2={chartWidth - chartPadding.right} y2={y} className="admin-report-gridline" />
@@ -342,11 +366,15 @@ function AdminReportsPage() {
                   })}
                   {revenueSeries.map((item, index) => {
                     const centerX = chartPadding.left + groupWidth * index + groupWidth / 2
-                    const height = (item.revenue / chartMaximum) * plotHeight
+                    const revenueY = chartY(item.netRevenue)
+                    const profitY = chartY(item.grossProfit)
                     return (
                       <g key={item.bucket} className="admin-report-bar-group">
-                        <rect x={centerX - barWidth / 2} y={chartPadding.top + plotHeight - height} width={barWidth} height={height} rx="5" className="admin-report-bar is-revenue">
-                          <title>{`${item.label}: ${formatMoney(item.revenue)}`}</title>
+                        <rect x={centerX - barWidth - 2} y={Math.min(revenueY, zeroY)} width={barWidth} height={Math.abs(zeroY - revenueY)} rx="4" className="admin-report-bar is-revenue">
+                          <title>{`${item.label} · Doanh thu thuần: ${formatMoney(item.netRevenue)}`}</title>
+                        </rect>
+                        <rect x={centerX + 2} y={Math.min(profitY, zeroY)} width={barWidth} height={Math.abs(zeroY - profitY)} rx="4" className={`admin-report-bar is-profit${item.grossProfit < 0 ? ' is-loss' : ''}`}>
+                          <title>{`${item.label} · ${formatProfit(item.grossProfit)}`}</title>
                         </rect>
                         <text x={centerX} y={chartPadding.top + plotHeight + 28} textAnchor="middle" className="admin-report-axis-label is-period">{item.label}</text>
                       </g>

@@ -5,6 +5,8 @@ import { getCartCount, getCartItems, refreshCartScope, syncCartFromApi } from '.
 import { getWishlistIds, refreshWishlistScope, syncWishlistFromApi } from '../utils/wishlist'
 import { getCurrentUser, getUserDisplayName, getUserInitial, logoutDemo } from '../utils/auth'
 import { useStoreSettings } from '../utils/storeSettings'
+import NotificationBell from './NotificationBell'
+import { disablePushNotifications } from '../services/notifications'
 import './Header.css'
 
 const menuItems = [
@@ -85,7 +87,8 @@ function Header() {
     return location.pathname.startsWith(path)
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await disablePushNotifications().catch(() => undefined)
     logoutDemo()
     setAccountMenuOpen(false)
     if (location.pathname.startsWith('/tai-khoan')) navigate('/tai-khoan?che-do=dang-nhap')
@@ -263,7 +266,7 @@ function Header() {
                     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
                     Đổi mật khẩu
                   </Link>
-                  <button role="menuitem" type="button" onClick={handleLogout}>
+                  <button role="menuitem" type="button" onClick={() => void handleLogout()}>
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5" /></svg>
                     Đăng xuất
                   </button>
@@ -282,6 +285,8 @@ function Header() {
               )}
             </div>
           </div>
+
+          {authUser && <NotificationBell variant="customer" />}
 
           <Link className="icon-button wishlist-button" to="/yeu-thich" aria-label="Sản phẩm yêu thích">
             <span className="count-badge">{wishlistCount}</span>
