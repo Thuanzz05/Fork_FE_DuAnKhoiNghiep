@@ -10,6 +10,16 @@ type PromotionType = 'percentage' | 'fixed' | 'shipping'
 type PromotionStatus = 'active' | 'scheduled' | 'expired' | 'disabled' | 'ended'
 type BackendPromotionStatus = 'HOAT_DONG' | 'TAM_DUNG' | 'HET_HAN'
 type PromotionSort = 'newest' | 'ending' | 'usage' | 'code'
+type PromotionScope = 'all' | 'selected'
+
+interface PromotionProduct {
+  id: string
+  name: string
+  productCode: string
+  sku: string
+  categoryName: string
+  status?: 'NHAP' | 'DANG_BAN' | 'TAM_AN' | 'NGUNG_BAN'
+}
 
 interface Promotion {
   id: string
@@ -21,6 +31,8 @@ interface Promotion {
   minimumOrder: number
   maximumDiscount?: number
   usageLimit: number
+  maximumUsesPerCustomer: number
+  productIds: string[]
   usedCount: number
   startDate: string
   endDate: string
@@ -31,12 +43,14 @@ interface Promotion {
 interface PromotionFormState {
   code: string
   name: string
-  description: string
   type: PromotionType
   value: string
   minimumOrder: string
   maximumDiscount: string
   usageLimit: string
+  maximumUsesPerCustomer: string
+  scope: PromotionScope
+  productIds: string[]
   startDate: string
   endDate: string
   enabled: boolean
@@ -63,12 +77,14 @@ const today = new Date().toISOString().slice(0, 10)
 const emptyForm: PromotionFormState = {
   code: '',
   name: '',
-  description: '',
   type: 'percentage',
   value: '',
   minimumOrder: '0',
   maximumDiscount: '',
   usageLimit: '100',
+  maximumUsesPerCustomer: '1',
+  scope: 'all',
+  productIds: [],
   startDate: today,
   endDate: '2026-12-31',
   enabled: true,
@@ -92,8 +108,35 @@ const formatPromotionValue = (promotion: Pick<Promotion, 'type' | 'value'>) => {
 
 const formatDate = (date: string) => new Date(`${date}T00:00:00`).toLocaleDateString('vi-VN')
 
+const buildPromotionDescription = (form: PromotionFormState) => {
+  const value = Number(form.value) || 0
+  const minimumOrder = Number(form.minimumOrder) || 0
+  const maximumDiscount = Number(form.maximumDiscount) || 0
+  const usageLimit = Number(form.usageLimit) || 0
+  const maximumUsesPerCustomer = Number(form.maximumUsesPerCustomer) || 1
+  const benefit = form.type === 'percentage'
+    ? `Giảm ${value}%`
+    : form.type === 'fixed'
+      ? `Giảm ${formatPrice(value)}`
+      : 'Miễn phí vận chuyển'
+  const conditions = [
+    benefit,
+    minimumOrder > 0 ? `Áp dụng cho đơn hàng từ ${formatPrice(minimumOrder)}` : 'Không yêu cầu giá trị đơn tối thiểu',
+    form.scope === 'selected'
+      ? `Áp dụng cho ${form.productIds.length} sản phẩm được chọn`
+      : 'Áp dụng cho tất cả sản phẩm',
+    `Mỗi khách hàng được sử dụng tối đa ${maximumUsesPerCustomer} lần`,
+  ]
+  if (form.type === 'percentage' && maximumDiscount > 0) conditions.push(`Mức giảm tối đa ${formatPrice(maximumDiscount)}`)
+  if (usageLimit > 0) conditions.push(`Tổng cộng ${usageLimit.toLocaleString('vi-VN')} lượt sử dụng`)
+  return `${conditions.join('. ')}.`
+}
+
 function AdminPromotionsPage() {
   const [promotions, setPromotions] = useState<Promotion[]>(emptyPromotions)
+  const [availableProducts, setAvailableProducts] = useState<PromotionProduct[]>([])
+  const [isProductListLoaded, setIsProductListLoaded] = useState(false)
+  const [productSearch, setProductSearch] = useState('')
   const [searchValue, setSearchValue] = useState('')
   const [typeFilter, setTypeFilter] = useState<'all' | PromotionType>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | PromotionStatus>('all')
@@ -113,7 +156,10 @@ function AdminPromotionsPage() {
         type: item.type === 'PHAN_TRAM' ? 'percentage' : item.type === 'MIEN_PHI_VAN_CHUYEN' ? 'shipping' : 'fixed',
         value: Number(item.value), minimumOrder: Number(item.minimumOrder),
         maximumDiscount: item.maximumDiscount == null ? undefined : Number(item.maximumDiscount),
-        usageLimit: Number(item.maximumUses || 0), usedCount: Number(item.usedCount || 0),
+        usageLimit: Number(item.maximumUses || 0),
+        maximumUsesPerCustomer: Number(item.maximumUsesPerCustomer || 1),
+        productIds: Array.isArray(item.productIds) ? item.productIds.map(String) : [],
+        usedCount: Number(item.usedCount || 0),
         startDate: String(item.startsAt).slice(0, 10), endDate: String(item.endsAt).slice(0, 10),
         enabled: item.status === 'HOAT_DONG',
         backendStatus: item.status === 'HOAT_DONG' ? 'HOAT_DONG' : item.status === 'HET_HAN' ? 'HET_HAN' : 'TAM_DUNG',
@@ -123,7 +169,33 @@ function AdminPromotionsPage() {
     }
   }
 
-  useEffect(() => { void loadPromotions() }, [])
+  const loadProducts = async () => {
+    try {
+      const rows = await api.get<PromotionProduct[]>('/admin/products')
+      setAvailableProducts(rows.filter((product) => product.status === 'DANG_BAN'))
+      setIsProductListLoaded(true)
+    } catch {
+      setAvailableProducts([])
+      setIsProductListLoaded(false)
+    }
+  }
+
+  useEffect(() => {
+    void loadPromotions()
+    void loadProducts()
+  }, [])
+
+  useEffect(() => {
+    if (!isFormOpen || !isProductListLoaded) return
+    const sellableProductIds = new Set(availableProducts.map((product) => product.id))
+    setForm((current) => {
+      if (current.scope !== 'selected') return current
+      const validProductIds = current.productIds.filter((id) => sellableProductIds.has(id))
+      return validProductIds.length === current.productIds.length
+        ? current
+        : { ...current, productIds: validProductIds }
+    })
+  }, [availableProducts, isFormOpen, isProductListLoaded])
 
   useEffect(() => {
     if (!notice) return
@@ -166,6 +238,15 @@ function AdminPromotionsPage() {
     })
   }, [promotions, searchValue, sortBy, statusFilter, typeFilter])
 
+  const filteredAvailableProducts = useMemo(() => {
+    const keyword = productSearch.trim().toLocaleLowerCase('vi-VN')
+    if (!keyword) return availableProducts
+    return availableProducts.filter((product) => [product.name, product.productCode, product.sku, product.categoryName]
+      .some((value) => value.toLocaleLowerCase('vi-VN').includes(keyword)))
+  }, [availableProducts, productSearch])
+
+  const generatedDescription = buildPromotionDescription(form)
+
   const { currentPage, totalPages, pageItems: paginatedPromotions, setCurrentPage } = usePagination(
     filteredPromotions,
     6,
@@ -178,7 +259,8 @@ function AdminPromotionsPage() {
 
   const openCreateForm = () => {
     setEditingPromotion(null)
-    setForm(emptyForm)
+    setForm({ ...emptyForm, productIds: [] })
+    setProductSearch('')
     setIsFormOpen(true)
   }
 
@@ -187,21 +269,42 @@ function AdminPromotionsPage() {
     setForm({
       code: promotion.code,
       name: promotion.name,
-      description: promotion.description,
       type: promotion.type,
       value: String(promotion.value),
       minimumOrder: String(promotion.minimumOrder),
       maximumDiscount: promotion.maximumDiscount ? String(promotion.maximumDiscount) : '',
       usageLimit: String(promotion.usageLimit),
+      maximumUsesPerCustomer: String(promotion.maximumUsesPerCustomer),
+      scope: promotion.productIds.length > 0 ? 'selected' : 'all',
+      productIds: [...promotion.productIds],
       startDate: promotion.startDate,
       endDate: promotion.endDate,
       enabled: promotion.enabled,
     })
+    setProductSearch('')
     setIsFormOpen(true)
   }
 
   const updateField = <K extends keyof PromotionFormState>(field: K, value: PromotionFormState[K]) => {
     setForm((current) => ({ ...current, [field]: value }))
+  }
+
+  const toggleProduct = (productId: string) => {
+    setForm((current) => ({
+      ...current,
+      productIds: current.productIds.includes(productId)
+        ? current.productIds.filter((id) => id !== productId)
+        : [...current.productIds, productId],
+    }))
+  }
+
+  const selectAllProducts = () => {
+    setForm((current) => ({
+      ...current,
+      productIds: current.productIds.length === availableProducts.length
+        ? []
+        : availableProducts.map((product) => product.id),
+    }))
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -219,15 +322,27 @@ function AdminPromotionsPage() {
       return
     }
 
+    if (form.scope === 'selected' && !isProductListLoaded) {
+      setNotice({ text: 'Không thể tải danh sách sản phẩm đang bán. Vui lòng thử lại', type: 'error' })
+      return
+    }
+
+    if (form.scope === 'selected' && form.productIds.length === 0) {
+      setNotice({ text: 'Hãy chọn ít nhất một sản phẩm áp dụng', type: 'error' })
+      return
+    }
+
     const promotionData = {
       code: normalizedCode,
       name: form.name.trim(),
-      description: form.description.trim(),
+      description: generatedDescription,
       type: form.type,
       value: Number(form.value) || 0,
       minimumOrder: Number(form.minimumOrder) || 0,
       maximumDiscount: Number(form.maximumDiscount) || undefined,
       usageLimit: Number(form.usageLimit) || 0,
+      maximumUsesPerCustomer: Number(form.maximumUsesPerCustomer) || 1,
+      productIds: form.scope === 'selected' ? form.productIds.map(Number) : [],
       startDate: form.startDate,
       endDate: form.endDate,
       enabled: form.enabled,
@@ -239,9 +354,10 @@ function AdminPromotionsPage() {
         type: promotionData.type === 'percentage' ? 'PHAN_TRAM' : promotionData.type === 'shipping' ? 'MIEN_PHI_VAN_CHUYEN' : 'SO_TIEN',
         value: promotionData.type === 'shipping' ? 0 : promotionData.value, minimumOrder: promotionData.minimumOrder,
         maximumDiscount: promotionData.type === 'percentage' ? promotionData.maximumDiscount : null,
-        maximumUses: promotionData.usageLimit || null, maximumUsesPerCustomer: 1,
+        maximumUses: promotionData.usageLimit || null,
+        maximumUsesPerCustomer: promotionData.maximumUsesPerCustomer,
         startsAt: `${promotionData.startDate} 00:00:00`, endsAt: `${promotionData.endDate} 23:59:59`,
-        status: promotionData.enabled ? 'HOAT_DONG' : 'TAM_DUNG', productIds: [],
+        status: promotionData.enabled ? 'HOAT_DONG' : 'TAM_DUNG', productIds: promotionData.productIds,
       }
       if (editingPromotion) await api.put(`/admin/promotions/${editingPromotion.id}`, payload)
       else await api.post('/admin/promotions', payload)
@@ -351,9 +467,26 @@ function AdminPromotionsPage() {
                 <label><span>Giảm tối đa</span><input min="0" type="number" value={form.maximumDiscount} onChange={(event) => updateField('maximumDiscount', event.target.value)} disabled={form.type !== 'percentage'} /></label>
                 <label><span>Ngày bắt đầu *</span><input required type="date" value={form.startDate} onChange={(event) => updateField('startDate', event.target.value)} /></label>
                 <label><span>Ngày kết thúc *</span><input required type="date" min={form.startDate} value={form.endDate} onChange={(event) => updateField('endDate', event.target.value)} /></label>
-                <label><span>Giới hạn lượt dùng *</span><input required min="0" type="number" value={form.usageLimit} onChange={(event) => updateField('usageLimit', event.target.value)} /></label>
+                <label><span>Tổng lượt sử dụng (0 là không giới hạn) *</span><input required min="0" step="1" type="number" value={form.usageLimit} onChange={(event) => updateField('usageLimit', event.target.value)} /></label>
+                <label><span>Lượt sử dụng tối đa mỗi khách *</span><input required min="1" step="1" type="number" value={form.maximumUsesPerCustomer} onChange={(event) => updateField('maximumUsesPerCustomer', event.target.value)} /></label>
+                <label><span>Phạm vi áp dụng *</span><select value={form.scope} onChange={(event) => updateField('scope', event.target.value as PromotionScope)}><option value="all">Tất cả sản phẩm</option><option value="selected">Sản phẩm được chọn</option></select></label>
                 <label className="admin-promotion-checkbox"><input type="checkbox" checked={form.enabled} onChange={(event) => updateField('enabled', event.target.checked)} /><span>Kích hoạt chương trình sau khi lưu</span></label>
-                <label className="is-wide"><span>Điều kiện áp dụng *</span><textarea required rows={3} value={form.description} onChange={(event) => updateField('description', event.target.value)} /></label>
+                {form.scope === 'selected' ? (
+                  <section className="admin-promotion-product-picker is-wide" aria-labelledby="admin-promotion-products-title">
+                    <header><div><strong id="admin-promotion-products-title">Sản phẩm áp dụng</strong><span>Đã chọn {form.productIds.length} / {availableProducts.length} sản phẩm</span></div><button type="button" disabled={availableProducts.length === 0} onClick={selectAllProducts}>{form.productIds.length === availableProducts.length && availableProducts.length > 0 ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}</button></header>
+                    <input type="search" value={productSearch} onChange={(event) => setProductSearch(event.target.value)} placeholder="Tìm theo tên, mã hoặc SKU..." aria-label="Tìm sản phẩm áp dụng" />
+                    <div className="admin-promotion-product-list">
+                      {filteredAvailableProducts.map((product) => (
+                        <label className="admin-promotion-product-option" key={product.id}>
+                          <input type="checkbox" checked={form.productIds.includes(product.id)} onChange={() => toggleProduct(product.id)} />
+                          <span><strong>{product.name}</strong><small>{[product.productCode, product.sku, product.categoryName].filter(Boolean).join(' · ')}</small></span>
+                        </label>
+                      ))}
+                      {filteredAvailableProducts.length === 0 ? <p>{availableProducts.length === 0 ? 'Chưa có sản phẩm để lựa chọn.' : 'Không tìm thấy sản phẩm phù hợp.'}</p> : null}
+                    </div>
+                  </section>
+                ) : null}
+                <div className="admin-promotion-condition-preview is-wide"><small>MÔ TẢ ĐIỀU KIỆN TỰ ĐỘNG</small><p>{generatedDescription}</p></div>
               </div>
               <footer><button type="button" className="admin-promotion-secondary" onClick={() => setIsFormOpen(false)}>Hủy</button><button type="submit" className="admin-promotion-primary">{editingPromotion ? 'Lưu thay đổi' : 'Tạo khuyến mãi'}</button></footer>
             </form>

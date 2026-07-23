@@ -190,6 +190,88 @@
   line-height: 1.75;
 }
 
+.news-comments-list {
+  margin-top: 36px;
+  padding-top: 28px;
+  border-top: 1px solid #eadfe0;
+}
+
+.news-comments-heading span {
+  color: #b53740;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.news-comments-heading h2 {
+  margin: 5px 0 20px;
+  color: #321b1d;
+  font-size: 22px;
+}
+
+.news-comments-items {
+  display: grid;
+  gap: 14px;
+}
+
+.news-comment-item {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #eee3e4;
+  border-radius: 10px;
+  background: #fffafa;
+}
+
+.news-comment-avatar {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 50%;
+  background: #b53740;
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.news-comment-item header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 14px;
+  margin-bottom: 7px;
+}
+
+.news-comment-item strong {
+  color: #3b2426;
+  font-size: 14px;
+}
+
+.news-comment-item time {
+  color: #9a8f90;
+  font-size: 11px;
+}
+
+.news-comment-item p,
+.news-comments-empty {
+  margin: 0;
+  color: #625758;
+  font-size: 14px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.news-comments-empty {
+  padding: 18px;
+  border: 1px dashed #dfced0;
+  border-radius: 9px;
+  background: #fffafa;
+  text-align: center;
+}
+
 .news-comment-section {
   margin-top: 34px;
   padding-top: 26px;
@@ -264,11 +346,18 @@
   background: #8e2b33;
 }
 
-.news-comment-section .comment-success {
+.news-comment-section button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.news-comment-section .comment-feedback {
   margin-top: 13px;
-  color: #b53740;
   font-weight: 700;
 }
+
+.news-comment-section .comment-feedback.is-success { color: #24734c; }
+.news-comment-section .comment-feedback.is-error { color: #b53740; }
 
 .news-detail-floating {
   position: fixed;
@@ -352,6 +441,17 @@
 
   .article-content p {
     font-size: 14px;
+  }
+
+  .news-comment-item {
+    grid-template-columns: 38px minmax(0, 1fr);
+    padding: 13px;
+  }
+
+  .news-comment-avatar {
+    width: 38px;
+    height: 38px;
+    font-size: 15px;
   }
 
   .news-detail-floating {

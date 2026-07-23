@@ -31,6 +31,7 @@ import AdminPromotionsPage from './pages/admin/AdminPromotionsPage'
 import AdminOrdersPage from './pages/admin/AdminOrdersPage'
 import AdminInventoryPage from './pages/admin/AdminInventoryPage'
 import AdminArticlesPage from './pages/admin/AdminArticlesPage'
+import AdminArticleCommentsPage from './pages/admin/AdminArticleCommentsPage'
 import AdminCategoriesPage from './pages/admin/AdminCategoriesPage'
 import AdminReviewsPage from './pages/admin/AdminReviewsPage'
 import AdminSettingsPage from './pages/admin/AdminSettingsPage'
@@ -100,6 +101,7 @@ function AppContent() {
         <Route path="/admin/don-hang" element={<AdminGuard><AdminOrdersPage /></AdminGuard>} />
         <Route path="/admin/kho" element={<AdminGuard><AdminInventoryPage /></AdminGuard>} />
         <Route path="/admin/bai-viet" element={<AdminGuard><AdminArticlesPage /></AdminGuard>} />
+        <Route path="/admin/binh-luan-bai-viet" element={<AdminGuard><AdminArticleCommentsPage /></AdminGuard>} />
         <Route path="/admin/danh-gia" element={<AdminGuard><AdminReviewsPage /></AdminGuard>} />
         <Route path="/admin/tin-nhan" element={<AdminGuard><AdminMessagesPage /></AdminGuard>} />
         <Route path="/admin/bao-cao" element={<AdminGuard><AdminReportsPage /></AdminGuard>} />

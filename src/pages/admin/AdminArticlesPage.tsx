@@ -206,6 +206,7 @@ function AdminArticlesPage() {
   const [form, setForm] = useState<ArticleFormState>(emptyForm)
   const [selectedImageName, setSelectedImageName] = useState('')
   const [isImageUploading, setIsImageUploading] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [notice, setNotice] = useState('')
   const imageFileInputRef = useRef<HTMLInputElement>(null)
 
@@ -352,14 +353,17 @@ function AdminArticlesPage() {
   }
 
   const confirmDelete = async () => {
-    if (!deletingArticle) return
+    if (!deletingArticle || isDeleting) return
+    setIsDeleting(true)
     try {
-      await api.put(`/admin/articles/${deletingArticle.id}`, { status: 'DANG_AN' })
+      await api.delete(`/admin/articles/${deletingArticle.id}`)
       await loadArticles()
-      setNotice(`Đã ẩn bài viết “${deletingArticle.title}”`)
+      setNotice(`Đã xóa bài viết “${deletingArticle.title}”`)
       setDeletingArticle(null)
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Không thể cập nhật bài viết')
+      setNotice(error instanceof Error ? error.message : 'Không thể xóa bài viết')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -433,7 +437,7 @@ function AdminArticlesPage() {
 
       {deletingArticle ? (
         <div className="admin-article-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setDeletingArticle(null)}>
-          <section className="admin-article-delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="admin-article-delete-title"><span><AdminIcon name="trash" /></span><h2 id="admin-article-delete-title">Xóa bài viết?</h2><p>Bạn sắp xóa <strong>{deletingArticle.title}</strong>. Thao tác này hiện chỉ áp dụng trên dữ liệu frontend.</p><div><button type="button" className="admin-article-secondary" onClick={() => setDeletingArticle(null)}>Hủy</button><button type="button" className="admin-article-danger" onClick={confirmDelete}>Xóa bài viết</button></div></section>
+          <section className="admin-article-delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="admin-article-delete-title"><span><AdminIcon name="trash" /></span><h2 id="admin-article-delete-title">Xóa bài viết?</h2><p>Bạn sắp xóa vĩnh viễn <strong>{deletingArticle.title}</strong>. Các bình luận thuộc bài viết cũng sẽ bị xóa và thao tác này không thể hoàn tác.</p><div><button type="button" className="admin-article-secondary" disabled={isDeleting} onClick={() => setDeletingArticle(null)}>Hủy</button><button type="button" className="admin-article-danger" disabled={isDeleting} onClick={confirmDelete}>{isDeleting ? 'Đang xóa...' : 'Xóa bài viết'}</button></div></section>
         </div>
       ) : null}
 

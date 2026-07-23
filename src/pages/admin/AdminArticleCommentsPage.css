@@ -1,0 +1,126 @@
+.admin-article-comments-heading { align-items: center; }
+
+.admin-article-comment-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.admin-article-comment-summary article {
+  display: flex;
+  min-height: 86px;
+  align-items: center;
+  gap: 13px;
+  padding: 16px;
+  border: 1px solid var(--admin-border);
+  border-radius: 7px;
+  background: #fff;
+}
+
+.admin-article-comment-summary article > span {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 7px;
+}
+
+.admin-article-comment-summary svg { width: 20px; }
+.admin-article-comment-summary .is-blue { background: #e7f0fa; color: #3972ad; }
+.admin-article-comment-summary .is-orange { background: #fff0dd; color: #b76612; }
+.admin-article-comment-summary .is-green { background: #e5f4ec; color: #168156; }
+.admin-article-comment-summary .is-red { background: #f9e7e9; color: #a52c35; }
+.admin-article-comment-summary article div { display: grid; gap: 4px; }
+.admin-article-comment-summary small { color: var(--admin-muted); font-size: 12px; }
+.admin-article-comment-summary strong { color: #312829; font-size: 19px; }
+
+.admin-article-comments-panel {
+  overflow: hidden;
+  border: 1px solid var(--admin-border);
+  border-radius: 7px;
+  background: #fff;
+}
+
+.admin-article-comments-toolbar {
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-article-comments-toolbar > div { display: flex; flex-wrap: wrap; gap: 10px; }
+.admin-article-comments-toolbar label { display: flex; align-items: center; gap: 7px; color: #796f70; font-size: 11px; font-weight: 650; }
+.admin-article-comments-toolbar select { min-width: 170px; max-width: 280px; height: 37px; padding: 0 30px 0 10px; border: 1px solid #e2d9da; border-radius: 6px; background: #fff; color: #4a4041; font-size: 11px; }
+.admin-article-comments-toolbar > span { color: #8b8081; font-size: 11px; }
+.admin-article-comments-toolbar > span strong { color: var(--admin-brand); }
+
+.admin-article-comments-table-wrap { overflow-x: auto; }
+.admin-article-comments-table { width: 100%; min-width: 1050px; border-collapse: collapse; font-size: 11px; }
+.admin-article-comments-table th { height: 43px; padding: 0 11px; background: #fbf9f9; color: #8a7f80; font-size: 10px; letter-spacing: .3px; text-align: left; text-transform: uppercase; }
+.admin-article-comments-table td { padding: 12px 11px; border-top: 1px solid #f0e9ea; color: #5e5455; vertical-align: middle; }
+.admin-article-comments-table tbody tr:hover { background: #fffafa; }
+
+.admin-article-comment-author { display: flex; min-width: 180px; align-items: center; gap: 9px; }
+.admin-article-comment-author > span { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: #f6e7e8; color: #a52c35; font-weight: 800; }
+.admin-article-comment-author div { display: grid; gap: 3px; }
+.admin-article-comment-author strong { color: #413637; }
+.admin-article-comment-author small { color: #918687; font-size: 9px; }
+.admin-article-comment-title { display: -webkit-box; overflow: hidden; max-width: 210px; color: #4b3f40; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.admin-article-comment-content { display: -webkit-box; overflow: hidden; max-width: 330px; margin: 0; line-height: 1.55; white-space: normal; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.admin-article-comments-table time { color: #756a6b; white-space: nowrap; }
+
+.admin-article-comment-status { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border-radius: 12px; font-size: 10px; font-weight: 750; white-space: nowrap; }
+.admin-article-comment-status i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.admin-article-comment-status.is-pending { background: #fff0dd; color: #a85a10; }
+.admin-article-comment-status.is-approved { background: #e5f4ec; color: #177950; }
+.admin-article-comment-status.is-rejected { background: #f2eeee; color: #776c6d; }
+
+.admin-article-comment-actions { display: flex; gap: 5px; }
+.admin-article-comment-actions button { display: grid; width: 31px; height: 31px; place-items: center; border: 1px solid #e7ddde; border-radius: 6px; background: #fff; color: #6d6263; }
+.admin-article-comment-actions button:hover { border-color: #d69da1; background: #fbf0f1; color: var(--admin-brand); }
+.admin-article-comment-actions button.is-approve { color: #177950; }
+.admin-article-comment-actions button.is-danger { color: #a12832; }
+.admin-article-comment-actions svg { width: 14px; }
+
+.admin-article-comments-empty { display: flex; min-height: 230px; align-items: center; justify-content: center; flex-direction: column; gap: 7px; color: #8a7f80; }
+.admin-article-comments-empty svg { width: 30px; }
+.admin-article-comments-empty strong { color: #4d4243; }
+.admin-article-comments-empty span { font-size: 11px; }
+
+.admin-article-comment-backdrop { position: fixed; inset: 0; z-index: 110; display: grid; place-items: center; padding: 20px; background: rgba(35, 27, 28, .55); }
+.admin-article-comment-delete { width: min(430px, 100%); padding: 26px; border-radius: 9px; background: #fff; text-align: center; box-shadow: 0 24px 70px rgba(31, 18, 20, .22); }
+.admin-article-comment-delete > span { display: grid; width: 50px; height: 50px; margin: 0 auto 12px; place-items: center; border-radius: 50%; background: #f8e4e6; color: #a52c35; }
+.admin-article-comment-delete > span svg { width: 22px; }
+.admin-article-comment-delete h2 { margin: 0; color: #352a2b; }
+.admin-article-comment-delete p { margin: 11px 0 20px; color: #766b6c; font-size: 12px; line-height: 1.65; }
+.admin-article-comment-delete > div { display: flex; justify-content: center; gap: 9px; }
+.admin-article-comment-delete button { min-height: 40px; padding: 0 17px; border: 1px solid #ded4d5; border-radius: 7px; background: #fff; color: #554a4b; font-weight: 750; }
+.admin-article-comment-delete button.is-danger { border-color: #a72f38; background: #a72f38; color: #fff; }
+.admin-article-comment-delete button:disabled { cursor: wait; opacity: .65; }
+
+.admin-article-comment-toast { position: fixed; top: 92px; right: 24px; z-index: 120; display: flex; max-width: min(380px, calc(100vw - 32px)); min-height: 45px; align-items: center; gap: 9px; padding: 10px 14px; border-radius: 7px; font-size: 12px; font-weight: 650; box-shadow: 0 10px 30px rgba(35, 76, 52, .13); }
+.admin-article-comment-toast > span { display: grid; width: 22px; height: 22px; flex: 0 0 auto; place-items: center; border-radius: 50%; color: #fff; }
+.admin-article-comment-toast.is-success { border: 1px solid #badfc9; background: #eaf7ef; color: #176440; }
+.admin-article-comment-toast.is-success > span { background: #218555; }
+.admin-article-comment-toast.is-error { border: 1px solid #efc7ca; background: #fff0f1; color: #9e2c35; }
+.admin-article-comment-toast.is-error > span { background: #b53740; }
+
+@media (max-width: 980px) {
+  .admin-article-comment-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-article-comments-toolbar { align-items: stretch; flex-direction: column; }
+}
+
+@media (max-width: 560px) {
+  .admin-article-comment-summary { grid-template-columns: 1fr; gap: 9px; }
+  .admin-article-comment-summary article { min-height: 74px; padding: 12px; }
+  .admin-article-comments-toolbar label { align-items: stretch; flex-direction: column; }
+  .admin-article-comments-toolbar select { width: 100%; max-width: none; }
+  .admin-article-comment-backdrop { padding: 10px; }
+  .admin-article-comment-delete { padding: 22px 17px; }
+  .admin-article-comment-toast { top: 76px; right: 16px; }
+}

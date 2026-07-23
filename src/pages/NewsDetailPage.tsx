@@ -5,23 +5,41 @@ import { normalizeNewsArticle, type NewsArticle } from '../data/news'
 import { api } from '../services/api'
 import './NewsDetailPage.css'
 
+type ArticleComment = {
+  id: string
+  name: string
+  content: string
+  createdAt: string
+}
+
+const formatCommentDate = (value: string) => new Intl.DateTimeFormat('vi-VN', {
+  day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+}).format(new Date(value))
+
+const getCommentInitial = (name: string) => name.trim().charAt(0).toLocaleUpperCase('vi-VN') || 'K'
+
 function NewsDetailPage() {
   const { id } = useParams()
   const [article, setArticle] = useState<NewsArticle | undefined>(undefined)
   const [relatedArticles, setRelatedArticles] = useState<NewsArticle[]>([])
+  const [comments, setComments] = useState<ArticleComment[]>([])
   const [loading, setLoading] = useState(true)
-  const [commentSent, setCommentSent] = useState(false)
+  const [commentState, setCommentState] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [isCommentSubmitting, setIsCommentSubmitting] = useState(false)
 
   useEffect(() => {
     setLoading(true)
-    api.get<{ article: NewsArticle; relatedArticles: NewsArticle[] }>(`/news/${id}`)
+    setCommentState(null)
+    api.get<{ article: NewsArticle; relatedArticles: NewsArticle[]; comments: ArticleComment[] }>(`/news/${id}`)
       .then((data) => {
         setArticle(normalizeNewsArticle(data.article))
         setRelatedArticles(data.relatedArticles.map(normalizeNewsArticle))
+        setComments(data.comments ?? [])
       })
       .catch(() => {
         setArticle(undefined)
         setRelatedArticles([])
+        setComments([])
       })
       .finally(() => setLoading(false))
   }, [id])
@@ -31,17 +49,22 @@ function NewsDetailPage() {
 
   const handleComment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (isCommentSubmitting) return
     const form = event.currentTarget
     const formData = new FormData(form)
+    setIsCommentSubmitting(true)
+    setCommentState(null)
     try {
       await api.post(`/news/${article.id}/comments`, {
         name: String(formData.get('name') || ''), email: String(formData.get('email') || ''),
         content: String(formData.get('content') || ''),
       })
       form.reset()
-      setCommentSent(true)
-    } catch {
-      setCommentSent(false)
+      setCommentState({ type: 'success', message: 'Cảm ơn bạn. Bình luận đã được ghi nhận và đang chờ quản trị viên duyệt.' })
+    } catch (error) {
+      setCommentState({ type: 'error', message: error instanceof Error ? error.message : 'Không thể gửi bình luận. Vui lòng thử lại.' })
+    } finally {
+      setIsCommentSubmitting(false)
     }
   }
 
@@ -110,18 +133,37 @@ function NewsDetailPage() {
             </p>
           </div>
 
+          <section className="news-comments-list" aria-labelledby="news-comments-title">
+            <div className="news-comments-heading">
+              <div><span>Ý KIẾN BẠN ĐỌC</span><h2 id="news-comments-title">Bình luận ({comments.length})</h2></div>
+            </div>
+            {comments.length ? (
+              <div className="news-comments-items">
+                {comments.map((comment) => (
+                  <article className="news-comment-item" key={comment.id}>
+                    <span className="news-comment-avatar" aria-hidden="true">{getCommentInitial(comment.name)}</span>
+                    <div>
+                      <header><strong>{comment.name}</strong><time dateTime={comment.createdAt}>{formatCommentDate(comment.createdAt)}</time></header>
+                      <p>{comment.content}</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : <p className="news-comments-empty">Chưa có bình luận được duyệt. Hãy là người đầu tiên chia sẻ ý kiến về bài viết.</p>}
+          </section>
+
           <section className="news-comment-section">
             <h2>Viết bình luận của bạn</h2>
             <p>Địa chỉ email của bạn sẽ được bảo mật. Các trường bắt buộc được đánh dấu *</p>
             <form onSubmit={handleComment}>
               <div className="comment-row">
-                <input type="text" name="name" placeholder="Họ tên *" aria-label="Họ tên" required />
-                <input type="email" name="email" placeholder="Email *" aria-label="Email" required />
+                <input type="text" name="name" placeholder="Họ tên *" aria-label="Họ tên" maxLength={150} required />
+                <input type="email" name="email" placeholder="Email *" aria-label="Email" maxLength={150} required />
               </div>
-              <textarea name="content" placeholder="Nội dung *" aria-label="Nội dung" rows={6} required />
-              <button type="submit">Gửi bình luận</button>
+              <textarea name="content" placeholder="Nội dung *" aria-label="Nội dung" rows={6} maxLength={2000} required />
+              <button type="submit" disabled={isCommentSubmitting}>{isCommentSubmitting ? 'Đang gửi...' : 'Gửi bình luận'}</button>
             </form>
-            {commentSent && <p className="comment-success">Cảm ơn bạn. Bình luận đã được ghi nhận và đang chờ duyệt.</p>}
+            {commentState && <p className={`comment-feedback is-${commentState.type}`} role="status">{commentState.message}</p>}
           </section>
         </article>
       </div>

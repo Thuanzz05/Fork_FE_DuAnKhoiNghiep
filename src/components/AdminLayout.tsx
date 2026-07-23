@@ -94,7 +94,7 @@ export const AdminIcon = ({ name, ...props }: AdminIconProps) => {
   )
 }
 
-type AdminSection = 'dashboard' | 'orders' | 'products' | 'categories' | 'inventory' | 'accounts' | 'promotions' | 'articles' | 'reviews' | 'messages' | 'reports' | 'settings'
+type AdminSection = 'dashboard' | 'orders' | 'products' | 'categories' | 'inventory' | 'accounts' | 'promotions' | 'articles' | 'articleComments' | 'reviews' | 'messages' | 'reports' | 'settings'
 
 interface AdminLayoutProps {
   activeItem: AdminSection
@@ -113,6 +113,7 @@ const navItems: Array<{ label: string; icon: AdminIconName; section?: AdminSecti
   { label: 'Tài khoản', icon: 'customers', section: 'accounts', to: '/admin/tai-khoan' },
   { label: 'Khuyến mãi', icon: 'discount', section: 'promotions', to: '/admin/khuyen-mai' },
   { label: 'Bài viết', icon: 'news', section: 'articles', to: '/admin/bai-viet' },
+  { label: 'Bình luận bài viết', icon: 'message', section: 'articleComments', to: '/admin/binh-luan-bai-viet' },
   { label: 'Đánh giá', icon: 'star', section: 'reviews', to: '/admin/danh-gia' },
   { label: 'Tin nhắn', icon: 'message', section: 'messages', to: '/admin/tin-nhan' },
 ]
