@@ -414,6 +414,11 @@
   background: #90262e;
 }
 
+.voucher-input-group button:disabled {
+  cursor: wait;
+  opacity: .65;
+}
+
 .voucher-notice {
   margin: -4px 0 12px;
   font-size: 12px;
@@ -428,40 +433,163 @@
   color: #dc2626;
 }
 
-.voucher-suggestions p {
-  margin: 0 0 6px;
-  color: #796d6e;
-  font-size: 11.5px;
-  font-weight: 600;
+.voucher-suggestions {
+  margin-top: 15px;
 }
 
-.voucher-suggestions ul {
-  margin: 0;
-  padding: 0 0 0 12px;
-  list-style: disc;
+.voucher-suggestions-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 9px;
+}
+
+.voucher-suggestions-heading > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.voucher-suggestions-heading strong {
+  color: #493a3c;
+  font-size: 12px;
+}
+
+.voucher-suggestions-heading span {
+  color: #978a8b;
+  font-size: 10px;
+}
+
+.voucher-card-list {
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
-.voucher-suggestions li {
-  color: #796d6e;
-  font-size: 11.5px;
+.voucher-card {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  align-items: center;
+  grid-template-columns: 88px minmax(0, 1fr) auto;
+  gap: 11px;
+  padding: 10px;
+  border: 1px solid #eadbdd;
+  border-radius: 7px;
+  background: #fffafa;
 }
 
-.voucher-suggestions button {
-  padding: 0;
-  border: 0;
+.voucher-card.is-applied {
+  border-color: #8bd2b6;
+  background: #f4fcf8;
+  box-shadow: 0 0 0 2px rgba(5, 150, 105, .06);
+}
+
+.voucher-card-code {
+  display: flex;
+  min-width: 0;
+  min-height: 45px;
+  align-items: flex-start;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 10px;
+  border-right: 1px dashed #dfc9cb;
+}
+
+.voucher-card-code strong {
+  max-width: 100%;
+  overflow: hidden;
   color: #b53740;
-  background: transparent;
-  font-size: 11.5px;
-  font-weight: 700;
-  cursor: pointer;
-  text-decoration: underline;
-  margin-right: 6px;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.voucher-suggestions button:hover {
-  color: #90262e;
+.voucher-card-code span {
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: #f8e1e3;
+  color: #a72e37;
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.voucher-card-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.voucher-card-copy > strong {
+  overflow: hidden;
+  color: #493d3f;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voucher-card-copy p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: #897c7d;
+  font-size: 9.5px;
+  font-weight: 400;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.voucher-card-copy small {
+  color: #07855e;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.voucher-card > button {
+  min-height: 31px;
+  padding: 0 10px;
+  border: 1px solid #b53740;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #b53740;
+  font-size: 9.5px;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.voucher-card > button:hover {
+  background: #b53740;
+  color: #ffffff;
+}
+
+.voucher-card > button.is-remove {
+  border-color: #8acbb1;
+  color: #087653;
+}
+
+.voucher-card > button.is-remove:hover {
+  background: #087653;
+  color: #ffffff;
+}
+
+.voucher-card > button:disabled {
+  cursor: wait;
+  opacity: .6;
+}
+
+.voucher-suggestions-empty {
+  margin: 0;
+  padding: 12px;
+  border: 1px dashed #dfd4d5;
+  border-radius: 6px;
+  color: #8c7f80;
+  background: #fcfafa;
+  font-size: 10.5px;
+  text-align: center;
 }
 
 /* Invoice bill details */

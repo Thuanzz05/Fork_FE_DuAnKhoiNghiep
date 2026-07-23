@@ -24,6 +24,16 @@ interface CheckoutQuote {
   shippingFee: number
   totalPayment: number
   appliedPromotion: { code: string; description: string } | null
+  promotions: CheckoutPromotion[]
+}
+
+interface CheckoutPromotion {
+  code: string
+  title: string
+  description: string | null
+  minimumOrder: number
+  type: 'PHAN_TRAM' | 'SO_TIEN' | 'MIEN_PHI_VAN_CHUYEN'
+  estimatedSavings?: number
 }
 
 type AdministrativeUnit = {
@@ -84,6 +94,8 @@ function CheckoutPage() {
   const [appliedVoucher, setAppliedVoucher] = useState<string | null>(null)
   const [checkoutQuote, setCheckoutQuote] = useState<CheckoutQuote | null>(null)
   const [voucherNotice, setVoucherNotice] = useState({ message: '', type: '' })
+  const [isQuoteLoading, setIsQuoteLoading] = useState(true)
+  const [updatingVoucherCode, setUpdatingVoucherCode] = useState<string | null>(null)
 
   const loadProvinces = async () => {
     setAddressLoading(true)
@@ -226,18 +238,23 @@ function CheckoutPage() {
   useEffect(() => {
     if (!selectedIds.length) return
     setAppliedVoucher(null)
+    setVoucherCode('')
+    setVoucherNotice({ message: '', type: '' })
+    setIsQuoteLoading(true)
     void api.post<CheckoutQuote>('/customers/me/checkout/quote', { productIds: selectedIds })
       .then(setCheckoutQuote)
       .catch((error) => {
         setCheckoutQuote(null)
         setVoucherNotice({ message: error instanceof Error ? error.message : 'Không thể tính đơn hàng.', type: 'error' })
       })
+      .finally(() => setIsQuoteLoading(false))
   }, [selectedIds])
 
-  // Voucher apply handler
-  const handleApplyVoucher = async () => {
-    const code = voucherCode.trim().toUpperCase()
+  const applyVoucherCode = async (rawCode: string) => {
+    const code = rawCode.trim().toUpperCase()
     if (!code) return
+    setUpdatingVoucherCode(code)
+    setVoucherCode(code)
     try {
       await loadCheckoutQuote(code)
       setVoucherNotice({ message: `Áp dụng mã ${code} thành công!`, type: 'success' })
@@ -245,6 +262,26 @@ function CheckoutPage() {
       setAppliedVoucher(null)
       await loadCheckoutQuote().catch(() => setCheckoutQuote(null))
       setVoucherNotice({ message: error instanceof Error ? error.message : 'Không thể áp dụng mã.', type: 'error' })
+    } finally {
+      setUpdatingVoucherCode(null)
+    }
+  }
+
+  const handleApplyVoucher = () => {
+    void applyVoucherCode(voucherCode)
+  }
+
+  const handleRemoveVoucher = async () => {
+    const previousCode = appliedVoucher
+    setUpdatingVoucherCode(previousCode || '__REMOVE__')
+    try {
+      await loadCheckoutQuote()
+      setVoucherCode('')
+      setVoucherNotice({ message: 'Đã bỏ mã khuyến mại.', type: 'success' })
+    } catch (error) {
+      setVoucherNotice({ message: error instanceof Error ? error.message : 'Không thể bỏ mã.', type: 'error' })
+    } finally {
+      setUpdatingVoucherCode(null)
     }
   }
 
@@ -508,45 +545,43 @@ function CheckoutPage() {
                 <div className="voucher-input-group">
                   <input
                     type="text"
-                    placeholder="Nhập mã (Ví dụ: REDBEAN50, FREESHIP)"
+                    placeholder="Nhập mã khuyến mại"
                     value={voucherCode}
-                    onChange={(e) => setVoucherCode(e.target.value)}
+                    onChange={(e) => {
+                      setVoucherCode(e.target.value)
+                      setVoucherNotice({ message: '', type: '' })
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'Enter') return
+                      event.preventDefault()
+                      handleApplyVoucher()
+                    }}
                   />
-                  <button type="button" onClick={handleApplyVoucher}>
-                    Áp dụng
+                  <button type="button" disabled={!voucherCode.trim() || updatingVoucherCode !== null} onClick={handleApplyVoucher}>
+                    {updatingVoucherCode ? 'Đang xử lý...' : 'Áp dụng'}
                   </button>
                 </div>
                 {voucherNotice.message && (
                   <p className={`voucher-notice ${voucherNotice.type}`}>{voucherNotice.message}</p>
                 )}
                 <div className="voucher-suggestions">
-                  <p>Mã ưu đãi gợi ý cho bạn:</p>
-                  <ul>
-                    <li>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setVoucherCode('REDBEAN50')
-                          setVoucherNotice({ message: '', type: '' })
-                        }}
-                      >
-                        REDBEAN50
-                      </button>
-                      <span>- Giảm ngay 50.000đ (cho đơn từ 200k)</span>
-                    </li>
-                    <li>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setVoucherCode('FREESHIP')
-                          setVoucherNotice({ message: '', type: '' })
-                        }}
-                      >
-                        FREESHIP
-                      </button>
-                      <span>- Miễn phí vận chuyển</span>
-                    </li>
-                  </ul>
+                  <div className="voucher-suggestions-heading"><div><strong>Ưu đãi dùng được cho đơn hàng này</strong><span>{checkoutQuote?.promotions.length ? `${checkoutQuote.promotions.length} mã phù hợp` : 'Hệ thống tự kiểm tra điều kiện'}</span></div></div>
+                  {isQuoteLoading ? <p className="voucher-suggestions-empty">Đang tìm ưu đãi phù hợp...</p> : checkoutQuote?.promotions.length ? (
+                    <div className="voucher-card-list">
+                      {checkoutQuote.promotions.map((promotion, index) => {
+                        const isApplied = appliedVoucher === promotion.code
+                        const isUpdating = updatingVoucherCode === promotion.code
+                        const estimatedSavings = Number(promotion.estimatedSavings) || 0
+                        return (
+                          <article className={`voucher-card${isApplied ? ' is-applied' : ''}`} key={promotion.code}>
+                            <div className="voucher-card-code"><strong>{promotion.code}</strong>{index === 0 && checkoutQuote.promotions.length > 1 ? <span>Tốt nhất</span> : null}</div>
+                            <div className="voucher-card-copy"><strong>{promotion.title}</strong><p>{promotion.description || `Áp dụng cho đơn từ ${formatPrice(Number(promotion.minimumOrder) || 0)}`}</p>{estimatedSavings > 0 ? <small>Tiết kiệm {formatPrice(estimatedSavings)}</small> : null}</div>
+                            <button type="button" className={isApplied ? 'is-remove' : ''} disabled={updatingVoucherCode !== null} onClick={() => { if (isApplied) void handleRemoveVoucher(); else void applyVoucherCode(promotion.code) }}>{isUpdating ? 'Đang xử lý...' : isApplied ? 'Bỏ mã' : 'Dùng mã'}</button>
+                          </article>
+                        )
+                      })}
+                    </div>
+                  ) : <p className="voucher-suggestions-empty">Hiện chưa có ưu đãi phù hợp với đơn hàng này.</p>}
                 </div>
               </section>
 
