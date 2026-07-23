@@ -73,8 +73,8 @@
   transform: scale(1.045);
 }
 
-.news-card-body {
-  padding-top: 18px;
+.news-page .news-card-body {
+  padding: 18px 18px 20px;
 }
 
 .news-card h2 {
@@ -162,6 +162,10 @@
   .news-grid {
     grid-template-columns: 1fr;
     gap: 30px;
+  }
+
+  .news-page .news-card-body {
+    padding: 16px 15px 18px;
   }
 
   .news-card h2 {
