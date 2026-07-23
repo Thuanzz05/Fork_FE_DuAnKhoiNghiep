@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import AdminLayout, { AdminIcon } from '../../components/AdminLayout'
 import Pagination from '../../components/Pagination'
 import { formatPrice } from '../../data/products'
@@ -26,15 +26,37 @@ interface ManagedAccount {
   lastActive: string
 }
 
-interface AccountFormState {
-  firstName: string
-  lastName: string
+interface AccountDetail {
+  id: string
+  fullName: string
   email: string
-  phone: string
-  role: AccountRole
-  status: AccountStatus
-  password: string
-  avatar: string
+  phone?: string
+  avatar?: string
+  linkedGoogle: boolean
+  birthDate?: string
+  gender?: 'NAM' | 'NU' | 'KHAC'
+  role: 'ADMIN' | 'KHACH_HANG'
+  status: 'HOAT_DONG' | 'BI_KHOA'
+  orderCount: number
+  spending: number
+  createdAt: string
+  updatedAt: string
+  addresses: Array<{
+    id: string
+    recipientName: string
+    phone: string
+    address: string
+    isDefault: boolean
+  }>
+  recentOrders: Array<{
+    id: string
+    orderCode: string
+    total: number
+    paymentMethod: string
+    paymentStatus: string
+    orderStatus: string
+    createdAt: string
+  }>
 }
 
 const roleMeta: Record<AccountRole, { label: string }> = {
@@ -47,17 +69,23 @@ const statusMeta: Record<AccountStatus, { label: string }> = {
   locked: { label: 'Đã khóa' },
 }
 
-const emptyForm: AccountFormState = {
-  firstName: '',
-  lastName: '',
-  email: '',
-  phone: '',
-  role: 'customer',
-  status: 'active',
-  password: '',
-  avatar: '',
+const orderStatusLabel: Record<string, string> = {
+  CHO_XAC_NHAN: 'Chờ xác nhận',
+  DA_XAC_NHAN: 'Đã xác nhận',
+  DANG_CHUAN_BI: 'Đang chuẩn bị',
+  DANG_GIAO: 'Đang giao',
+  DA_GIAO: 'Đã giao',
+  DA_HUY: 'Đã hủy',
 }
 
+const paymentMethodLabel: Record<string, string> = {
+  COD: 'COD',
+  CHUYEN_KHOAN: 'Chuyển khoản',
+  MOMO: 'MoMo',
+  VNPAY: 'VNPay',
+}
+
+const genderLabel: Record<string, string> = { NAM: 'Nam', NU: 'Nữ', KHAC: 'Khác' }
 const getFullName = (account: Pick<ManagedAccount, 'firstName' | 'lastName'>) => `${account.lastName} ${account.firstName}`.trim()
 
 const getInitials = (account: Pick<ManagedAccount, 'firstName' | 'lastName' | 'email'>) => {
@@ -66,35 +94,44 @@ const getInitials = (account: Pick<ManagedAccount, 'firstName' | 'lastName' | 'e
   return `${words[0].charAt(0)}${words.at(-1)?.charAt(0) ?? ''}`.toLocaleUpperCase('vi-VN')
 }
 
+const formatDateTime = (value?: string) => value
+  ? new Date(value).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
+  : 'Chưa có dữ liệu'
+
 function AdminAccountsPage() {
   const [accounts, setAccounts] = useState<ManagedAccount[]>([])
+  const [searchValue, setSearchValue] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | AccountStatus>('all')
+  const [sortBy, setSortBy] = useState<AccountSort>('newest')
+  const [selectedAccount, setSelectedAccount] = useState<ManagedAccount | null>(null)
+  const [accountDetail, setAccountDetail] = useState<AccountDetail | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState('')
+  const [deletingAccount, setDeletingAccount] = useState<ManagedAccount | null>(null)
+  const [notice, setNotice] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
 
   const loadAccounts = async () => {
     try {
       type AdminUserRow = {
         id: string; fullName: string; email: string; phone?: string; avatar?: string
         role: 'ADMIN' | 'KHACH_HANG'; status: 'HOAT_DONG' | 'BI_KHOA'
-        orderCount: number; spending: number; createdAt: string
+        orderCount: number; spending: number; addressCount?: number; createdAt: string; lastActiveAt?: string
       }
-      type AdminUsersResponse = {
-        items: AdminUserRow[]
-        pagination: { totalPages: number }
-      }
+      type AdminUsersResponse = { items: AdminUserRow[]; pagination: { totalPages: number } }
       const firstPage = await api.get<AdminUsersResponse>('/admin/users?page=1&limit=100')
       const otherPages = await Promise.all(Array.from(
         { length: Math.max(firstPage.pagination.totalPages - 1, 0) },
         (_, index) => api.get<AdminUsersResponse>(`/admin/users?page=${index + 2}&limit=100`),
       ))
       const items = [firstPage, ...otherPages].flatMap((page) => page.items)
-      // Chỉ hiển thị tài khoản khách hàng, ẩn admin
       setAccounts(items.filter((item) => item.role === 'KHACH_HANG').map((item) => {
         const names = item.fullName.trim().split(/\s+/)
         return {
           id: item.id, firstName: names.pop() || '', lastName: names.join(' '), email: item.email,
-          phone: item.phone || '', avatar: item.avatar, addressCount: 0,
-          role: item.role === 'ADMIN' ? 'admin' : 'customer',
-          status: item.status === 'HOAT_DONG' ? 'active' : 'locked',
-          orderCount: item.orderCount, totalSpent: item.spending, joinedAt: item.createdAt, lastActive: 'Gần đây',
+          phone: item.phone || '', avatar: item.avatar, addressCount: Number(item.addressCount || 0),
+          role: 'customer', status: item.status === 'HOAT_DONG' ? 'active' : 'locked',
+          orderCount: item.orderCount, totalSpent: item.spending, joinedAt: item.createdAt,
+          lastActive: item.lastActiveAt || item.createdAt,
         }
       }))
     } catch {
@@ -103,14 +140,6 @@ function AdminAccountsPage() {
   }
 
   useEffect(() => { void loadAccounts() }, [])
-  const [searchValue, setSearchValue] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | AccountStatus>('all')
-  const [sortBy, setSortBy] = useState<AccountSort>('newest')
-  const [editingAccount, setEditingAccount] = useState<ManagedAccount | null>(null)
-  const [deletingAccount, setDeletingAccount] = useState<ManagedAccount | null>(null)
-  const [isFormOpen, setIsFormOpen] = useState(false)
-  const [form, setForm] = useState<AccountFormState>(emptyForm)
-  const [notice, setNotice] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
 
   useEffect(() => {
     if (!notice) return
@@ -119,10 +148,10 @@ function AdminAccountsPage() {
   }, [notice])
 
   useEffect(() => {
-    if (!isFormOpen && !deletingAccount) return
+    if (!selectedAccount && !deletingAccount) return
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setIsFormOpen(false)
+        setSelectedAccount(null)
         setDeletingAccount(null)
       }
     }
@@ -132,17 +161,15 @@ function AdminAccountsPage() {
       document.body.style.overflow = ''
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [deletingAccount, isFormOpen])
+  }, [deletingAccount, selectedAccount])
 
   const filteredAccounts = useMemo(() => {
     const keyword = searchValue.trim().toLocaleLowerCase('vi-VN')
     const result = accounts.filter((account) => {
       const matchesKeyword = !keyword || [getFullName(account), account.email, account.phone, account.id]
         .some((value) => value.toLocaleLowerCase('vi-VN').includes(keyword))
-      const matchesStatus = statusFilter === 'all' || account.status === statusFilter
-      return matchesKeyword && matchesStatus
+      return matchesKeyword && (statusFilter === 'all' || account.status === statusFilter)
     })
-
     return result.sort((first, second) => {
       if (sortBy === 'name') return getFullName(first).localeCompare(getFullName(second), 'vi')
       if (sortBy === 'spending') return second.totalSpent - first.totalSpent
@@ -151,63 +178,28 @@ function AdminAccountsPage() {
   }, [accounts, searchValue, sortBy, statusFilter])
 
   const { currentPage, totalPages, pageItems: paginatedAccounts, setCurrentPage } = usePagination(
-    filteredAccounts,
-    6,
-    `${searchValue}|${statusFilter}|${sortBy}`,
+    filteredAccounts, 6, `${searchValue}|${statusFilter}|${sortBy}`,
   )
 
   const activeCount = accounts.filter((account) => account.status === 'active').length
   const lockedCount = accounts.filter((account) => account.status === 'locked').length
   const totalSpending = accounts.reduce((sum, account) => sum + account.totalSpent, 0)
 
-  const openEditForm = (account: ManagedAccount) => {
-    setEditingAccount(account)
-    setForm({
-      firstName: account.firstName,
-      lastName: account.lastName,
-      email: account.email,
-      phone: account.phone,
-      role: account.role,
-      status: account.status,
-      password: '',
-      avatar: account.avatar ?? '',
-    })
-    setIsFormOpen(true)
-  }
-
-  const updateField = <K extends keyof AccountFormState>(field: K, value: AccountFormState[K]) => {
-    setForm((current) => ({ ...current, [field]: value }))
-  }
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const normalizedEmail = form.email.trim().toLocaleLowerCase('vi-VN')
-    const duplicatedEmail = accounts.some((account) => account.email.toLocaleLowerCase('vi-VN') === normalizedEmail && account.id !== editingAccount?.id)
-
-    if (duplicatedEmail) {
-      setNotice({ text: 'Email này đã được sử dụng bởi tài khoản khác', type: 'error' })
-      return
-    }
-
-    if (!editingAccount) {
-      setNotice({ text: 'Backend hiện chưa hỗ trợ admin tạo tài khoản trực tiếp', type: 'error' })
-      return
-    }
+  const openAccountDetail = async (account: ManagedAccount) => {
+    setSelectedAccount(account)
+    setAccountDetail(null)
+    setDetailError('')
+    setDetailLoading(true)
     try {
-      await api.patch(`/admin/users/${editingAccount.id}`, {
-        role: form.role === 'admin' ? 'ADMIN' : 'KHACH_HANG',
-        status: form.status === 'active' ? 'HOAT_DONG' : 'BI_KHOA',
-      })
-      await loadAccounts()
-      setNotice({ text: 'Đã cập nhật quyền và trạng thái tài khoản', type: 'success' })
-      setIsFormOpen(false)
+      setAccountDetail(await api.get<AccountDetail>(`/admin/users/${account.id}`))
     } catch (error) {
-      setNotice({ text: error instanceof Error ? error.message : 'Không thể cập nhật tài khoản', type: 'error' })
+      setDetailError(error instanceof Error ? error.message : 'Không thể tải chi tiết tài khoản')
+    } finally {
+      setDetailLoading(false)
     }
   }
 
   const toggleAccountStatus = async (account: ManagedAccount) => {
-    if (account.role === 'admin') return
     const nextStatus: AccountStatus = account.status === 'active' ? 'locked' : 'active'
     try {
       await api.patch(`/admin/users/${account.id}`, { status: nextStatus === 'locked' ? 'BI_KHOA' : 'HOAT_DONG' })
@@ -224,28 +216,16 @@ function AdminAccountsPage() {
       await api.delete(`/admin/users/${deletingAccount.id}`)
       await loadAccounts()
       setNotice({ text: `Đã xóa tài khoản ${getFullName(deletingAccount)}`, type: 'success' })
-      setDeletingAccount(null)
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Không thể xóa tài khoản'
-      setNotice({ text: errorMessage, type: 'error' })
+      setNotice({ text: error instanceof Error ? error.message : 'Không thể xóa tài khoản', type: 'error' })
+    } finally {
       setDeletingAccount(null)
     }
   }
 
   return (
-    <AdminLayout
-      activeItem="accounts"
-      searchValue={searchValue}
-      onSearchChange={setSearchValue}
-      searchPlaceholder="Tìm tên, email hoặc số điện thoại..."
-    >
-      <div className="admin-page-heading admin-accounts-heading">
-        <div>
-          <p>QUẢN LÝ NGƯỜI DÙNG</p>
-          <h1>Quản lý khách hàng</h1>
-          <span>Theo dõi và quản lý thông tin tài khoản khách hàng của hệ thống.</span>
-        </div>
-      </div>
+    <AdminLayout activeItem="accounts" searchValue={searchValue} onSearchChange={setSearchValue} searchPlaceholder="Tìm tên, email hoặc số điện thoại...">
+      <div className="admin-page-heading admin-accounts-heading"><div><p>QUẢN LÝ NGƯỜI DÙNG</p><h1>Quản lý khách hàng</h1><span>Theo dõi và quản lý thông tin tài khoản khách hàng của hệ thống.</span></div></div>
 
       <section className="admin-account-summary" aria-label="Tổng quan tài khoản">
         <article><span className="is-red"><AdminIcon name="customers" /></span><div><small>Tổng khách hàng</small><strong>{accounts.length}</strong></div></article>
@@ -255,65 +235,56 @@ function AdminAccountsPage() {
       </section>
 
       <section className="admin-accounts-panel">
-        <div className="admin-accounts-toolbar">
-          <div>
-            <label><span>Trạng thái</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | AccountStatus)} aria-label="Lọc theo trạng thái"><option value="all">Tất cả trạng thái</option><option value="active">Hoạt động</option><option value="locked">Đã khóa</option></select></label>
-            <label><span>Sắp xếp</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as AccountSort)} aria-label="Sắp xếp tài khoản"><option value="newest">Mới đăng ký</option><option value="name">Theo tên A-Z</option><option value="spending">Chi tiêu cao nhất</option></select></label>
-          </div>
-          <span>Hiển thị <strong>{filteredAccounts.length}</strong> / {accounts.length} khách hàng</span>
-        </div>
+        <div className="admin-accounts-toolbar"><div>
+          <label><span>Trạng thái</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | AccountStatus)}><option value="all">Tất cả trạng thái</option><option value="active">Hoạt động</option><option value="locked">Đã khóa</option></select></label>
+          <label><span>Sắp xếp</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as AccountSort)}><option value="newest">Mới đăng ký</option><option value="name">Theo tên A-Z</option><option value="spending">Chi tiêu cao nhất</option></select></label>
+        </div><span>Hiển thị <strong>{filteredAccounts.length}</strong> / {accounts.length} khách hàng</span></div>
 
-        <div className="admin-accounts-table-wrap">
-          <table className="admin-accounts-table">
-            <thead><tr><th>STT</th><th>Tài khoản</th><th>Điện thoại</th><th>Vai trò</th><th>Đơn hàng</th><th>Địa chỉ</th><th>Ngày tham gia</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
-            <tbody>
-              {paginatedAccounts.map((account, index) => (
-                <tr key={account.id}>
-                  <td><span className="admin-account-order">{(currentPage - 1) * 6 + index + 1}</span></td>
-                  <td><div className="admin-account-cell"><span className={`admin-account-avatar is-${account.role}`}>{account.avatar ? <img src={account.avatar} alt="" /> : getInitials(account)}</span><div><strong>{getFullName(account)}</strong><span>{account.email}</span><small>Hoạt động: {account.lastActive}</small></div></div></td>
-                  <td>{account.phone || <span className="admin-account-empty">Chưa cập nhật</span>}</td>
-                  <td><span className={`admin-account-role is-${account.role}`}>{roleMeta[account.role].label}</span></td>
-                  <td><div className="admin-account-orders"><strong>{account.orderCount} đơn</strong><span>{formatPrice(account.totalSpent)}</span></div></td>
-                  <td>{account.addressCount} địa chỉ</td>
-                  <td>{new Date(account.joinedAt).toLocaleDateString('vi-VN')}</td>
-                  <td><span className={`admin-account-status is-${account.status}`}><i />{statusMeta[account.status].label}</span></td>
-                  <td><div className="admin-account-actions"><button type="button" onClick={() => openEditForm(account)} aria-label={`Sửa ${getFullName(account)}`} title="Sửa tài khoản"><AdminIcon name="edit" /></button><button type="button" onClick={() => toggleAccountStatus(account)} aria-label={`${account.status === 'active' ? 'Khóa' : 'Mở khóa'} ${getFullName(account)}`} title={account.status === 'active' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}><AdminIcon name={account.status === 'active' ? 'lock' : 'unlock'} /></button><button type="button" className="is-danger" onClick={() => setDeletingAccount(account)} aria-label={`Xóa ${getFullName(account)}`} title="Xóa tài khoản"><AdminIcon name="trash" /></button></div></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {filteredAccounts.length === 0 ? <div className="admin-accounts-empty"><AdminIcon name="search" /><strong>Không tìm thấy khách hàng</strong><span>Hãy thử từ khóa hoặc bộ lọc khác.</span></div> : null}
-        </div>
+        <div className="admin-accounts-table-wrap"><table className="admin-accounts-table">
+          <thead><tr><th>STT</th><th>Tài khoản</th><th>Điện thoại</th><th>Vai trò</th><th>Đơn hàng</th><th>Địa chỉ</th><th>Ngày tham gia</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+          <tbody>{paginatedAccounts.map((account, index) => <tr key={account.id}>
+            <td><span className="admin-account-order">{(currentPage - 1) * 6 + index + 1}</span></td>
+            <td><div className="admin-account-cell"><span className={`admin-account-avatar is-${account.role}`}>{account.avatar ? <img src={account.avatar} alt="" /> : getInitials(account)}</span><div><strong>{getFullName(account)}</strong><span>{account.email}</span><small>Cập nhật: {formatDateTime(account.lastActive)}</small></div></div></td>
+            <td>{account.phone || <span className="admin-account-empty">Chưa cập nhật</span>}</td>
+            <td><span className={`admin-account-role is-${account.role}`}>{roleMeta[account.role].label}</span></td>
+            <td><div className="admin-account-orders"><strong>{account.orderCount} đơn</strong><span>{formatPrice(account.totalSpent)}</span></div></td>
+            <td>{account.addressCount} địa chỉ</td>
+            <td>{new Date(account.joinedAt).toLocaleDateString('vi-VN')}</td>
+            <td><span className={`admin-account-status is-${account.status}`}><i />{statusMeta[account.status].label}</span></td>
+            <td><div className="admin-account-actions"><button type="button" onClick={() => void openAccountDetail(account)} aria-label={`Xem ${getFullName(account)}`} title="Xem chi tiết tài khoản"><AdminIcon name="eye" /></button><button type="button" onClick={() => void toggleAccountStatus(account)} title={account.status === 'active' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}><AdminIcon name={account.status === 'active' ? 'lock' : 'unlock'} /></button><button type="button" className="is-danger" onClick={() => setDeletingAccount(account)} title="Xóa tài khoản"><AdminIcon name="trash" /></button></div></td>
+          </tr>)}</tbody>
+        </table>{filteredAccounts.length === 0 ? <div className="admin-accounts-empty"><AdminIcon name="search" /><strong>Không tìm thấy khách hàng</strong><span>Hãy thử từ khóa hoặc bộ lọc khác.</span></div> : null}</div>
         <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filteredAccounts.length} pageSize={6} itemLabel="khách hàng" onPageChange={setCurrentPage} />
       </section>
 
-      {isFormOpen ? (
-        <div className="admin-account-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setIsFormOpen(false)}>
-          <section className="admin-account-modal" role="dialog" aria-modal="true" aria-labelledby="admin-account-modal-title">
-            <header><div><span>{editingAccount ? editingAccount.id : 'TÀI KHOẢN MỚI'}</span><h2 id="admin-account-modal-title">{editingAccount ? 'Chỉnh sửa tài khoản' : 'Thêm tài khoản'}</h2></div><button type="button" onClick={() => setIsFormOpen(false)} aria-label="Đóng"><AdminIcon name="close" /></button></header>
-            <form onSubmit={handleSubmit}>
-              <div className="admin-account-form-grid">
-                <label><span>Họ và tên đệm *</span><input required value={form.lastName} onChange={(event) => updateField('lastName', event.target.value)} /></label>
-                <label><span>Tên *</span><input required value={form.firstName} onChange={(event) => updateField('firstName', event.target.value)} /></label>
-                <label><span>Email *</span><input required type="email" value={form.email} onChange={(event) => updateField('email', event.target.value)} /></label>
-                <label><span>Số điện thoại *</span><input required type="tel" pattern="[0-9]{9,11}" value={form.phone} onChange={(event) => updateField('phone', event.target.value)} /></label>
-                <label><span>Vai trò *</span><select value={form.role} onChange={(event) => updateField('role', event.target.value as AccountRole)}><option value="customer">Khách hàng</option><option value="admin">Quản trị viên</option></select></label>
-                <label><span>Trạng thái *</span><select value={form.status} onChange={(event) => updateField('status', event.target.value as AccountStatus)}><option value="active">Hoạt động</option><option value="locked">Đã khóa</option></select></label>
-                {!editingAccount ? <label className="is-wide"><span>Mật khẩu tạm thời *</span><input required type="password" minLength={6} value={form.password} onChange={(event) => updateField('password', event.target.value)} /></label> : null}
-                <label className="is-wide"><span>Đường dẫn avatar</span><input placeholder="Để trống để dùng avatar chữ cái" value={form.avatar} onChange={(event) => updateField('avatar', event.target.value)} /></label>
-              </div>
-              <footer><button type="button" className="admin-account-secondary" onClick={() => setIsFormOpen(false)}>Hủy</button><button type="submit" className="admin-account-primary">{editingAccount ? 'Lưu thay đổi' : 'Tạo tài khoản'}</button></footer>
-            </form>
-          </section>
-        </div>
-      ) : null}
+      {selectedAccount ? <div className="admin-account-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setSelectedAccount(null)}>
+        <section className="admin-account-modal admin-account-detail-modal" role="dialog" aria-modal="true" aria-labelledby="admin-account-modal-title">
+          <header><div><span>HỒ SƠ KHÁCH HÀNG</span><h2 id="admin-account-modal-title">Chi tiết tài khoản</h2></div><button type="button" onClick={() => setSelectedAccount(null)} aria-label="Đóng"><AdminIcon name="close" /></button></header>
+          {detailLoading ? <div className="admin-account-detail-state"><span className="admin-account-detail-spinner" /><strong>Đang tải thông tin...</strong></div> : null}
+          {!detailLoading && detailError ? <div className="admin-account-detail-state is-error"><AdminIcon name="customers" /><strong>Không thể tải hồ sơ</strong><p>{detailError}</p><button type="button" onClick={() => void openAccountDetail(selectedAccount)}>Thử lại</button></div> : null}
+          {!detailLoading && accountDetail ? <div className="admin-account-detail-body">
+            <section className="admin-account-detail-profile">
+              <span className="admin-account-detail-avatar">{accountDetail.avatar ? <img src={accountDetail.avatar} alt="" /> : getInitials(selectedAccount)}</span>
+              <div><h3>{accountDetail.fullName}</h3><p>{accountDetail.email}</p><div><span className="admin-account-role is-customer">Khách hàng</span><span className={`admin-account-status is-${accountDetail.status === 'HOAT_DONG' ? 'active' : 'locked'}`}><i />{accountDetail.status === 'HOAT_DONG' ? 'Hoạt động' : 'Đã khóa'}</span>{accountDetail.linkedGoogle ? <span className="admin-account-google">Đã liên kết Google</span> : null}</div></div>
+            </section>
+            <section className="admin-account-detail-stats">
+              <article><small>Tổng đơn hàng</small><strong>{accountDetail.orderCount}</strong></article>
+              <article><small>Tổng chi tiêu</small><strong>{formatPrice(accountDetail.spending)}</strong></article>
+              <article><small>Sổ địa chỉ</small><strong>{accountDetail.addresses.length}</strong></article>
+              <article><small>Ngày tham gia</small><strong>{new Date(accountDetail.createdAt).toLocaleDateString('vi-VN')}</strong></article>
+            </section>
+            <section className="admin-account-detail-section"><h3>Thông tin cá nhân</h3><div className="admin-account-detail-info">
+              <p><span>Họ và tên</span><strong>{accountDetail.fullName}</strong></p><p><span>Email đăng nhập</span><strong>{accountDetail.email}</strong></p>
+              <p><span>Số điện thoại</span><strong>{accountDetail.phone || 'Chưa cập nhật'}</strong></p><p><span>Ngày sinh</span><strong>{accountDetail.birthDate ? new Date(accountDetail.birthDate).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}</strong></p>
+              <p><span>Giới tính</span><strong>{accountDetail.gender ? genderLabel[accountDetail.gender] : 'Chưa cập nhật'}</strong></p><p><span>Cập nhật gần nhất</span><strong>{formatDateTime(accountDetail.updatedAt)}</strong></p>
+            </div></section>
+            <section className="admin-account-detail-section"><h3>Địa chỉ nhận hàng ({accountDetail.addresses.length})</h3>{accountDetail.addresses.length ? <div className="admin-account-addresses">{accountDetail.addresses.map((address) => <article key={address.id}><div><strong>{address.recipientName}</strong>{address.isDefault ? <span>Mặc định</span> : null}</div><p>{address.phone}</p><p>{address.address}</p></article>)}</div> : <p className="admin-account-detail-empty">Khách hàng chưa lưu địa chỉ nhận hàng.</p>}</section>
+            <section className="admin-account-detail-section"><h3>Đơn hàng gần đây</h3>{accountDetail.recentOrders.length ? <div className="admin-account-recent-orders">{accountDetail.recentOrders.map((order) => <article key={order.id}><div><strong>{order.orderCode}</strong><span>{new Date(order.createdAt).toLocaleDateString('vi-VN')}</span></div><div><b>{formatPrice(order.total)}</b><span>{paymentMethodLabel[order.paymentMethod] || order.paymentMethod}</span><em className={`is-${order.orderStatus.toLocaleLowerCase()}`}>{orderStatusLabel[order.orderStatus] || order.orderStatus}</em></div></article>)}</div> : <p className="admin-account-detail-empty">Khách hàng chưa phát sinh đơn hàng.</p>}</section>
+          </div> : null}
+        </section>
+      </div> : null}
 
-      {deletingAccount ? (
-        <div className="admin-account-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setDeletingAccount(null)}>
-          <section className="admin-account-delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="admin-account-delete-title"><span><AdminIcon name="trash" /></span><h2 id="admin-account-delete-title">Xóa tài khoản?</h2><p>Bạn sắp xóa tài khoản <strong>{getFullName(deletingAccount)}</strong> ({deletingAccount.email}). Tài khoản sẽ bị ẩn khỏi hệ thống nhưng dữ liệu vẫn được lưu trữ.</p><div><button type="button" className="admin-account-secondary" onClick={() => setDeletingAccount(null)}>Hủy</button><button type="button" className="admin-account-danger" onClick={confirmDelete}>Xóa tài khoản</button></div></section>
-        </div>
-      ) : null}
-
+      {deletingAccount ? <div className="admin-account-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setDeletingAccount(null)}><section className="admin-account-delete-modal" role="alertdialog" aria-modal="true"><span><AdminIcon name="trash" /></span><h2>Xóa tài khoản?</h2><p>Bạn sắp xóa tài khoản <strong>{getFullName(deletingAccount)}</strong> ({deletingAccount.email}).</p><div><button type="button" className="admin-account-secondary" onClick={() => setDeletingAccount(null)}>Hủy</button><button type="button" className="admin-account-danger" onClick={() => void confirmDelete()}>Xóa tài khoản</button></div></section></div> : null}
       {notice ? <div className={`admin-account-toast is-${notice.type}`} role="status"><span>{notice.type === 'success' ? '✓' : '!'}</span>{notice.text}</div> : null}
     </AdminLayout>
   )
