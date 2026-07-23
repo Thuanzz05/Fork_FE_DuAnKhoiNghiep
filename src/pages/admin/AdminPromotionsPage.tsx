@@ -7,7 +7,8 @@ import { api } from '../../services/api'
 import './AdminPromotionsPage.css'
 
 type PromotionType = 'percentage' | 'fixed' | 'shipping'
-type PromotionStatus = 'active' | 'scheduled' | 'expired' | 'disabled'
+type PromotionStatus = 'active' | 'scheduled' | 'expired' | 'disabled' | 'ended'
+type BackendPromotionStatus = 'HOAT_DONG' | 'TAM_DUNG' | 'HET_HAN'
 type PromotionSort = 'newest' | 'ending' | 'usage' | 'code'
 
 interface Promotion {
@@ -24,6 +25,7 @@ interface Promotion {
   startDate: string
   endDate: string
   enabled: boolean
+  backendStatus: BackendPromotionStatus
 }
 
 interface PromotionFormState {
@@ -51,6 +53,7 @@ const promotionStatuses: Record<PromotionStatus, { label: string }> = {
   scheduled: { label: 'Sắp diễn ra' },
   expired: { label: 'Đã hết hạn' },
   disabled: { label: 'Đã tắt' },
+  ended: { label: 'Đã kết thúc' },
 }
 
 const emptyPromotions: Promotion[] = []
@@ -72,6 +75,7 @@ const emptyForm: PromotionFormState = {
 }
 
 const getPromotionStatus = (promotion: Promotion): PromotionStatus => {
+  if (promotion.backendStatus === 'HET_HAN') return 'ended'
   if (!promotion.enabled) return 'disabled'
   const currentDate = new Date(`${today}T00:00:00`)
   if (currentDate < new Date(`${promotion.startDate}T00:00:00`)) return 'scheduled'
@@ -99,6 +103,7 @@ function AdminPromotionsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [form, setForm] = useState<PromotionFormState>(emptyForm)
   const [notice, setNotice] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const loadPromotions = async () => {
     try {
@@ -111,6 +116,7 @@ function AdminPromotionsPage() {
         usageLimit: Number(item.maximumUses || 0), usedCount: Number(item.usedCount || 0),
         startDate: String(item.startsAt).slice(0, 10), endDate: String(item.endsAt).slice(0, 10),
         enabled: item.status === 'HOAT_DONG',
+        backendStatus: item.status === 'HOAT_DONG' ? 'HOAT_DONG' : item.status === 'HET_HAN' ? 'HET_HAN' : 'TAM_DUNG',
       })))
     } catch {
       setPromotions([])
@@ -260,13 +266,21 @@ function AdminPromotionsPage() {
 
   const confirmDelete = async () => {
     if (!deletingPromotion) return
+    setIsDeleting(true)
     try {
-      await api.put(`/admin/promotions/${deletingPromotion.id}`, { status: 'HET_HAN' })
+      const result = await api.delete<{ action: 'deleted' | 'ended' }>(`/admin/promotions/${deletingPromotion.id}`)
       await loadPromotions()
-      setNotice({ text: `Đã kết thúc mã ${deletingPromotion.code}`, type: 'success' })
+      setNotice({
+        text: result.action === 'deleted'
+          ? `Đã xóa mã ${deletingPromotion.code}`
+          : `Đã kết thúc mã ${deletingPromotion.code} và giữ lại lịch sử sử dụng`,
+        type: 'success',
+      })
       setDeletingPromotion(null)
     } catch (error) {
-      setNotice({ text: error instanceof Error ? error.message : 'Không thể cập nhật khuyến mãi', type: 'error' })
+      setNotice({ text: error instanceof Error ? error.message : 'Không thể xóa khuyến mãi', type: 'error' })
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -301,6 +315,8 @@ function AdminPromotionsPage() {
               {paginatedPromotions.map((promotion) => {
                 const status = getPromotionStatus(promotion)
                 const usagePercent = promotion.usageLimit > 0 ? Math.min(100, Math.round((promotion.usedCount / promotion.usageLimit) * 100)) : 0
+                const canModify = promotion.backendStatus !== 'HET_HAN'
+                const canDelete = canModify || promotion.usedCount === 0
                 return (
                   <tr key={promotion.id}>
                     <td><div className="admin-promotion-cell"><span><AdminIcon name="discount" /></span><div><strong>{promotion.code}</strong><b>{promotion.name}</b><small>{promotion.description}</small></div></div></td>
@@ -310,7 +326,7 @@ function AdminPromotionsPage() {
                     <td><div className="admin-promotion-period"><span>{formatDate(promotion.startDate)}</span><i>→</i><span>{formatDate(promotion.endDate)}</span></div></td>
                     <td><div className="admin-promotion-usage"><span><strong>{promotion.usedCount}</strong> / {promotion.usageLimit || '∞'}</span><i><b style={{ width: `${usagePercent}%` }} /></i></div></td>
                     <td><span className={`admin-promotion-status is-${status}`}><i />{promotionStatuses[status].label}</span></td>
-                    <td><div className="admin-promotion-actions"><button type="button" onClick={() => openEditForm(promotion)} aria-label={`Sửa ${promotion.code}`} title="Sửa khuyến mãi"><AdminIcon name="edit" /></button><button type="button" onClick={() => togglePromotion(promotion)} aria-label={`${promotion.enabled ? 'Tắt' : 'Bật'} ${promotion.code}`} title={promotion.enabled ? 'Tắt chương trình' : 'Bật chương trình'}><AdminIcon name={promotion.enabled ? 'pause' : 'play'} /></button><button type="button" className="is-danger" onClick={() => setDeletingPromotion(promotion)} aria-label={`Xóa ${promotion.code}`} title="Xóa khuyến mãi"><AdminIcon name="trash" /></button></div></td>
+                    <td><div className="admin-promotion-actions">{canModify ? <><button type="button" onClick={() => openEditForm(promotion)} aria-label={`Sửa ${promotion.code}`} title="Sửa khuyến mãi"><AdminIcon name="edit" /></button><button type="button" onClick={() => togglePromotion(promotion)} aria-label={`${promotion.enabled ? 'Tắt' : 'Bật'} ${promotion.code}`} title={promotion.enabled ? 'Tắt chương trình' : 'Bật chương trình'}><AdminIcon name={promotion.enabled ? 'pause' : 'play'} /></button></> : null}{canDelete ? <button type="button" className="is-danger" onClick={() => setDeletingPromotion(promotion)} aria-label={`${promotion.usedCount > 0 ? 'Kết thúc' : 'Xóa'} ${promotion.code}`} title={promotion.usedCount > 0 ? 'Kết thúc chương trình' : 'Xóa khuyến mãi'}><AdminIcon name="trash" /></button> : null}</div></td>
                   </tr>
                 )
               })}
@@ -347,7 +363,7 @@ function AdminPromotionsPage() {
 
       {deletingPromotion ? (
         <div className="admin-promotion-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setDeletingPromotion(null)}>
-          <section className="admin-promotion-delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="admin-promotion-delete-title"><span><AdminIcon name="trash" /></span><h2 id="admin-promotion-delete-title">Xóa khuyến mãi?</h2><p>Bạn sắp xóa mã <strong>{deletingPromotion.code}</strong>. Khách hàng sẽ không thể sử dụng mã này sau khi dữ liệu được nối với backend.</p><div><button type="button" className="admin-promotion-secondary" onClick={() => setDeletingPromotion(null)}>Hủy</button><button type="button" className="admin-promotion-danger" onClick={confirmDelete}>Xóa khuyến mãi</button></div></section>
+          <section className="admin-promotion-delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="admin-promotion-delete-title"><span><AdminIcon name="trash" /></span><h2 id="admin-promotion-delete-title">{deletingPromotion.usedCount > 0 ? 'Kết thúc khuyến mãi?' : 'Xóa khuyến mãi?'}</h2><p>{deletingPromotion.usedCount > 0 ? <>Mã <strong>{deletingPromotion.code}</strong> đã có {deletingPromotion.usedCount.toLocaleString('vi-VN')} lượt sử dụng nên sẽ được kết thúc thay vì xóa. Lịch sử đơn hàng vẫn được giữ nguyên.</> : <>Mã <strong>{deletingPromotion.code}</strong> chưa được sử dụng và sẽ bị xóa vĩnh viễn. Hành động này không thể hoàn tác.</>}</p><div><button type="button" className="admin-promotion-secondary" disabled={isDeleting} onClick={() => setDeletingPromotion(null)}>Hủy</button><button type="button" className="admin-promotion-danger" disabled={isDeleting} onClick={confirmDelete}>{isDeleting ? 'Đang xử lý...' : deletingPromotion.usedCount > 0 ? 'Kết thúc chương trình' : 'Xóa khuyến mãi'}</button></div></section>
         </div>
       ) : null}
 

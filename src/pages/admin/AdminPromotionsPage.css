@@ -380,7 +380,8 @@
   color: #3972ad;
 }
 
-.admin-promotion-status.is-expired {
+.admin-promotion-status.is-expired,
+.admin-promotion-status.is-ended {
   background: #f1eeee;
   color: #776c6d;
 }
@@ -635,6 +636,11 @@
   display: flex;
   justify-content: center;
   gap: 9px;
+}
+
+.admin-promotion-delete-modal button:disabled {
+  cursor: wait;
+  opacity: .65;
 }
 
 .admin-promotion-toast {
