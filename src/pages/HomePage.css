@@ -357,25 +357,86 @@
 }
 
 @media (max-width: 500px) {
+  .home-hero {
+    margin-bottom: 12px;
+    background: #fff7f8;
+  }
+
+  .hero-image-wrapper {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hero-banner-image {
+    height: clamp(170px, 48vw, 190px);
+    object-fit: cover;
+    object-position: 72% center;
+  }
+
+  .hero-content-container {
+    position: relative;
+    left: auto;
+    width: 100%;
+    height: auto;
+    padding: 18px 20px 22px;
+    transform: none;
+    background: linear-gradient(180deg, #fff7f8 0%, #fff 100%);
+  }
+
   .hero-content-left {
-    left: 0;
-    width: 46%;
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 100%;
+    transform: none;
   }
   .hero-title {
-    margin-bottom: 0.5vw;
+    margin-bottom: 9px;
+    font-size: 21px;
+    line-height: 1.25;
   }
   .hero-badge-pill {
-    margin-bottom: 0.5vw;
-    padding: 0.4vw 1vw;
+    margin-bottom: 8px;
+    padding: 7px 11px;
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 1.35;
   }
   .hero-subtext-italic {
-    margin-bottom: 1vw;
+    margin-bottom: 14px;
+    font-size: 12px;
   }
   .hero-features-row {
-    margin-bottom: 1.2vw;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .hero-feature-item {
+    min-width: 0;
+    gap: 6px;
+  }
+  .feature-icon {
+    width: 22px;
+    height: 22px;
+  }
+  .feature-text .bold-text {
+    font-size: 11px;
+  }
+  .feature-text .light-text {
+    font-size: 9.5px;
+  }
+  .hero-btn-green {
+    min-height: 40px;
+    padding: 10px 17px;
+    font-size: 12px;
+  }
+  .btn-arrow {
+    width: 13px;
+    height: 13px;
   }
   .hero-badge {
-    transform: scale(0.45);
+    display: none;
   }
   .badge-vitamin-b3 {
     left: 47%;
@@ -388,6 +449,26 @@
   .badge-ha {
     left: 79%;
     top: 12%;
+  }
+}
+
+@media (max-width: 390px) {
+  .hero-banner-image {
+    height: 172px;
+    object-position: 70% center;
+  }
+
+  .hero-content-container {
+    padding: 16px 16px 20px;
+  }
+
+  .hero-title {
+    font-size: 20px;
+  }
+
+  .home-trust-bar {
+    margin-right: 12px;
+    margin-left: 12px;
   }
 }
 

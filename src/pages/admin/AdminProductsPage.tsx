@@ -590,14 +590,14 @@ function AdminProductsPage() {
                 </label>
                 <label className="is-wide">
                   <span>Thư viện ảnh sản phẩm (tối đa 5 ảnh)</span>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                  <div className="admin-product-gallery">
                     {form.galleryImages.map((img, index) => (
-                      <div key={index} style={{ position: 'relative', width: '60px', height: '60px', border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden' }}>
-                        <img src={img} alt={`Gallery ${index + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <div key={index} className="admin-product-gallery-item">
+                        <img src={img} alt={`Gallery ${index + 1}`} />
                         <button 
                           type="button" 
                           onClick={() => removeGalleryImage(index)}
-                          style={{ position: 'absolute', top: '2px', right: '2px', background: '#f44336', color: 'white', border: 'none', borderRadius: '50%', width: '18px', height: '18px', cursor: 'pointer', fontSize: '14px', lineHeight: '1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          className="admin-product-gallery-remove"
                           title="Xóa ảnh"
                         >×</button>
                       </div>
@@ -607,7 +607,7 @@ function AdminProductsPage() {
                     type="button" 
                     onClick={() => galleryFileInputRef.current?.click()}
                     disabled={form.galleryImages.length >= 5}
-                    style={{ padding: '8px 16px', fontSize: '14px', cursor: form.galleryImages.length >= 5 ? 'not-allowed' : 'pointer', opacity: form.galleryImages.length >= 5 ? 0.5 : 1, border: '1px solid #ccc', borderRadius: '4px', background: 'white' }}
+                    className="admin-product-gallery-upload"
                   >
                     📤 Thêm ảnh ({form.galleryImages.length}/5)
                   </button>
@@ -625,7 +625,7 @@ function AdminProductsPage() {
                 <label><span>Giá gốc</span><input min="0" type="number" value={form.originalPrice} onChange={(event) => updateField('originalPrice', event.target.value)} /></label>
                 <label><span>Khối lượng / dung tích *</span><input required value={form.weight} onChange={(event) => updateField('weight', event.target.value)} /></label>
                 <label><span>Xuất xứ *</span><input required value={form.origin} onChange={(event) => updateField('origin', event.target.value)} /></label>
-                <div style={{ gridColumn: 'span 2' }}><span style={{ fontSize: '14px', fontWeight: '500' }}>Tồn kho</span><p style={{ fontSize: '14px', margin: '4px 0 0 0', color: '#666' }}>Chỉ thay đổi qua phiếu nhập, phiếu xuất hoặc đơn hàng.</p></div>
+                <div className="admin-product-stock-note"><span>Tồn kho</span><p>Chỉ thay đổi qua phiếu nhập, phiếu xuất hoặc đơn hàng.</p></div>
                 <label className="admin-checkbox-field" title="Sản phẩm combo là bộ sản phẩm gồm nhiều món (VD: Bộ 3 món chăm sóc da)">
                   <input type="checkbox" checked={form.isCombo} onChange={(event) => updateField('isCombo', event.target.checked)} />
                   <span>Đây là sản phẩm combo</span>
