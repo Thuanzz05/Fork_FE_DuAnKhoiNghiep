@@ -13,7 +13,7 @@
   top: 0;
   z-index: 900;
   width: 100%;
-  overflow-x: clip;
+  overflow: visible;
   background: #ffffff;
   color: #3A1215;
   box-shadow: 0 2px 12px rgba(58, 18, 21, 0.08);
@@ -74,11 +74,12 @@
 
 /* ---- Search ---- */
 .header-search {
+  position: relative;
   display: flex;
   flex: 1 1 380px;
   max-width: 380px;
   height: 42px;
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid #F0C4C7;
   border-radius: 999px;
   background: #ffffff;
@@ -90,7 +91,7 @@
   box-shadow: 0 0 0 3px rgba(181, 55, 64, 0.1);
 }
 
-.header-search input {
+.header-search > input {
   width: 100%;
   min-width: 0;
   padding: 0 18px;
@@ -102,12 +103,12 @@
   font-style: italic;
 }
 
-.header-search input::placeholder {
+.header-search > input::placeholder {
   color: #A07075;
   opacity: 1;
 }
 
-.header-search button {
+.header-search > .header-search-submit {
   display: inline-grid;
   place-items: center;
   width: 50px;
@@ -116,11 +117,12 @@
   border: 0;
   color: #ffffff;
   background: #B53740;
+  border-radius: 0 999px 999px 0;
   cursor: pointer;
   transition: background 0.2s;
 }
 
-.header-search button:hover {
+.header-search > .header-search-submit:hover {
   background: #8E2B33;
 }
 
@@ -141,6 +143,130 @@
 .header-search svg {
   width: 18px;
   height: 18px;
+}
+
+.header-search-suggestions {
+  position: absolute;
+  top: calc(100% + 9px);
+  right: -1px;
+  left: -1px;
+  z-index: 1200;
+  max-height: min(430px, calc(100vh - 150px));
+  overflow-y: auto;
+  border: 1px solid #eadbdd;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 16px 38px rgba(58, 18, 21, 0.18);
+}
+
+.header-search-suggestion-list {
+  display: grid;
+  padding: 6px;
+}
+
+.header-search-suggestion {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  min-height: 62px;
+  padding: 7px 9px;
+  border-radius: 9px;
+  color: #3a292b;
+  text-decoration: none;
+  transition: background-color 0.16s ease;
+}
+
+.header-search-suggestion:hover,
+.header-search-suggestion.is-active {
+  background: #fff3f4;
+}
+
+.header-search-suggestion > img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border: 1px solid #f0e2e3;
+  border-radius: 8px;
+  background: #faf7f7;
+}
+
+.header-search-suggestion-copy,
+.header-search-suggestion-price {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.header-search-suggestion-copy {
+  gap: 4px;
+}
+
+.header-search-suggestion-copy strong {
+  overflow: hidden;
+  color: #3a292b;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-search-suggestion-copy small {
+  overflow: hidden;
+  color: #948486;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-search-suggestion-price {
+  align-items: flex-end;
+  gap: 2px;
+  padding-left: 4px;
+  white-space: nowrap;
+}
+
+.header-search-suggestion-price strong {
+  color: #b53740;
+  font-size: 11px;
+}
+
+.header-search-suggestion-price del {
+  color: #a99c9d;
+  font-size: 9px;
+}
+
+.header-search-message {
+  margin: 0;
+  padding: 22px 16px;
+  color: #7e6e70;
+  font-size: 12px;
+  text-align: center;
+}
+
+.header-search .header-search-view-all {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 14px;
+  border: 0;
+  border-top: 1px solid #f0e4e5;
+  border-radius: 0 0 14px 14px;
+  background: #fffafa;
+  color: #a42f38;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.35;
+  cursor: pointer;
+  transition: background-color 0.16s ease;
+}
+
+.header-search .header-search-view-all:hover,
+.header-search .header-search-view-all:focus-visible {
+  background: #fbecee;
+  outline: none;
 }
 
 /* ---- Contact info ---- */
@@ -857,11 +983,11 @@
     height: 42px;
   }
 
-  .header-search input {
+  .header-search > input {
     font-size: 14px;
   }
 
-  .header-search button {
+  .header-search > .header-search-submit {
     width: 46px;
     height: 42px;
     flex-basis: 46px;
@@ -1069,8 +1195,27 @@
   }
 
   .header-search,
-  .header-search button {
+  .header-search > .header-search-submit {
     height: 40px;
+  }
+
+  .header-search-suggestions {
+    max-height: min(390px, calc(100dvh - 145px));
+  }
+
+  .header-search-suggestion {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    min-height: 58px;
+    padding: 7px;
+  }
+
+  .header-search-suggestion > img {
+    width: 44px;
+    height: 44px;
+  }
+
+  .header-search-suggestion-price {
+    display: none;
   }
 
   .account-dropdown {
