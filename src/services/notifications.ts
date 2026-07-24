@@ -18,6 +18,12 @@ export type NotificationList = {
 
 const vapidPublicKey = String(import.meta.env.VITE_VAPID_PUBLIC_KEY || '').trim()
 
+export type PushPermissionState = NotificationPermission
+  | 'insecure-context'
+  | 'ios-install-required'
+  | 'embedded-browser'
+  | 'unsupported'
+
 const urlBase64ToUint8Array = (value: string) => {
   const padding = '='.repeat((4 - value.length % 4) % 4)
   const base64 = (value + padding).replace(/-/g, '+').replace(/_/g, '/')
@@ -25,16 +31,52 @@ const urlBase64ToUint8Array = (value: string) => {
   return Uint8Array.from([...raw].map((character) => character.charCodeAt(0)))
 }
 
-export const supportsWebPush = () => (
+const isIOSDevice = () => {
+  const platform = navigator.platform || ''
+  return /iPad|iPhone|iPod/i.test(navigator.userAgent)
+    || (platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+}
+
+const isStandaloneApp = () => (
+  window.matchMedia('(display-mode: standalone)').matches
+  || Boolean((navigator as Navigator & { standalone?: boolean }).standalone)
+)
+
+const isEmbeddedBrowser = () => (
+  /FBAN|FBAV|Instagram|Zalo|Line\/|\bwv\b/i.test(navigator.userAgent)
+)
+
+const hasWebPushAPIs = () => (
   'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
 )
 
-export const getPushPermission = (): NotificationPermission | 'unsupported' => {
-  if (!supportsWebPush()) return 'unsupported'
-  return Notification.permission
+export const supportsWebPush = () => window.isSecureContext && hasWebPushAPIs()
+
+export const getPushPermission = (): PushPermissionState => {
+  if (!window.isSecureContext) return 'insecure-context'
+  if (hasWebPushAPIs()) return Notification.permission
+  if (isEmbeddedBrowser()) return 'embedded-browser'
+  if (isIOSDevice() && !isStandaloneApp()) return 'ios-install-required'
+  return 'unsupported'
 }
 
-const registerWorker = () => navigator.serviceWorker.register('/sw.js', { scope: '/' })
+const unavailableMessage = (state: PushPermissionState) => {
+  if (state === 'insecure-context') {
+    return 'Thông báo đẩy chỉ hoạt động trên HTTPS hoặc localhost.'
+  }
+  if (state === 'ios-install-required') {
+    return 'Trên iPhone/iPad, hãy thêm Rubeanora vào Màn hình chính rồi mở ứng dụng để bật thông báo.'
+  }
+  if (state === 'embedded-browser') {
+    return 'Hãy mở website bằng Chrome hoặc Safari thay vì trình duyệt bên trong Zalo, Facebook hay Instagram.'
+  }
+  return 'Trình duyệt hoặc phiên bản hệ điều hành này chưa hỗ trợ thông báo đẩy.'
+}
+
+export const registerPushWorker = async () => {
+  if (!window.isSecureContext || !('serviceWorker' in navigator)) return null
+  return navigator.serviceWorker.register('/sw.js', { scope: '/' })
+}
 
 const saveSubscription = async (subscription: PushSubscription) => {
   const json = subscription.toJSON()
@@ -49,7 +91,8 @@ const saveSubscription = async (subscription: PushSubscription) => {
 }
 
 export async function syncPushSubscription(requestPermission = false) {
-  if (!supportsWebPush()) throw new Error('Trình duyệt này chưa hỗ trợ thông báo đẩy.')
+  const pushState = getPushPermission()
+  if (!supportsWebPush()) throw new Error(unavailableMessage(pushState))
   if (!vapidPublicKey) throw new Error('Frontend chưa cấu hình VITE_VAPID_PUBLIC_KEY.')
 
   let permission = Notification.permission
@@ -59,7 +102,8 @@ export async function syncPushSubscription(requestPermission = false) {
     return { subscribed: false, permission }
   }
 
-  const registration = await registerWorker()
+  const registration = await registerPushWorker()
+  if (!registration) throw new Error('Không thể đăng ký dịch vụ nhận thông báo trên trình duyệt này.')
   let subscription = await registration.pushManager.getSubscription()
   if (!subscription) {
     subscription = await registration.pushManager.subscribe({
