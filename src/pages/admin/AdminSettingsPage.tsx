@@ -115,8 +115,8 @@ function AdminSettingsPage() {
       setNotice({ message: 'Địa chỉ email liên hệ chưa đúng định dạng', type: 'error' })
       return
     }
-    if (settings.notificationEmail.trim() && !/^\S+@\S+\.\S+$/.test(settings.notificationEmail)) {
-      setNotice({ message: 'Địa chỉ email nhận thông báo chưa đúng định dạng', type: 'error' })
+    if (!settings.notificationEmail.trim() || !/^\S+@\S+\.\S+$/.test(settings.notificationEmail)) {
+      setNotice({ message: 'Vui lòng nhập đúng email nhận thông báo', type: 'error' })
       return
     }
     if (![settings.codEnabled, settings.bankTransferEnabled].some(Boolean)) {
@@ -173,7 +173,7 @@ function AdminSettingsPage() {
   }
 
   return (
-    <AdminLayout activeItem="settings" searchPlaceholder="Tìm kiếm trong trang quản trị...">
+    <AdminLayout activeItem="settings">
       <div className="admin-page-heading admin-settings-heading">
         <div><p>THIẾT LẬP HỆ THỐNG</p><h1>Cài đặt cửa hàng</h1><span>Quản lý thông tin hiển thị và cấu hình vận hành chung.</span></div>
         <div className="admin-settings-heading-actions"><span className={isDirty ? 'is-dirty' : ''}><i />{isDirty ? 'Có thay đổi chưa lưu' : 'Đã lưu thay đổi'}</span><button type="button" className="admin-setting-primary" disabled={!isDirty} onClick={handleSave}><AdminIcon name="settings" />Lưu cài đặt</button></div>
@@ -237,8 +237,8 @@ function AdminSettingsPage() {
           {activeSection === 'notifications' ? (
             <div className="admin-settings-section">
               <header><div><span>THÔNG BÁO</span><h2>Cảnh báo vận hành</h2><p>Chọn các sự kiện cần gửi thông báo cho cửa hàng và khách hàng.</p></div></header>
-              <div className="admin-settings-form-grid"><label className="is-wide"><span>Email nhận thông báo *</span><input type="email" value={settings.notificationEmail} onChange={(event) => updateField('notificationEmail', event.target.value)} /><small>Thông báo quản trị sẽ được gửi về địa chỉ này khi nối backend.</small></label></div>
-              <div className="admin-settings-subsection"><h3>Thông báo cho khách hàng</h3><SettingToggle checked={settings.sendOrderConfirmation} onChange={(value) => updateField('sendOrderConfirmation', value)} label="Xác nhận đơn hàng qua email" description="Gửi thông tin tóm tắt sau khi khách đặt hàng thành công." /></div>
+              <div className="admin-settings-form-grid"><label className="is-wide"><span>Email nhận thông báo *</span><input type="email" value={settings.notificationEmail} onChange={(event) => updateField('notificationEmail', event.target.value)} /><small>Cửa hàng sẽ nhận email tại địa chỉ này khi có đơn hàng mới.</small></label></div>
+              <div className="admin-settings-subsection"><h3>Thông báo cho khách hàng</h3><SettingToggle checked={settings.sendOrderConfirmation} onChange={(value) => updateField('sendOrderConfirmation', value)} label="Xác nhận đơn hàng qua email" description="Gửi mã đơn, sản phẩm và tổng thanh toán cho khách sau khi đặt hàng thành công." /></div>
             </div>
           ) : null}
 
@@ -261,7 +261,7 @@ function AdminSettingsPage() {
             </div>
           ) : null}
 
-          <footer className="admin-settings-content-footer"><div><strong>{isDirty ? 'Bạn có thay đổi chưa lưu' : 'Mọi thay đổi đã được lưu'}</strong><span>Cài đặt được lưu trên trình duyệt trong giai đoạn frontend.</span></div><button type="button" className="admin-setting-primary" disabled={!isDirty} onClick={handleSave}>Lưu cài đặt</button></footer>
+          <footer className="admin-settings-content-footer"><div><strong>{isDirty ? 'Bạn có thay đổi chưa lưu' : 'Mọi thay đổi đã được lưu'}</strong><span>Cài đặt được lưu và đồng bộ với hệ thống.</span></div><button type="button" className="admin-setting-primary" disabled={!isDirty} onClick={handleSave}>Lưu cài đặt</button></footer>
         </section>
       </div>
 

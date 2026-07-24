@@ -275,7 +275,7 @@ function AdminReportsPage() {
   const printedAt = new Intl.DateTimeFormat('vi-VN', { dateStyle: 'long', timeStyle: 'short' }).format(new Date())
 
   return (
-    <AdminLayout activeItem="reports" searchPlaceholder="Tìm trong báo cáo...">
+    <AdminLayout activeItem="reports">
       <header className="admin-report-print-header">
         <div>
           <img src={storeSettings.logo || '/images/logo1.png'} alt={storeSettings.storeName} />
