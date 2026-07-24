@@ -139,9 +139,24 @@ function NotificationBell({ variant = 'customer' }: NotificationBellProps) {
               <div><strong>Nhận thông báo trên thiết bị</strong><small>Biết ngay khi đơn hàng hoặc tin nhắn có cập nhật.</small></div>
               {pushPermission === 'denied'
                 ? <span>Hãy cho phép thông báo trong cài đặt trình duyệt.</span>
-                : pushPermission === 'unsupported'
-                  ? <span>Trình duyệt này chưa hỗ trợ Web Push.</span>
-                  : <button type="button" disabled={loading} onClick={() => void enablePush()}>{loading ? 'Đang bật...' : 'Bật thông báo'}</button>}
+                : pushPermission === 'ios-install-required'
+                  ? (
+                    <div className="notification-center__instructions">
+                      <span>iPhone/iPad chỉ nhận Web Push khi website được cài ở Màn hình chính.</span>
+                      <ol>
+                        <li>Mở trang này bằng Safari.</li>
+                        <li>Nhấn Chia sẻ ⬆ rồi chọn “Thêm vào Màn hình chính”.</li>
+                        <li>Mở biểu tượng Rubeanora vừa tạo, đăng nhập và nhấn “Bật thông báo”.</li>
+                      </ol>
+                    </div>
+                  )
+                  : pushPermission === 'embedded-browser'
+                    ? <span>Trình duyệt trong Zalo/Facebook/Instagram không hỗ trợ. Hãy chọn menu ⋮ → Mở bằng Chrome hoặc Safari.</span>
+                    : pushPermission === 'insecure-context'
+                      ? <span>Hãy mở website bằng địa chỉ HTTPS. Truy cập qua IP local dạng HTTP trên điện thoại sẽ không nhận được thông báo.</span>
+                      : pushPermission === 'unsupported'
+                        ? <span>Hãy cập nhật hệ điều hành và dùng phiên bản Chrome, Safari hoặc Edge mới nhất.</span>
+                        : <button type="button" disabled={loading} onClick={() => void enablePush()}>{loading ? 'Đang bật...' : 'Bật thông báo'}</button>}
               {pushError && <span className="notification-center__error">{pushError}</span>}
             </div>
           )}

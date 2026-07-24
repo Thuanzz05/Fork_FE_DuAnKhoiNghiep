@@ -2,8 +2,11 @@
   "name": "Rubeanora",
   "short_name": "Rubeanora",
   "description": "Mỹ phẩm chăm sóc da từ đậu đỏ thiên nhiên",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "lang": "vi",
   "background_color": "#ffffff",
   "theme_color": "#b53740",
   "icons": [
