@@ -49,6 +49,7 @@ function AdminSettingsPage() {
       facebookUrl?: string; instagramUrl?: string; tiktokUrl?: string
       legalName?: string; supportEmail?: string; mapEmbedUrl?: string; orderPrefix?: string
       codEnabled?: boolean; bankTransferEnabled?: boolean; youtubeUrl?: string
+      facebookEnabled?: boolean; instagramEnabled?: boolean; youtubeEnabled?: boolean; tiktokEnabled?: boolean
       notificationEmail?: string; sendOrderConfirmation?: boolean; maintenanceMode?: boolean
     }>('/admin/settings').then((data) => {
       const next = {
@@ -57,6 +58,8 @@ function AdminSettingsPage() {
         contactEmail: data.email || '', address: data.address || '', businessHours: data.workingHours || '',
         standardShippingFee: data.shippingFee, freeShippingThreshold: data.freeShippingThreshold,
         facebookUrl: data.facebookUrl || '', instagramUrl: data.instagramUrl || '', tiktokUrl: data.tiktokUrl || '',
+        facebookEnabled: data.facebookEnabled ?? true, instagramEnabled: data.instagramEnabled ?? true,
+        youtubeEnabled: data.youtubeEnabled ?? true, tiktokEnabled: data.tiktokEnabled ?? true,
         legalName: data.legalName || '', supportEmail: data.supportEmail || '', mapEmbedUrl: data.mapEmbedUrl || '',
         orderPrefix: data.orderPrefix || 'RBB', codEnabled: data.codEnabled ?? true,
         bankTransferEnabled: data.bankTransferEnabled ?? true, youtubeUrl: data.youtubeUrl || '',
@@ -147,6 +150,8 @@ function AdminSettingsPage() {
         freeShippingThreshold: normalizedSettings.freeShippingThreshold,
         facebookUrl: normalizedSettings.facebookUrl, instagramUrl: normalizedSettings.instagramUrl,
         tiktokUrl: normalizedSettings.tiktokUrl,
+        facebookEnabled: normalizedSettings.facebookEnabled, instagramEnabled: normalizedSettings.instagramEnabled,
+        youtubeEnabled: normalizedSettings.youtubeEnabled, tiktokEnabled: normalizedSettings.tiktokEnabled,
         legalName: normalizedSettings.legalName, supportEmail: normalizedSettings.supportEmail,
         mapEmbedUrl: normalizedSettings.mapEmbedUrl, orderPrefix: normalizedSettings.orderPrefix,
         codEnabled: normalizedSettings.codEnabled, bankTransferEnabled: normalizedSettings.bankTransferEnabled,
