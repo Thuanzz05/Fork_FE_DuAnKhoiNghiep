@@ -3,6 +3,12 @@ import { useStoreSettings } from '../utils/storeSettings'
 
 function Footer() {
   const storeSettings = useStoreSettings()
+  const hasEnabledSocialNetwork = [
+    storeSettings.facebookEnabled,
+    storeSettings.instagramEnabled,
+    storeSettings.youtubeEnabled,
+    storeSettings.tiktokEnabled,
+  ].some(Boolean)
 
   return (
     <footer className="site-footer">
@@ -55,40 +61,44 @@ function Footer() {
           </div>
 
           <div className="footer-col">
-            <h3>Theo Dõi Chúng Tôi</h3>
-            <div className="footer-social">
-              {storeSettings.youtubeEnabled && (
-                <a href={storeSettings.youtubeUrl || '#'} aria-label="YouTube" className="social-icon" target="_blank" rel="noreferrer">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19.1c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.35 29 29 0 0 0-.46-5.33z" />
-                    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="#B53740" />
-                  </svg>
-                </a>
-              )}
-              {storeSettings.facebookEnabled && (
-                <a href={storeSettings.facebookUrl || '#'} aria-label="Facebook" className="social-icon" target="_blank" rel="noreferrer">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
-                  </svg>
-                </a>
-              )}
-              {storeSettings.instagramEnabled && (
-                <a href={storeSettings.instagramUrl || '#'} aria-label="Instagram" className="social-icon" target="_blank" rel="noreferrer">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-                    <circle cx="12" cy="12" r="5" />
-                    <circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none" />
-                  </svg>
-                </a>
-              )}
-              {storeSettings.tiktokEnabled && (
-                <a href={storeSettings.tiktokUrl || '#'} aria-label="TikTok" className="social-icon" target="_blank" rel="noreferrer">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
-                  </svg>
-                </a>
-              )}
-            </div>
+            {hasEnabledSocialNetwork && (
+              <>
+                <h3>Theo Dõi Chúng Tôi</h3>
+                <div className="footer-social">
+                  {storeSettings.youtubeEnabled && (
+                    <a href={storeSettings.youtubeUrl || '#'} aria-label="YouTube" className="social-icon" target="_blank" rel="noreferrer">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19.1c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.35 29 29 0 0 0-.46-5.33z" />
+                        <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="#B53740" />
+                      </svg>
+                    </a>
+                  )}
+                  {storeSettings.facebookEnabled && (
+                    <a href={storeSettings.facebookUrl || '#'} aria-label="Facebook" className="social-icon" target="_blank" rel="noreferrer">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+                      </svg>
+                    </a>
+                  )}
+                  {storeSettings.instagramEnabled && (
+                    <a href={storeSettings.instagramUrl || '#'} aria-label="Instagram" className="social-icon" target="_blank" rel="noreferrer">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                        <circle cx="12" cy="12" r="5" />
+                        <circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none" />
+                      </svg>
+                    </a>
+                  )}
+                  {storeSettings.tiktokEnabled && (
+                    <a href={storeSettings.tiktokUrl || '#'} aria-label="TikTok" className="social-icon" target="_blank" rel="noreferrer">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
+                      </svg>
+                    </a>
+                  )}
+                </div>
+              </>
+            )}
 
             <h4 className="footer-products-title">Sản phẩm nổi bật</h4>
             <ul className="footer-products-list">

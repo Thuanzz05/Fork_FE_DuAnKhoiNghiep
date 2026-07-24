@@ -1,6 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useCatalog } from '../hooks/useCatalog'
+import { formatPrice } from '../data/products'
 import { getCartCount, getCartItems, refreshCartScope, syncCartFromApi } from '../utils/cart'
 import { getWishlistIds, refreshWishlistScope, syncWishlistFromApi } from '../utils/wishlist'
 import { getCurrentUser, getUserDisplayName, getUserInitial, logoutDemo } from '../utils/auth'
@@ -17,10 +18,22 @@ const menuItems = [
   { label: 'Liên hệ', path: '/lien-he' },
 ]
 
+function normalizeSearchText(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function Header() {
-  const { categories } = useCatalog()
+  const { categories, products, loading: catalogLoading } = useCatalog()
   const location = useLocation()
   const navigate = useNavigate()
+  const searchRef = useRef<HTMLFormElement>(null)
   const storeSettings = useStoreSettings()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
@@ -29,6 +42,39 @@ function Header() {
   const [cartCount, setCartCount] = useState(() => getCartCount())
   const [authUser, setAuthUser] = useState(() => getCurrentUser())
   const [searchTerm, setSearchTerm] = useState(() => new URLSearchParams(location.search).get('tu-khoa') || '')
+  const [searchSuggestionsOpen, setSearchSuggestionsOpen] = useState(false)
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1)
+
+  const productSuggestions = useMemo(() => {
+    const normalizedQuery = normalizeSearchText(searchTerm)
+    if (!normalizedQuery) return []
+
+    const queryTokens = normalizedQuery.split(' ').filter(Boolean)
+    const scoreProduct = (product: (typeof products)[number]) => {
+      const normalizedName = normalizeSearchText(product.name)
+      if (normalizedName.startsWith(normalizedQuery)) return 0
+      if (normalizedName.includes(normalizedQuery)) return 1
+      return 2
+    }
+
+    return products
+      .filter((product) => {
+        const searchableText = normalizeSearchText([
+          product.name,
+          product.nameEn,
+          product.category,
+          product.weight,
+          ...(product.tags || []),
+        ].join(' '))
+
+        return queryTokens.every((token) => searchableText.includes(token))
+      })
+      .sort((left, right) => scoreProduct(left) - scoreProduct(right) || left.name.localeCompare(right.name, 'vi'))
+      .slice(0, 5)
+  }, [products, searchTerm])
+
+  const hasSearchQuery = Boolean(normalizeSearchText(searchTerm))
+  const showSearchSuggestions = searchSuggestionsOpen && hasSearchQuery
 
   useEffect(() => {
     const syncAuth = () => {
@@ -97,6 +143,8 @@ function Header() {
   const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const keyword = searchTerm.replace(/\s+/g, ' ').trim()
+    setSearchSuggestionsOpen(false)
+    setActiveSuggestionIndex(-1)
 
     if (!keyword) {
       setSearchTerm('')
@@ -108,6 +156,57 @@ function Header() {
     navigate(`/san-pham?${params.toString()}`)
   }
 
+  const openSuggestedProduct = (index: number) => {
+    const product = productSuggestions[index]
+    if (!product) return
+
+    setSearchSuggestionsOpen(false)
+    setActiveSuggestionIndex(-1)
+    navigate(`/san-pham/${product.slug}`)
+  }
+
+  const handleSearchKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Escape') {
+      setSearchSuggestionsOpen(false)
+      setActiveSuggestionIndex(-1)
+      return
+    }
+
+    if (event.key === 'ArrowDown' && productSuggestions.length > 0) {
+      event.preventDefault()
+      setSearchSuggestionsOpen(true)
+      setActiveSuggestionIndex((index) => (index + 1) % productSuggestions.length)
+      return
+    }
+
+    if (event.key === 'ArrowUp' && productSuggestions.length > 0) {
+      event.preventDefault()
+      setSearchSuggestionsOpen(true)
+      setActiveSuggestionIndex((index) => (index <= 0 ? productSuggestions.length - 1 : index - 1))
+      return
+    }
+
+    if (event.key === 'Enter' && activeSuggestionIndex >= 0) {
+      event.preventDefault()
+      openSuggestedProduct(activeSuggestionIndex)
+    }
+  }
+
+  useEffect(() => {
+    setActiveSuggestionIndex(-1)
+  }, [searchTerm])
+
+  useEffect(() => {
+    const closeSearchSuggestions = (event: PointerEvent) => {
+      if (searchRef.current?.contains(event.target as Node)) return
+      setSearchSuggestionsOpen(false)
+      setActiveSuggestionIndex(-1)
+    }
+
+    document.addEventListener('pointerdown', closeSearchSuggestions)
+    return () => document.removeEventListener('pointerdown', closeSearchSuggestions)
+  }, [])
+
   useEffect(() => {
     if (!location.pathname.startsWith('/san-pham')) return
     setSearchTerm(new URLSearchParams(location.search).get('tu-khoa') || '')
@@ -117,6 +216,8 @@ function Header() {
   useEffect(() => {
     setMobileMenuOpen(false)
     setAccountMenuOpen(false)
+    setSearchSuggestionsOpen(false)
+    setActiveSuggestionIndex(-1)
   }, [location.pathname])
 
   useEffect(() => {
@@ -162,28 +263,81 @@ function Header() {
           <img src={storeSettings.logo || '/images/logo1.png'} alt={storeSettings.storeName} className="logo-img" />
         </Link>
 
-        <form className="header-search" role="search" onSubmit={handleSearchSubmit}>
+        <form ref={searchRef} className="header-search" role="search" onSubmit={handleSearchSubmit}>
           <input
             type="search"
             name="tu-khoa"
             value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
+            onChange={(event) => {
+              setSearchTerm(event.target.value)
+              setSearchSuggestionsOpen(Boolean(event.target.value.trim()))
+            }}
+            onFocus={() => setSearchSuggestionsOpen(hasSearchQuery)}
             placeholder="Tìm kiếm sản phẩm"
             aria-label="Tìm kiếm sản phẩm"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={showSearchSuggestions}
+            aria-controls="header-search-suggestions"
+            aria-activedescendant={activeSuggestionIndex >= 0 ? `header-search-suggestion-${activeSuggestionIndex}` : undefined}
             autoComplete="off"
             enterKeyHint="search"
-            onKeyDown={(event) => {
-              if (event.key !== 'Enter') return
-              event.preventDefault()
-              event.currentTarget.form?.requestSubmit()
-            }}
+            onKeyDown={handleSearchKeyDown}
           />
-          <button type="submit" aria-label="Tìm kiếm">
+          <button className="header-search-submit" type="submit" aria-label="Tìm kiếm">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="11" cy="11" r="7" />
               <path d="m16.5 16.5 4 4" />
             </svg>
           </button>
+
+          {showSearchSuggestions && (
+            <div className="header-search-suggestions" id="header-search-suggestions" role="listbox">
+              {catalogLoading ? (
+                <p className="header-search-message">Đang tải gợi ý...</p>
+              ) : productSuggestions.length > 0 ? (
+                <div className="header-search-suggestion-list">
+                  {productSuggestions.map((product, index) => (
+                    <Link
+                      id={`header-search-suggestion-${index}`}
+                      className={`header-search-suggestion${activeSuggestionIndex === index ? ' is-active' : ''}`}
+                      key={product.id}
+                      to={`/san-pham/${product.slug}`}
+                      role="option"
+                      aria-selected={activeSuggestionIndex === index}
+                      onMouseEnter={() => setActiveSuggestionIndex(index)}
+                      onClick={() => {
+                        setSearchSuggestionsOpen(false)
+                        setActiveSuggestionIndex(-1)
+                      }}
+                    >
+                      <img src={product.image} alt="" />
+                      <span className="header-search-suggestion-copy">
+                        <strong>{product.name}</strong>
+                        <small>{product.category} · {product.weight}</small>
+                      </span>
+                      <span className="header-search-suggestion-price">
+                        <strong>{formatPrice(product.price)}</strong>
+                        {product.originalPrice && product.originalPrice > product.price ? (
+                          <del>{formatPrice(product.originalPrice)}</del>
+                        ) : null}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="header-search-message">Không tìm thấy sản phẩm phù hợp.</p>
+              )}
+
+              <button
+                className="header-search-view-all"
+                type="submit"
+                onMouseEnter={() => setActiveSuggestionIndex(-1)}
+              >
+                Xem tất cả kết quả cho “{searchTerm.replace(/\s+/g, ' ').trim()}”
+              </button>
+            </div>
+          )}
         </form>
 
         <div className="header-info" aria-label="Thông tin liên hệ">

@@ -45,7 +45,7 @@ const dispatchAuthUpdated = (session: AuthSession | null) => {
 
 export const getAuthSession = (): AuthSession | null => {
   try {
-    const raw = sessionStorage.getItem(AUTH_SESSION_KEY)
+    const raw = sessionStorage.getItem(AUTH_SESSION_KEY) ?? localStorage.getItem(AUTH_SESSION_KEY)
     if (!raw) return null
     const session = JSON.parse(raw) as AuthSession & { user: AuthUser & { user?: AuthUser } }
     // Recover sessions saved by older clients that stored the API's { user } wrapper.
@@ -58,19 +58,23 @@ export const getAuthSession = (): AuthSession | null => {
 
 export const getCurrentUser = () => getAuthSession()?.user ?? null
 
-const saveSession = (session: AuthSession | null) => {
+const hasRememberedSession = () => localStorage.getItem(AUTH_SESSION_KEY) !== null
+
+const saveSession = (session: AuthSession | null, remember = hasRememberedSession()) => {
+  sessionStorage.removeItem(AUTH_SESSION_KEY)
+  localStorage.removeItem(AUTH_SESSION_KEY)
+
   if (session) {
-    sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session))
-  } else {
-    sessionStorage.removeItem(AUTH_SESSION_KEY)
+    const storage = remember ? localStorage : sessionStorage
+    storage.setItem(AUTH_SESSION_KEY, JSON.stringify(session))
   }
   dispatchAuthUpdated(session)
 }
 
-export const loginDemo = async (email: string, password: string) => {
-  const result = await api.post<{ token: string; user: AuthUser }>('/auth/login', { email, password })
-  setAccessToken(result.token)
-  saveSession({ user: result.user, password: '' })
+export const loginDemo = async (email: string, password: string, remember = false) => {
+  const result = await api.post<{ token: string; user: AuthUser }>('/auth/login', { email, password, remember })
+  setAccessToken(result.token, remember)
+  saveSession({ user: result.user, password: '' }, remember)
   return result.user
 }
 
@@ -81,10 +85,10 @@ export const registerDemo = async (data: Omit<AuthUser, 'id' | 'addresses' | 'ro
   return result.user
 }
 
-export const loginWithGoogle = async (credential: string) => {
-  const result = await api.post<{ token: string; user: AuthUser }>('/auth/google', { credential })
-  setAccessToken(result.token)
-  saveSession({ user: result.user, password: '' })
+export const loginWithGoogle = async (credential: string, remember = false) => {
+  const result = await api.post<{ token: string; user: AuthUser }>('/auth/google', { credential, remember })
+  setAccessToken(result.token, remember)
+  saveSession({ user: result.user, password: '' }, remember)
   return result.user
 }
 

@@ -283,7 +283,28 @@
   }
 
   .quick-view-buy {
-    grid-template-columns: 1fr;
+    grid-template-columns: 124px minmax(0, 1fr);
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .quick-view-qty {
+    grid-template-columns: 38px minmax(0, 1fr) 38px;
+    height: 48px;
+  }
+
+  .quick-view-qty button,
+  .quick-view-qty span {
+    font-size: 15px;
+  }
+
+  .quick-view-add {
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    padding: 0 14px;
+    font-size: 15px;
+    line-height: 1.2;
   }
 
   .quick-view-info h2 {
@@ -329,5 +350,19 @@
 
   .quick-view-thumbs {
     gap: 8px;
+  }
+
+  .quick-view-buy {
+    grid-template-columns: 116px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .quick-view-qty {
+    grid-template-columns: 36px minmax(0, 1fr) 36px;
+  }
+
+  .quick-view-add {
+    padding: 0 10px;
+    font-size: 14px;
   }
 }

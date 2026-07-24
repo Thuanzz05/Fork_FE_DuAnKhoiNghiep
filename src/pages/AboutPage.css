@@ -891,7 +891,9 @@
 
   .about-hero-bg-img {
     position: relative;
-    height: 250px;
+    height: clamp(190px, 54vw, 220px);
+    object-fit: cover;
+    object-position: right center;
   }
 
   .about-hero-overlay {
@@ -942,7 +944,9 @@
 
   .about-partner-bg-img {
     position: relative;
-    height: 200px;
+    height: clamp(155px, 46vw, 190px);
+    object-fit: cover;
+    object-position: right center;
   }
 
   .about-partner-overlay {
@@ -956,8 +960,10 @@
   }
 
   .about-partner-features {
-    flex-wrap: wrap;
-    gap: 14px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 14px 12px;
   }
 
   .partner-icon-circle {
@@ -971,6 +977,67 @@
 
   .about-commitments-section {
     padding: 15px 0 40px 0;
+  }
+}
+
+@media (max-width: 430px) {
+  .about-container,
+  .about-container-story {
+    width: calc(100% - 32px);
+  }
+
+  .about-hero-bg-img {
+    height: 185px;
+  }
+
+  .about-hero-overlay {
+    padding: 24px 0 32px;
+  }
+
+  .about-hero-title {
+    font-size: 25px;
+  }
+
+  .about-hero-subtitle {
+    font-size: 18px;
+  }
+
+  .about-hero-features {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    gap: 10px;
+  }
+
+  .about-partner-bg-img {
+    height: 165px;
+  }
+
+  .about-partner-overlay {
+    padding: 22px 16px 26px;
+  }
+
+  .partner-brand-name {
+    font-size: 25px;
+  }
+
+  .partner-brand-sub {
+    font-size: 16px;
+    line-height: 1.35;
+  }
+
+  .partner-brand-desc {
+    font-size: 14px;
+  }
+
+  .partner-feature-item {
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .partner-icon-circle {
+    width: 32px;
+    height: 32px;
   }
 }
 

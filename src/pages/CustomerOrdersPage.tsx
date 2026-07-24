@@ -1,14 +1,18 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Navigate, Link } from 'react-router-dom'
 import CustomerAccountSidebar from '../components/CustomerAccountSidebar'
+import Pagination from '../components/Pagination'
 import { getCurrentUser } from '../utils/auth'
 import type { Order, OrderStatus } from '../utils/orders'
 import { addCartItem } from '../utils/cart'
 import { formatPrice } from '../data/products'
 import { api } from '../services/api'
+import { usePagination } from '../hooks/usePagination'
 import './CustomerOrdersPage.css'
 
 type FilterTab = 'ALL' | 'CHO_XAC_NHAN' | 'DANG_GIAO_HANG' | 'DA_GIAO_HANG' | 'DA_HUY'
+
+const ORDERS_PER_PAGE = 5
 
 function CustomerOrdersPage() {
   const [user] = useState(() => getCurrentUser())
@@ -50,8 +54,6 @@ function CustomerOrdersPage() {
       window.removeEventListener('orders-updated', handleOrdersUpdated)
     }
   }, [loadOrders])
-
-  if (!user) return <Navigate to="/tai-khoan?che-do=dang-nhap" replace />
 
   const getOrderStatusText = (status: OrderStatus) => {
     switch (status) {
@@ -154,6 +156,19 @@ function CustomerOrdersPage() {
     const timeB = new Date(b.createdAt).getTime()
     return sortBy === 'newest' ? timeB - timeA : timeA - timeB
   })
+
+  const {
+    currentPage,
+    totalPages,
+    pageItems: paginatedOrders,
+    setCurrentPage,
+  } = usePagination(
+    sortedOrders,
+    ORDERS_PER_PAGE,
+    `${activeTab}|${searchTerm}|${sortBy}|${dateFilter}`,
+  )
+
+  if (!user) return <Navigate to="/tai-khoan?che-do=dang-nhap" replace />
 
   const handleCancelClick = (orderId: string) => {
     setCancelOrderId(orderId)
@@ -365,9 +380,9 @@ function CustomerOrdersPage() {
                   </Link>
                 </div>
               ) : (
-                sortedOrders.map((order, index) => (
+                paginatedOrders.map((order) => (
                   <article className="order-card" key={order.id}>
-                    {index === 0 && sortBy === 'newest' && (
+                    {order.id === sortedOrders[0]?.id && sortBy === 'newest' && (
                       <span className="latest-order-badge">ĐƠN HÀNG MỚI NHẤT</span>
                     )}
                     <div className="order-card-header">
@@ -467,6 +482,17 @@ function CustomerOrdersPage() {
                 ))
               )}
             </div>
+
+            {sortedOrders.length > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={sortedOrders.length}
+                pageSize={ORDERS_PER_PAGE}
+                itemLabel="đơn hàng"
+                onPageChange={setCurrentPage}
+              />
+            )}
           </section>
         </div>
       </div>

@@ -77,6 +77,7 @@ type PublicStoreSettings = {
   facebookUrl?: string; instagramUrl?: string; tiktokUrl?: string
   legalName?: string; supportEmail?: string; mapEmbedUrl?: string; orderPrefix?: string
   codEnabled?: boolean; bankTransferEnabled?: boolean; youtubeUrl?: string
+  facebookEnabled?: boolean; instagramEnabled?: boolean; youtubeEnabled?: boolean; tiktokEnabled?: boolean
   notificationEmail?: string; sendOrderConfirmation?: boolean; maintenanceMode?: boolean
 }
 
@@ -92,11 +93,15 @@ const mapApiSettings = (data: PublicStoreSettings): StoreSettings => ({
   standardShippingFee: data.shippingFee,
   freeShippingThreshold: data.freeShippingThreshold,
   facebookUrl: data.facebookUrl || '',
+  facebookEnabled: data.facebookEnabled ?? true,
   instagramUrl: data.instagramUrl || '',
+  instagramEnabled: data.instagramEnabled ?? true,
   tiktokUrl: data.tiktokUrl || '',
+  tiktokEnabled: data.tiktokEnabled ?? true,
   legalName: data.legalName || '', supportEmail: data.supportEmail || '', mapEmbedUrl: data.mapEmbedUrl || '',
   orderPrefix: data.orderPrefix || 'RBB', codEnabled: data.codEnabled ?? true,
   bankTransferEnabled: data.bankTransferEnabled ?? true, youtubeUrl: data.youtubeUrl || '',
+  youtubeEnabled: data.youtubeEnabled ?? true,
   notificationEmail: data.notificationEmail || '', sendOrderConfirmation: data.sendOrderConfirmation ?? true,
   maintenanceMode: data.maintenanceMode ?? false,
 })

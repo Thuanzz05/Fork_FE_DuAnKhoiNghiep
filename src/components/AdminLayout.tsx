@@ -127,6 +127,7 @@ function AdminLayout({
   onSearchChange,
   searchPlaceholder = 'Tìm kiếm đơn hàng, sản phẩm...',
 }: AdminLayoutProps) {
+  const showTopbarSearch = !(['dashboard', 'reports', 'settings'] as AdminSection[]).includes(activeItem)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [newContactCount, setNewContactCount] = useState(0)
   const [newOrderCount, setNewOrderCount] = useState(0)
@@ -259,16 +260,18 @@ function AdminLayout({
           <button type="button" className="admin-menu-button" onClick={() => setIsSidebarOpen(true)} aria-label="Mở menu quản trị">
             <AdminIcon name="menu" />
           </button>
-          <label className="admin-search">
-            <AdminIcon name="search" />
-            <input
-              type="search"
-              placeholder={searchPlaceholder}
-              aria-label="Tìm kiếm"
-              value={searchValue}
-              onChange={(event) => onSearchChange?.(event.target.value)}
-            />
-          </label>
+          {showTopbarSearch && (
+            <label className="admin-search">
+              <AdminIcon name="search" />
+              <input
+                type="search"
+                placeholder={searchPlaceholder}
+                aria-label="Tìm kiếm"
+                value={searchValue}
+                onChange={(event) => onSearchChange?.(event.target.value)}
+              />
+            </label>
+          )}
           <div className="admin-topbar-actions">
             <NotificationBell variant="admin" />
 

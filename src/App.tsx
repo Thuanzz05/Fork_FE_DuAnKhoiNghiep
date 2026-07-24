@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Routes, Route, useLocation } from 'react-router-dom'
 import CartToast from './components/CartToast'
 import CustomerChatWidget from './components/CustomerChatWidget'
+import BackToTopButton from './components/BackToTopButton'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import HomePage from './pages/HomePage'
@@ -72,6 +73,7 @@ function AppContent() {
       {!isAdminRoute && <Header />}
       {!isAdminRoute && <CartToast />}
       {!isAdminRoute && <CustomerChatWidget />}
+      {!isAdminRoute && <BackToTopButton />}
 
       <Routes>
         <Route path="/" element={<HomePage />} />

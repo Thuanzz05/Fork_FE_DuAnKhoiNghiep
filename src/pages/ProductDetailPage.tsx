@@ -412,12 +412,6 @@ function ProductDetailPage() {
         </div>
       </section>
 
-      <div className="product-detail-floating" aria-label="Liên hệ nhanh">
-        <a href="tel:0986126955" aria-label="Gọi điện"><svg viewBox="0 0 24 24"><path d="M22 16.92v2.4a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 3.6 2 2 0 0 1 4.1 1.42h2.4a2 2 0 0 1 2 1.72c.12.9.32 1.77.6 2.61a2 2 0 0 1-.45 2.11L7.63 8.88a16 16 0 0 0 7.49 7.49l1.02-1.02a2 2 0 0 1 2.11-.45c.84.28 1.71.48 2.61.6A2 2 0 0 1 22 16.92Z" /></svg></a>
-        <a href="mailto:Hoangthingocmai2005@gmail.com" aria-label="Gửi email"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg></a>
-        <button type="button" aria-label="Lên đầu trang" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><svg viewBox="0 0 24 24"><path d="m6 15 6-6 6 6" /></svg></button>
-      </div>
-
       {wishlistToastOpen && (
         <div className="detail-wishlist-toast" role="status" aria-live="polite">
           <button type="button" aria-label="Đóng thông báo" onClick={() => setWishlistToastOpen(false)}>×</button>

@@ -368,8 +368,7 @@
   gap: 8px;
 }
 
-.news-detail-floating a,
-.news-detail-floating button {
+.news-detail-floating a {
   display: grid;
   place-items: center;
   width: 44px;
@@ -394,8 +393,6 @@
 
 .quick-phone { background: #b53740; }
 .quick-mail { background: #25c9dc; }
-.news-detail-floating .quick-top { background: #d56a72; }
-
 @media (max-width: 900px) {
   .news-detail-layout {
     grid-template-columns: 1fr;
@@ -457,11 +454,10 @@
   .news-detail-floating {
     right: 10px;
     top: auto;
-    bottom: 20px;
+    bottom: 138px;
   }
 
-  .news-detail-floating a,
-  .news-detail-floating button {
+  .news-detail-floating a {
     width: 40px;
     height: 40px;
   }

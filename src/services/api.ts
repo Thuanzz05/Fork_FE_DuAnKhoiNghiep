@@ -17,11 +17,19 @@ export class ApiError extends Error {
   }
 }
 
-export const getAccessToken = () => sessionStorage.getItem(ACCESS_TOKEN_KEY)
+export const getAccessToken = () => (
+  sessionStorage.getItem(ACCESS_TOKEN_KEY)
+  ?? localStorage.getItem(ACCESS_TOKEN_KEY)
+)
 
-export const setAccessToken = (token: string | null) => {
-  if (token) sessionStorage.setItem(ACCESS_TOKEN_KEY, token)
-  else sessionStorage.removeItem(ACCESS_TOKEN_KEY)
+export const setAccessToken = (token: string | null, remember = false) => {
+  sessionStorage.removeItem(ACCESS_TOKEN_KEY)
+  localStorage.removeItem(ACCESS_TOKEN_KEY)
+
+  if (token) {
+    const storage = remember ? localStorage : sessionStorage
+    storage.setItem(ACCESS_TOKEN_KEY, token)
+  }
 }
 
 export const resolveApiUrl = (path: string) => {
@@ -51,6 +59,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
     if (response.status === 401) {
       setAccessToken(null)
       sessionStorage.removeItem('red-bean-beauty-auth-session')
+      localStorage.removeItem('red-bean-beauty-auth-session')
       window.dispatchEvent(new CustomEvent('auth-updated', { detail: null }))
     }
     throw new ApiError(payload.message || `Yêu cầu thất bại (${response.status})`, response.status)

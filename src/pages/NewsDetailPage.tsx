@@ -175,9 +175,6 @@ function NewsDetailPage() {
         <a className="quick-mail" href="mailto:Hoangthingocmai2005@gmail.com" aria-label="Gửi email">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>
         </a>
-        <button className="quick-top" type="button" aria-label="Lên đầu trang" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6" /></svg>
-        </button>
       </div>
     </main>
   )

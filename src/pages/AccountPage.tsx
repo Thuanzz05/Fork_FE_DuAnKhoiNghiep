@@ -39,6 +39,7 @@ function AccountPage() {
   const requestedMode = resolveMode(searchParams.get('che-do'), resetToken)
   const [mode, setMode] = useState<AccountMode>(requestedMode)
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberLogin, setRememberLogin] = useState(false)
   const [notice, setNotice] = useState('')
   const [noticeKind, setNoticeKind] = useState<NoticeKind>('info')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -128,7 +129,7 @@ function AccountPage() {
         )
         navigate(user.role === 'ADMIN' ? '/admin' : '/')
       } else {
-        const user = await loginDemo(email, password)
+        const user = await loginDemo(email, password, rememberLogin)
         navigate(user.role === 'ADMIN' ? '/admin' : '/')
       }
     } catch (error) {
@@ -143,13 +144,13 @@ function AccountPage() {
     try {
       setNoticeKind('info')
       setNotice('Đang xác thực tài khoản Google...')
-      const user = await loginWithGoogle(credential)
+      const user = await loginWithGoogle(credential, rememberLogin)
       navigate(user.role === 'ADMIN' ? '/admin' : '/')
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Không thể đăng nhập bằng Google.')
       setNoticeKind('error')
     }
-  }, [navigate])
+  }, [navigate, rememberLogin])
 
   if (existingUser && mode !== 'forgot' && mode !== 'reset') {
     return <Navigate to={existingUser.role === 'ADMIN' ? '/admin' : '/'} replace />
@@ -247,7 +248,15 @@ function AccountPage() {
 
               {mode === 'login' && (
                 <div className="account-options">
-                  <label className="remember-option"><input type="checkbox" name="remember" /><span>Ghi nhớ đăng nhập</span></label>
+                  <label className="remember-option">
+                    <input
+                      type="checkbox"
+                      name="remember"
+                      checked={rememberLogin}
+                      onChange={(event) => setRememberLogin(event.target.checked)}
+                    />
+                    <span>Ghi nhớ đăng nhập</span>
+                  </label>
                   <button type="button" className="forgot-button" onClick={() => changeMode('forgot')}>Quên mật khẩu?</button>
                 </div>
               )}
