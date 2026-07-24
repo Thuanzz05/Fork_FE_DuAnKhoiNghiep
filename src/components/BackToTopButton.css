@@ -1,0 +1,73 @@
+.back-to-top-button {
+  position: fixed;
+  right: 28px;
+  bottom: 96px;
+  z-index: 85;
+  display: grid;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  place-items: center;
+  color: #fff;
+  background: #b53740;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 50%;
+  box-shadow: 0 8px 24px rgba(94, 25, 31, 0.28);
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition:
+    opacity 180ms ease,
+    visibility 180ms ease,
+    transform 180ms ease,
+    background-color 180ms ease;
+}
+
+.back-to-top-button.is-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.back-to-top-button:hover {
+  background: #922b33;
+  transform: translateY(-2px);
+}
+
+.back-to-top-button:focus-visible {
+  outline: 3px solid rgba(181, 55, 64, 0.32);
+  outline-offset: 3px;
+}
+
+.back-to-top-button svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (max-width: 480px) {
+  .back-to-top-button {
+    right: 22px;
+    bottom: 84px;
+    width: 42px;
+    height: 42px;
+  }
+
+  .back-to-top-button svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back-to-top-button {
+    transition: none;
+  }
+}

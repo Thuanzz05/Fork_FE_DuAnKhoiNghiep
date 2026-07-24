@@ -1093,43 +1093,6 @@
   font-size: 11px;
 }
 
-.product-detail-floating {
-  position: fixed;
-  right: 13px;
-  top: 60%;
-  z-index: 850;
-  display: grid;
-  gap: 8px;
-}
-
-.product-detail-floating a,
-.product-detail-floating button {
-  display: grid;
-  place-items: center;
-  width: 43px;
-  height: 43px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  color: #ffffff;
-  background: #b53740;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, .17);
-  cursor: pointer;
-}
-
-.product-detail-floating a:nth-child(2) { background: #28c5d5; }
-.product-detail-floating button { background: #d56a72; }
-
-.product-detail-floating svg {
-  width: 20px;
-  height: 20px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
 .detail-voucher-modal-overlay {
   position: fixed;
   inset: 0;
@@ -1335,18 +1298,6 @@
 
   .similar-product-card h3 {
     min-height: auto;
-  }
-
-  .product-detail-floating {
-    right: 9px;
-    top: auto;
-    bottom: 18px;
-  }
-
-  .product-detail-floating a,
-  .product-detail-floating button {
-    width: 39px;
-    height: 39px;
   }
 
   .detail-wishlist-toast {
