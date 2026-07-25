@@ -172,9 +172,15 @@ function AdminReviewsPage() {
 
   const confirmDelete = async () => {
     if (!deletingReview) return
-    await updateReviewStatus(deletingReview, 'hidden')
-    setNotice({ message: `Đã từ chối đánh giá của ${deletingReview.userName}`, type: 'success' })
-    setDeletingReview(null)
+    try {
+      await api.delete(`/admin/reviews/${deletingReview.id}`)
+      await loadReviews()
+      window.dispatchEvent(new Event('admin-reviews-updated'))
+      setNotice({ message: `Đã xóa đánh giá của ${deletingReview.userName}`, type: 'success' })
+      setDeletingReview(null)
+    } catch (error) {
+      setNotice({ message: error instanceof Error ? error.message : 'Không thể xóa đánh giá', type: 'error' })
+    }
   }
 
   return (

@@ -38,7 +38,6 @@ const mapAdminProduct = (item: AdminProductRow): ManagedProduct => ({
 
 interface ProductFormState {
   name: string
-  nameEn: string
   categorySlug: string
   image: string
   galleryImages: string[]
@@ -57,7 +56,6 @@ const initialProducts: ManagedProduct[] = []
 
 const emptyForm: ProductFormState = {
   name: '',
-  nameEn: '',
   categorySlug: '',
   image: '',
   galleryImages: [],
@@ -174,7 +172,7 @@ function AdminProductsPage() {
     const keyword = searchValue.trim().toLocaleLowerCase('vi-VN')
 
     return productList.filter((product) => {
-      const matchesKeyword = !keyword || [product.name, product.nameEn, product.sku, product.category]
+      const matchesKeyword = !keyword || [product.name, product.sku, product.category]
         .some((value) => value.toLocaleLowerCase('vi-VN').includes(keyword))
       const matchesCategory = categoryFilter === 'all' || product.categorySlug === categoryFilter
       const matchesStatus = statusFilter === 'all' || getProductStatus(product) === statusFilter
@@ -209,7 +207,6 @@ function AdminProductsPage() {
     setGalleryImageNames([])
     setForm({
       name: product.name,
-      nameEn: product.nameEn,
       categorySlug: product.categorySlug,
       image: product.image,
       galleryImages: product.galleryImages || [],
@@ -322,7 +319,7 @@ function AdminProductsPage() {
     
     const payload = {
       categoryId: 'id' in selectedCategory ? Number(selectedCategory.id) : Number.NaN,
-      productCode: form.nameEn.trim() || sku,
+      productCode: sku,
       sku, name: form.name.trim(), slug,
       productType: form.isCombo ? 'COMBO' : 'DON', mainImage: form.image.trim(),
       images: form.galleryImages.length > 0 ? form.galleryImages.map((url, index) => ({
@@ -553,7 +550,6 @@ function AdminProductsPage() {
             <form onSubmit={handleSubmit}>
               <div className="admin-product-form-grid">
                 <label className="is-wide"><span>Tên sản phẩm *</span><input required value={form.name} onChange={(event) => updateField('name', event.target.value)} /></label>
-                <label><span>Tên tiếng Anh *</span><input required value={form.nameEn} onChange={(event) => updateField('nameEn', event.target.value)} /></label>
                 <label><span>Danh mục *</span><select required value={form.categorySlug} onChange={(event) => updateField('categorySlug', event.target.value)}>
                   <option value="" disabled>-- Chọn danh mục --</option>
                   {availableCategories.map((category) => <option value={category.slug} key={category.slug}>{category.name}</option>)}
