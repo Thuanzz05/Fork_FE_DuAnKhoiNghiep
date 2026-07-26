@@ -20,6 +20,7 @@ import SalesPolicyPage from './pages/SalesPolicyPage'
 import CustomerAccountPage from './pages/CustomerAccountPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
 import CustomerOrdersPage from './pages/CustomerOrdersPage'
+import CustomerLoyaltyPage from './pages/CustomerLoyaltyPage'
 import CheckoutPage from './pages/CheckoutPage'
 import SePayPaymentPage from './pages/SePayPaymentPage'
 import ScrollToTop from './components/ScrollToTop'
@@ -92,6 +93,7 @@ function AppContent() {
         <Route path="/tai-khoan/thong-tin" element={<CustomerAccountPage />} />
         <Route path="/tai-khoan/doi-mat-khau" element={<ChangePasswordPage />} />
         <Route path="/tai-khoan/don-hang" element={<CustomerOrdersPage />} />
+        <Route path="/tai-khoan/xu-thanh-vien" element={<CustomerLoyaltyPage />} />
         <Route path="/thanh-toan" element={<CheckoutPage />} />
         <Route path="/thanh-toan/chuyen-khoan/:orderId" element={<SePayPaymentPage />} />
         <Route path="/admin" element={<AdminGuard><AdminDashboardPage /></AdminGuard>} />

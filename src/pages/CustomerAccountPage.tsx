@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import CustomerAccountSidebar from '../components/CustomerAccountSidebar'
 import type { AuthUser, CustomerAddress } from '../utils/auth'
 import {
@@ -38,6 +38,11 @@ function CustomerAccountPage() {
   const [wardCode, setWardCode] = useState('')
   const [addressLoading, setAddressLoading] = useState(false)
   const [addressApiError, setAddressApiError] = useState('')
+  const [loyalty, setLoyalty] = useState<{
+    availableCoins: number
+    tierName: string
+    earningRate: number
+  } | null>(null)
 
   const loadProvinces = async () => {
     setAddressLoading(true)
@@ -59,6 +64,20 @@ function CustomerAccountPage() {
   useEffect(() => {
     void loadProvinces()
   }, [])
+
+  useEffect(() => {
+    if (!user) return
+    apiRequest<{
+      wallet: { availableCoins: number }
+      member: { tierName: string; earningRate: number }
+    }>('/customers/me/loyalty')
+      .then((result) => setLoyalty({
+        availableCoins: Number(result.wallet.availableCoins),
+        tierName: result.member.tierName,
+        earningRate: Number(result.member.earningRate),
+      }))
+      .catch(() => setLoyalty(null))
+  }, [user])
 
   useEffect(() => {
     if (!provinceCode) {
@@ -217,6 +236,16 @@ function CustomerAccountPage() {
                 <p>Tài khoản của tôi</p>
                 <h1>Thông tin cá nhân</h1>
               </div>
+            </div>
+
+            <div className="profile-loyalty-card">
+              <div className="profile-loyalty-icon">Xu</div>
+              <div>
+                <small>Xu khả dụng</small>
+                <strong>{loyalty ? loyalty.availableCoins.toLocaleString('vi-VN') : '—'} xu</strong>
+                <span>{loyalty ? `${loyalty.tierName} · Tích ${(loyalty.earningRate * 100).toLocaleString('vi-VN')}%` : 'Đang tải thông tin thành viên...'}</span>
+              </div>
+              <Link to="/tai-khoan/xu-thanh-vien">Xem lịch sử xu</Link>
             </div>
 
             <div className="profile-editor">

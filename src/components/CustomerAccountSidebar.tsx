@@ -32,6 +32,10 @@ function CustomerAccountSidebar({ user }: { user: AuthUser }) {
           </svg>
           Đơn hàng của tôi
         </NavLink>
+        <NavLink to="/tai-khoan/xu-thanh-vien">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M8 12h8M12 8v8" /></svg>
+          Xu và hạng thành viên
+        </NavLink>
         <NavLink to="/tai-khoan/doi-mat-khau">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
           Đổi mật khẩu

@@ -4,6 +4,12 @@ import Pagination from '../../components/Pagination'
 import { formatPrice } from '../../data/products'
 import { api } from '../../services/api'
 import {
+  availableOrderPrintDocuments,
+  printDocumentLabels,
+  printOrderDocument,
+  type PrintDocumentType,
+} from '../../utils/printDocuments'
+import {
   type Order,
   type OrderStatus,
   type PaymentMethod,
@@ -18,9 +24,13 @@ type OrderSort = 'newest' | 'oldest' | 'highest'
 const orderStatusMeta: Record<OrderStatus, { label: string; tone: string }> = {
   CHO_XAC_NHAN: { label: 'Chờ xác nhận', tone: 'pending' },
   DA_XAC_NHAN: { label: 'Đã xác nhận', tone: 'confirmed' },
-  DANG_DONG_GOI: { label: 'Đang đóng gói', tone: 'packing' },
-  DANG_GIAO_HANG: { label: 'Đang giao hàng', tone: 'shipping' },
-  DA_GIAO_HANG: { label: 'Đã giao hàng', tone: 'completed' },
+  DANG_CHUAN_BI: { label: 'Đang chuẩn bị hàng', tone: 'packing' },
+  DANG_GIAO: { label: 'Đang giao hàng', tone: 'shipping' },
+  DA_GIAO: { label: 'Đã giao hàng', tone: 'completed' },
+  GIAO_THAT_BAI: { label: 'Giao thất bại', tone: 'cancelled' },
+  GIAO_LAI: { label: 'Đang giao lại', tone: 'shipping' },
+  DANG_HOAN_HANG: { label: 'Đang hoàn hàng', tone: 'packing' },
+  DA_HOAN_HANG: { label: 'Đã hoàn hàng', tone: 'cancelled' },
   DA_HUY: { label: 'Đã hủy', tone: 'cancelled' },
 }
 
@@ -45,10 +55,14 @@ const paymentMethodMeta: Record<PaymentMethod, string> = {
 
 const allowedOrderTransitions: Record<OrderStatus, OrderStatus[]> = {
   CHO_XAC_NHAN: ['CHO_XAC_NHAN', 'DA_XAC_NHAN', 'DA_HUY'],
-  DA_XAC_NHAN: ['DA_XAC_NHAN', 'DANG_DONG_GOI', 'DA_HUY'],
-  DANG_DONG_GOI: ['DANG_DONG_GOI', 'DANG_GIAO_HANG', 'DA_HUY'],
-  DANG_GIAO_HANG: ['DANG_GIAO_HANG', 'DA_GIAO_HANG'],
-  DA_GIAO_HANG: ['DA_GIAO_HANG'],
+  DA_XAC_NHAN: ['DA_XAC_NHAN', 'DANG_CHUAN_BI', 'DA_HUY'],
+  DANG_CHUAN_BI: ['DANG_CHUAN_BI', 'DANG_GIAO', 'DA_HUY'],
+  DANG_GIAO: ['DANG_GIAO', 'DA_GIAO', 'GIAO_THAT_BAI'],
+  GIAO_THAT_BAI: ['GIAO_THAT_BAI', 'GIAO_LAI', 'DANG_HOAN_HANG'],
+  GIAO_LAI: ['GIAO_LAI', 'DA_GIAO', 'GIAO_THAT_BAI'],
+  DANG_HOAN_HANG: ['DANG_HOAN_HANG', 'DA_HOAN_HANG'],
+  DA_HOAN_HANG: ['DA_HOAN_HANG'],
+  DA_GIAO: ['DA_GIAO'],
   DA_HUY: ['DA_HUY'],
 }
 
@@ -71,20 +85,13 @@ function AdminOrdersPage() {
   const [pendingTotal, setPendingTotal] = useState(0)
   const [processingTotal, setProcessingTotal] = useState(0)
 
-  const mapOrderStatus = (status: string): OrderStatus => ({
-    DANG_CHUAN_BI: 'DANG_DONG_GOI', DANG_GIAO: 'DANG_GIAO_HANG', DA_GIAO: 'DA_GIAO_HANG',
-  }[status] as OrderStatus || status as OrderStatus)
-  const toBackendStatus = (status: OrderStatus) => ({
-    DANG_DONG_GOI: 'DANG_CHUAN_BI', DANG_GIAO_HANG: 'DANG_GIAO', DA_GIAO_HANG: 'DA_GIAO',
-  } as Record<string, string>)[status] || status
-
   const loadOrders = async () => {
     try {
       const [list, dashboard] = await Promise.all([
         api.get<{ items: Array<Record<string, any>>; pagination: { total: number; totalPages: number } }>(`/admin/orders?${new URLSearchParams({
           page: String(serverPage), limit: '6',
           ...(searchValue.trim() ? { search: searchValue.trim() } : {}),
-          ...(orderStatusFilter !== 'all' ? { status: toBackendStatus(orderStatusFilter) } : {}),
+          ...(orderStatusFilter !== 'all' ? { status: orderStatusFilter } : {}),
           ...(paymentStatusFilter !== 'all' ? { paymentStatus: paymentStatusFilter } : {}),
           ...(paymentMethodFilter !== 'all' ? { paymentMethod: paymentMethodFilter } : {}),
           ...(periodFilter !== 'all' ? { period: periodFilter } : {}),
@@ -102,7 +109,7 @@ function AdminOrdersPage() {
         recipientName: String(item.recipientName), phone: String(item.phone), shippingAddress: String(item.shippingAddress),
         customerNote: item.customerNote, totalProductPrice: Number(item.subtotal), discountAmount: Number(item.discount),
         shippingFee: Number(item.shippingFee), totalPayment: Number(item.total), paymentMethod: item.paymentMethod as PaymentMethod,
-        orderStatus: mapOrderStatus(String(item.orderStatus)), paymentStatus: item.paymentStatus as PaymentStatus,
+        orderStatus: String(item.orderStatus) as OrderStatus, paymentStatus: item.paymentStatus as PaymentStatus,
         createdAt: String(item.createdAt), cancelReason: item.cancelReason,
         lineCount: Number(item.lineCount), itemCount: Number(item.itemCount),
         refundRequestId: item.refundRequestId == null ? null : String(item.refundRequestId),
@@ -131,7 +138,10 @@ function AdminOrdersPage() {
   const [createRefundRequest, setCreateRefundRequest] = useState(false)
   const [draftRefundStatus, setDraftRefundStatus] = useState<RefundStatus | ''>('')
   const [refundAdminNote, setRefundAdminNote] = useState('')
+  const [failureReason, setFailureReason] = useState('')
+  const [returnCondition, setReturnCondition] = useState<'BAN_DUOC' | 'XUAT_HUY' | ''>('')
   const [notice, setNotice] = useState('')
+  const [printType, setPrintType] = useState<PrintDocumentType>('DON_BAN_HANG')
 
   // oxlint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void loadOrders() }, [serverPage, searchValue, orderStatusFilter, paymentStatusFilter, paymentMethodFilter, periodFilter, sortBy])
@@ -190,6 +200,15 @@ function AdminOrdersPage() {
       const item = await api.get<Record<string, any>>(`/admin/orders/${order.id}`)
       const detailedOrder: Order = {
         ...order,
+        email: item.email,
+        adminNote: item.adminNote,
+        customerNote: item.customerNote,
+        shippingProvider: item.shippingProvider,
+        trackingCode: item.trackingCode,
+        exports: (item.exports || []).map((entry: Record<string, any>) => ({
+          id: String(entry.id), code: String(entry.code), type: String(entry.type),
+          status: String(entry.status), exportedAt: entry.exportedAt,
+        })),
         items: (item.items || []).map((line: Record<string, any>) => ({
           productId: String(line.productId), productName: String(line.name), productImage: String(line.image || ''),
           price: Number(line.unitPrice), quantity: Number(line.quantity), weight: '',
@@ -198,6 +217,7 @@ function AdminOrdersPage() {
       setSelectedOrder(detailedOrder)
       setDraftOrderStatus(detailedOrder.orderStatus)
       setDraftPaymentStatus(detailedOrder.paymentStatus)
+      setPrintType(availableOrderPrintDocuments(detailedOrder)[0])
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Không thể tải chi tiết đơn hàng')
       return
@@ -205,6 +225,8 @@ function AdminOrdersPage() {
     setCreateRefundRequest(false)
     setDraftRefundStatus(order.refundStatus || '')
     setRefundAdminNote(order.refundAdminNote || '')
+    setFailureReason('')
+    setReturnCondition('')
   }
 
   const saveOrderUpdate = async () => {
@@ -216,6 +238,14 @@ function AdminOrdersPage() {
       setNotice('Đơn đã thanh toán: phải chọn tạo yêu cầu hoàn tiền trước khi hủy')
       return
     }
+    const returningPaidOrder = draftOrderStatus === 'DANG_HOAN_HANG'
+      && selectedOrder.orderStatus !== 'DANG_HOAN_HANG'
+      && selectedOrder.paymentStatus === 'DA_THANH_TOAN'
+      && !selectedOrder.refundRequestId
+    if (returningPaidOrder && !createRefundRequest) {
+      setNotice('Đơn đã thanh toán: phải tạo yêu cầu hoàn tiền khi bắt đầu hoàn hàng')
+      return
+    }
     const updatedOrder: Order = {
       ...selectedOrder,
       orderStatus: draftOrderStatus,
@@ -224,12 +254,14 @@ function AdminOrdersPage() {
     }
     try {
       await api.patch(`/admin/orders/${selectedOrder.id}`, {
-        orderStatus: toBackendStatus(draftOrderStatus),
+        orderStatus: draftOrderStatus,
         cancelReason: draftOrderStatus === 'DA_HUY' ? updatedOrder.cancelReason : undefined,
-        refundAction: cancellingPaidOrder && createRefundRequest ? 'TAO_YEU_CAU' : undefined,
+        refundAction: (cancellingPaidOrder || returningPaidOrder) && createRefundRequest ? 'TAO_YEU_CAU' : undefined,
         refundStatus: selectedOrder.refundStatus && draftRefundStatus !== selectedOrder.refundStatus
           ? draftRefundStatus : undefined,
         refundAdminNote: refundAdminNote.trim() || undefined,
+        failureReason: draftOrderStatus === 'GIAO_THAT_BAI' ? failureReason.trim() : undefined,
+        returnCondition: draftOrderStatus === 'DA_HOAN_HANG' ? returnCondition : undefined,
       })
       await loadOrders()
       setSelectedOrder(updatedOrder)
@@ -243,6 +275,15 @@ function AdminOrdersPage() {
   const refreshOrders = () => {
     void loadOrders()
     setNotice('Đã làm mới danh sách đơn hàng')
+  }
+
+  const handlePrintDocument = async () => {
+    if (!selectedOrder) return
+    try {
+      await printOrderDocument(printType, selectedOrder)
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Không thể in chứng từ')
+    }
   }
 
   return (
@@ -310,10 +351,20 @@ function AdminOrdersPage() {
               <aside className="admin-order-detail-aside">
                 <section>
                   <h3>Cập nhật trạng thái</h3>
-                  <label><span>Trạng thái đơn hàng</span><select value={draftOrderStatus} onChange={(event) => setDraftOrderStatus(event.target.value as OrderStatus)}>{allowedOrderTransitions[selectedOrder.orderStatus].map((value) => <option value={value} key={value}>{orderStatusMeta[value].label}</option>)}</select></label>
+                  <label><span>Trạng thái hiện tại</span><input value={orderStatusMeta[selectedOrder.orderStatus].label} readOnly /></label>
+                  <label><span>Chuyển sang trạng thái</span><select value={draftOrderStatus} onChange={(event) => setDraftOrderStatus(event.target.value as OrderStatus)}><option value={selectedOrder.orderStatus}>Giữ nguyên — {orderStatusMeta[selectedOrder.orderStatus].label}</option>{allowedOrderTransitions[selectedOrder.orderStatus].filter((value) => value !== selectedOrder.orderStatus).map((value) => <option value={value} key={value}>{orderStatusMeta[value].label}</option>)}</select><small>Chỉ hiển thị những bước tiếp theo hợp lệ theo quy trình đơn hàng.</small></label>
                   <label><span>Trạng thái thanh toán</span><input value={paymentStatusMeta[draftPaymentStatus].label} readOnly /></label>
+                  {draftOrderStatus === 'GIAO_THAT_BAI' ? (
+                    <label><span>Lý do giao thất bại</span><textarea value={failureReason} onChange={(event) => setFailureReason(event.target.value)} placeholder="Khách không nhận, không liên lạc được..." /></label>
+                  ) : null}
+                  {draftOrderStatus === 'DA_HOAN_HANG' ? (
+                    <label><span>Tình trạng hàng hoàn</span><select value={returnCondition} onChange={(event) => setReturnCondition(event.target.value as typeof returnCondition)}><option value="">-- Bắt buộc chọn --</option><option value="BAN_DUOC">Còn bán được — nhập lại kho</option><option value="XUAT_HUY">Hư hỏng — ghi nhận xuất hủy</option></select></label>
+                  ) : null}
                   {draftOrderStatus === 'DA_HUY' && selectedOrder.orderStatus !== 'DA_HUY' && selectedOrder.paymentStatus === 'DA_THANH_TOAN' ? (
                     <label><span>Xử lý tiền đã thanh toán</span><select value={createRefundRequest ? 'TAO_YEU_CAU' : ''} onChange={(event) => setCreateRefundRequest(event.target.value === 'TAO_YEU_CAU')}><option value="">-- Bắt buộc chọn --</option><option value="TAO_YEU_CAU">Tạo yêu cầu hoàn tiền</option></select></label>
+                  ) : null}
+                  {draftOrderStatus === 'DANG_HOAN_HANG' && selectedOrder.paymentStatus === 'DA_THANH_TOAN' && !selectedOrder.refundRequestId ? (
+                    <label><span>Hoàn tiền đơn giao thất bại</span><select value={createRefundRequest ? 'TAO_YEU_CAU' : ''} onChange={(event) => setCreateRefundRequest(event.target.value === 'TAO_YEU_CAU')}><option value="">-- Bắt buộc chọn --</option><option value="TAO_YEU_CAU">Tạo yêu cầu hoàn tiền</option></select></label>
                   ) : null}
                   {selectedOrder.refundStatus ? (
                     <>
@@ -322,6 +373,12 @@ function AdminOrdersPage() {
                     </>
                   ) : null}
                   <button type="button" onClick={saveOrderUpdate}>Lưu cập nhật</button>
+                </section>
+                <section className="admin-order-print-panel">
+                  <h3>In chứng từ</h3>
+                  <label><span>Loại chứng từ</span><select value={printType} onChange={(event) => setPrintType(event.target.value as PrintDocumentType)}>{availableOrderPrintDocuments(selectedOrder).map((value) => <option value={value} key={value}>{printDocumentLabels[value]}</option>)}</select></label>
+                  <p>Chỉ hiển thị chứng từ hợp lệ với trạng thái đơn hiện tại.</p>
+                  <button type="button" onClick={handlePrintDocument}><AdminIcon name="print" />In chứng từ</button>
                 </section>
                 <section className="admin-order-payment-summary"><h3>Thanh toán</h3><p><span>Tiền hàng</span><strong>{formatPrice(selectedOrder.totalProductPrice)}</strong></p><p><span>Giảm giá</span><strong>-{formatPrice(selectedOrder.discountAmount)}</strong></p><p><span>Phí vận chuyển</span><strong>{formatPrice(selectedOrder.shippingFee)}</strong></p><p className="is-total"><span>Tổng thanh toán</span><strong>{formatPrice(selectedOrder.totalPayment)}</strong></p><small>{paymentMethodMeta[selectedOrder.paymentMethod]}</small></section>
               </aside>

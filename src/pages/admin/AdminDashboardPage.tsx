@@ -142,7 +142,7 @@ const getRevenueChart = (
 const orderStatusMeta: Record<string, { label: string; tone: string }> = {
   CHO_XAC_NHAN: { label: 'Chờ xác nhận', tone: 'pending' },
   DA_XAC_NHAN: { label: 'Đã xác nhận', tone: 'confirmed' },
-  DANG_CHUAN_BI: { label: 'Đang chuẩn bị', tone: 'packing' },
+  DANG_CHUAN_BI: { label: 'Đang chuẩn bị hàng', tone: 'packing' },
   DANG_GIAO: { label: 'Đang giao hàng', tone: 'shipping' },
   DA_GIAO: { label: 'Đã giao hàng', tone: 'completed' },
   DA_HUY: { label: 'Đã hủy', tone: 'cancelled' },

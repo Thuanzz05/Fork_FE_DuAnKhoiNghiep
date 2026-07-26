@@ -1,0 +1,119 @@
+.loyalty-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.loyalty-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 26px 28px;
+  border: 1px solid #eadfe0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fff 0%, #fff7f5 100%);
+}
+
+.loyalty-heading span,
+.loyalty-history header span {
+  color: #bd3944;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.loyalty-heading h1 {
+  margin: 5px 0;
+  color: #382d2e;
+  font-size: 28px;
+}
+
+.loyalty-heading p {
+  margin: 0;
+  color: #766a6b;
+  font-size: 14px;
+}
+
+.loyalty-tier {
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: #8c5a31;
+  color: white;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.loyalty-tier.is-vang { background: #c28a12; }
+.loyalty-tier.is-kim_cuong { background: linear-gradient(135deg, #525a75, #9275a7); }
+.loyalty-tier.is-thanh_vien { background: #a66d61; }
+
+.loyalty-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.loyalty-summary article,
+.loyalty-progress-card,
+.loyalty-history {
+  border: 1px solid #eadfe0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.loyalty-summary article {
+  display: flex;
+  min-height: 138px;
+  padding: 20px;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.loyalty-summary small { color: #827677; font-size: 13px; }
+.loyalty-summary strong { margin: 8px 0 4px; color: #3d3233; font-size: 25px; }
+.loyalty-summary span { color: #9a8d8e; font-size: 12px; }
+.loyalty-summary .is-coins { background: linear-gradient(135deg, #be3641, #96232d); }
+.loyalty-summary .is-coins small,
+.loyalty-summary .is-coins span { color: rgba(255, 255, 255, .8); }
+.loyalty-summary .is-coins strong { color: #fff; font-size: 32px; }
+
+.loyalty-progress-card { padding: 22px 24px; }
+.loyalty-progress-card h2 { margin: 0 0 5px; color: #3f3435; font-size: 18px; }
+.loyalty-progress-card p { margin: 0; color: #7b6f70; font-size: 13px; }
+.loyalty-progress { height: 12px; margin-top: 20px; overflow: hidden; border-radius: 99px; background: #f0e9e9; }
+.loyalty-progress i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #bd3944, #e19a67); }
+.loyalty-progress-labels { display: flex; justify-content: space-between; margin-top: 8px; color: #776b6c; font-size: 12px; }
+
+.loyalty-history > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid #eee5e6;
+}
+
+.loyalty-history h2 { margin: 3px 0 0; color: #3f3435; font-size: 18px; }
+.loyalty-history header small { color: #918485; }
+.loyalty-history article { display: grid; grid-template-columns: 90px minmax(0, 1fr) auto; gap: 15px; align-items: center; padding: 16px 22px; border-top: 1px solid #f2ecec; }
+.loyalty-history article:first-child { border-top: 0; }
+.loyalty-history article > span { font-size: 17px; font-weight: 800; }
+.loyalty-history .is-plus { color: #198153; }
+.loyalty-history .is-minus { color: #bd3944; }
+.loyalty-history article strong { color: #493e3f; font-size: 14px; }
+.loyalty-history article p { margin: 3px 0; color: #817475; font-size: 12px; }
+.loyalty-history article small,
+.loyalty-history article em { color: #9a8d8e; font-size: 11px; font-style: normal; }
+.loyalty-empty,
+.loyalty-loading,
+.loyalty-error,
+.loyalty-debt { padding: 22px; border-radius: 10px; background: #fff; color: #766a6b; text-align: center; }
+.loyalty-error,
+.loyalty-debt { background: #fff1df; color: #8e571d; }
+
+@media (max-width: 760px) {
+  .loyalty-summary { grid-template-columns: 1fr; }
+  .loyalty-heading { flex-direction: column; }
+  .loyalty-history article { grid-template-columns: 75px minmax(0, 1fr); }
+  .loyalty-history article em { grid-column: 2; }
+}

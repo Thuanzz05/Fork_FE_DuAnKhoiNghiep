@@ -72,7 +72,7 @@ const statusMeta: Record<AccountStatus, { label: string }> = {
 const orderStatusLabel: Record<string, string> = {
   CHO_XAC_NHAN: 'Chờ xác nhận',
   DA_XAC_NHAN: 'Đã xác nhận',
-  DANG_CHUAN_BI: 'Đang chuẩn bị',
+  DANG_CHUAN_BI: 'Đang chuẩn bị hàng',
   DANG_GIAO: 'Đang giao',
   DA_GIAO: 'Đã giao',
   DA_HUY: 'Đã hủy',

@@ -4,6 +4,7 @@ import Pagination from '../../components/Pagination'
 import { formatPrice } from '../../data/products'
 import { usePagination } from '../../hooks/usePagination'
 import { api } from '../../services/api'
+import { printStockVoucher } from '../../utils/printDocuments'
 import './AdminInventoryPage.css'
 
 type InventoryView = 'stock' | 'vouchers'
@@ -164,6 +165,7 @@ function AdminInventoryPage() {
   const [isSupplierSaving, setIsSupplierSaving] = useState(false)
   const [selectedVoucher, setSelectedVoucher] = useState<StockVoucher | null>(null)
   const [notice, setNotice] = useState('')
+  const [isPrinting, setIsPrinting] = useState(false)
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [supplierForm, setSupplierForm] = useState<SupplierFormState>(emptySupplierForm)
   const [voucherForm, setVoucherForm] = useState<VoucherFormState>(() => ({
@@ -210,6 +212,19 @@ function AdminInventoryPage() {
     } catch {
       setInventory([])
       setVouchers([])
+    }
+  }
+
+  const handlePrintVoucher = async () => {
+    if (!selectedVoucher || isPrinting) return
+    setIsPrinting(true)
+    try {
+      await printStockVoucher(selectedVoucher)
+      setNotice(`Đã mở bản in ${selectedVoucher.code}`)
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Không thể in phiếu kho')
+    } finally {
+      setIsPrinting(false)
     }
   }
 
@@ -599,7 +614,7 @@ function AdminInventoryPage() {
               <section><h3>Danh sách sản phẩm</h3><div>{selectedVoucher.items.map((item) => {
                 return <article key={item.productId}><img src={item.image} alt="" /><div><strong>{item.productName}</strong><span>{item.sku} · {item.quantity} {item.unit} x {formatPrice(item.unitCost)}</span></div><b>{formatPrice(item.total)}</b></article>
               })}</div></section>
-              <footer><span>Tổng cộng <strong>{voucherQuantity(selectedVoucher)} sản phẩm</strong></span><b>{formatPrice(voucherTotal(selectedVoucher))}</b></footer>
+              <footer><span>Tổng cộng <strong>{voucherQuantity(selectedVoucher)} sản phẩm</strong></span><b>{formatPrice(voucherTotal(selectedVoucher))}</b><button type="button" className="admin-inventory-save-button" onClick={handlePrintVoucher} disabled={isPrinting}>{isPrinting ? 'Đang chuẩn bị...' : 'In phiếu kho'}</button></footer>
             </div>
           </section>
         </div>

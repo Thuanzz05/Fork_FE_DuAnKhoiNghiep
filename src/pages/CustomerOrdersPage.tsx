@@ -10,7 +10,7 @@ import { api } from '../services/api'
 import { usePagination } from '../hooks/usePagination'
 import './CustomerOrdersPage.css'
 
-type FilterTab = 'ALL' | 'CHO_XAC_NHAN' | 'DANG_GIAO_HANG' | 'DA_GIAO_HANG' | 'DA_HUY'
+type FilterTab = 'ALL' | 'CHO_XAC_NHAN' | 'DANG_GIAO' | 'DA_GIAO' | 'DA_HUY'
 
 const ORDERS_PER_PAGE = 5
 
@@ -61,12 +61,20 @@ function CustomerOrdersPage() {
         return 'Chờ xác nhận'
       case 'DA_XAC_NHAN':
         return 'Đã xác nhận'
-      case 'DANG_DONG_GOI':
-        return 'Đang đóng gói'
-      case 'DANG_GIAO_HANG':
+      case 'DANG_CHUAN_BI':
+        return 'Đang chuẩn bị hàng'
+      case 'DANG_GIAO':
         return 'Đang giao hàng'
-      case 'DA_GIAO_HANG':
+      case 'DA_GIAO':
         return 'Đã giao hàng'
+      case 'GIAO_THAT_BAI':
+        return 'Giao hàng thất bại'
+      case 'GIAO_LAI':
+        return 'Đang giao lại'
+      case 'DANG_HOAN_HANG':
+        return 'Đang hoàn hàng'
+      case 'DA_HOAN_HANG':
+        return 'Đã hoàn hàng'
       case 'DA_HUY':
         return 'Đã hủy'
       default:
@@ -79,12 +87,16 @@ function CustomerOrdersPage() {
       case 'CHO_XAC_NHAN':
         return 'status-pending'
       case 'DA_XAC_NHAN':
-      case 'DANG_DONG_GOI':
+      case 'DANG_CHUAN_BI':
         return 'status-confirmed'
-      case 'DANG_GIAO_HANG':
+      case 'DANG_GIAO':
+      case 'GIAO_LAI':
         return 'status-shipping'
-      case 'DA_GIAO_HANG':
+      case 'DA_GIAO':
         return 'status-completed'
+      case 'GIAO_THAT_BAI':
+      case 'DANG_HOAN_HANG':
+      case 'DA_HOAN_HANG':
       case 'DA_HUY':
         return 'status-cancelled'
       default:
@@ -106,11 +118,11 @@ function CustomerOrdersPage() {
   const filteredOrders = orders.filter((order) => {
     // 1. Lọc theo Tab trạng thái
     let matchesTab = true
-    if (activeTab === 'DANG_GIAO_HANG') {
+    if (activeTab === 'DANG_GIAO') {
       matchesTab =
         order.orderStatus === 'DA_XAC_NHAN' ||
-        order.orderStatus === 'DANG_DONG_GOI' ||
-        order.orderStatus === 'DANG_GIAO_HANG'
+        order.orderStatus === 'DANG_CHUAN_BI' ||
+        order.orderStatus === 'DANG_GIAO'
     } else if (activeTab !== 'ALL') {
       matchesTab = order.orderStatus === activeTab
     }
@@ -236,9 +248,13 @@ function CustomerOrdersPage() {
 
     const reviewsData = reviewOrder.items.map((item) => ({
       productId: item.productId,
-      rating: ratings[item.productId] || 5,
+      rating: ratings[item.productId] || 0,
       comment: comments[item.productId] || '',
     }))
+    if (reviewsData.some((item) => item.rating < 1)) {
+      setActionNotice({ message: 'Vui lòng chọn số sao cho tất cả sản phẩm.', type: 'error' })
+      return
+    }
 
     try {
       await api.post(`/customers/me/orders/${reviewOrder.id}/reviews`, { reviews: reviewsData })
@@ -318,8 +334,8 @@ function CustomerOrdersPage() {
               {[
                 { key: 'ALL', label: 'Tất cả' },
                 { key: 'CHO_XAC_NHAN', label: 'Chờ xác nhận' },
-                { key: 'DANG_GIAO_HANG', label: 'Đang giao' },
-                { key: 'DA_GIAO_HANG', label: 'Đã giao' },
+                { key: 'DANG_GIAO', label: 'Đang giao' },
+                { key: 'DA_GIAO', label: 'Đã giao' },
                 { key: 'DA_HUY', label: 'Đã hủy' },
               ].map((tab) => (
                 <button
@@ -446,7 +462,7 @@ function CustomerOrdersPage() {
                             Hủy đơn
                           </button>
                         )}
-                        {order.orderStatus === 'DA_GIAO_HANG' && (
+                        {order.orderStatus === 'DA_GIAO' && (
                           <>
                             {order.isReviewed ? (
                               <button
@@ -467,7 +483,7 @@ function CustomerOrdersPage() {
                             )}
                           </>
                         )}
-                        {(order.orderStatus === 'DA_GIAO_HANG' || order.orderStatus === 'DA_HUY') && (
+                        {(order.orderStatus === 'DA_GIAO' || order.orderStatus === 'DA_HUY') && (
                           <button
                             type="button"
                             className="btn-primary"
@@ -595,12 +611,12 @@ function CustomerOrdersPage() {
 
                         {/* Node 2: Đang chuẩn bị hàng */}
                         <div className={`timeline-node ${
-                          ['DA_XAC_NHAN', 'DANG_DONG_GOI'].includes(selectedOrder.orderStatus)
+                          ['DA_XAC_NHAN', 'DANG_CHUAN_BI'].includes(selectedOrder.orderStatus)
                             ? 'active'
-                            : ['DANG_GIAO_HANG', 'DA_GIAO_HANG'].includes(selectedOrder.orderStatus)
+                            : ['DANG_GIAO', 'DA_GIAO'].includes(selectedOrder.orderStatus)
                             ? 'past'
                             : 'inactive'
-                        } ${['DANG_GIAO_HANG', 'DA_GIAO_HANG'].includes(selectedOrder.orderStatus) ? 'line-active' : ''}`}>
+                        } ${['DANG_GIAO', 'DA_GIAO'].includes(selectedOrder.orderStatus) ? 'line-active' : ''}`}>
                           <div className="node-icon">
                             <svg viewBox="0 0 24 24" className="timeline-svg">
                               <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" strokeWidth="2" fill="none" />
@@ -616,12 +632,12 @@ function CustomerOrdersPage() {
 
                         {/* Node 3: Đang vận chuyển */}
                         <div className={`timeline-node ${
-                          selectedOrder.orderStatus === 'DANG_GIAO_HANG'
+                          selectedOrder.orderStatus === 'DANG_GIAO'
                             ? 'active'
-                            : selectedOrder.orderStatus === 'DA_GIAO_HANG'
+                            : selectedOrder.orderStatus === 'DA_GIAO'
                             ? 'past'
                             : 'inactive'
-                        } ${selectedOrder.orderStatus === 'DA_GIAO_HANG' ? 'line-active' : ''}`}>
+                        } ${selectedOrder.orderStatus === 'DA_GIAO' ? 'line-active' : ''}`}>
                           <div className="node-icon">
                             <svg viewBox="0 0 24 24" className="timeline-svg">
                               <rect x="2" y="11" width="13" height="8" rx="1" stroke="currentColor" strokeWidth="2.2" fill="none" />
@@ -637,7 +653,7 @@ function CustomerOrdersPage() {
                         </div>
 
                         {/* Node 4: Giao hàng thành công */}
-                        <div className={`timeline-node ${selectedOrder.orderStatus === 'DA_GIAO_HANG' ? 'active' : 'inactive'}`}>
+                        <div className={`timeline-node ${selectedOrder.orderStatus === 'DA_GIAO' ? 'active' : 'inactive'}`}>
                           <div className="node-icon">
                             <svg viewBox="0 0 24 24" className="timeline-svg">
                               <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
@@ -646,7 +662,7 @@ function CustomerOrdersPage() {
                           <div className="node-content">
                             <h4>Giao hàng thành công</h4>
                             <p className="node-desc">Đơn hàng đã được giao thành công đến bạn.</p>
-                            {selectedOrder.orderStatus === 'DA_GIAO_HANG' && (
+                            {selectedOrder.orderStatus === 'DA_GIAO' && (
                               <span className="node-time">{formatDate(selectedOrder.createdAt)}</span>
                             )}
                           </div>
@@ -721,7 +737,7 @@ function CustomerOrdersPage() {
                   Hủy đơn hàng này
                 </button>
               )}
-              {selectedOrder.orderStatus === 'DA_GIAO_HANG' && (
+              {selectedOrder.orderStatus === 'DA_GIAO' && (
                 <>
                   {selectedOrder.isReviewed ? (
                     <button
@@ -749,7 +765,7 @@ function CustomerOrdersPage() {
                   )}
                 </>
               )}
-              {(selectedOrder.orderStatus === 'DA_GIAO_HANG' || selectedOrder.orderStatus === 'DA_HUY') && (
+              {(selectedOrder.orderStatus === 'DA_GIAO' || selectedOrder.orderStatus === 'DA_HUY') && (
                 <button
                   type="button"
                   className="btn-primary"
@@ -823,6 +839,7 @@ function CustomerOrdersPage() {
             </div>
             <form onSubmit={handleReviewSubmit}>
               <div className="order-modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                <div className="review-reward-note">Mỗi đánh giá hợp lệ nhận 300 xu; viết từ 30 ký tự nhận tổng 1.000 xu. Xu được cộng sau khi quản trị viên duyệt, tối đa 3.000 xu mỗi đơn.</div>
                 <div className="reviews-list">
                   {reviewOrder.items.map((item) => (
                     <div className="reviews-product-row" key={item.productId}>
@@ -831,7 +848,7 @@ function CustomerOrdersPage() {
                         <h4>{item.productName}</h4>
                         <div className="star-rating">
                           {[1, 2, 3, 4, 5].map((star) => {
-                            const isSelected = star <= (ratings[item.productId] || 5)
+                            const isSelected = star <= (ratings[item.productId] || 0)
                             return (
                               <button
                                 key={star}
@@ -851,6 +868,7 @@ function CustomerOrdersPage() {
                           onChange={(e) => handleCommentChange(item.productId, e.target.value)}
                           rows={2}
                         />
+                        <small className="review-coin-preview">Dự kiến nhận: {(String(comments[item.productId] || '').trim().length >= 30 ? 1000 : 300).toLocaleString('vi-VN')} xu sau khi được duyệt</small>
                       </div>
                     </div>
                   ))}

@@ -2,9 +2,13 @@ import { getStoreSettings } from './storeSettings'
 export type OrderStatus =
   | 'CHO_XAC_NHAN'
   | 'DA_XAC_NHAN'
-  | 'DANG_DONG_GOI'
-  | 'DANG_GIAO_HANG'
-  | 'DA_GIAO_HANG'
+  | 'DANG_CHUAN_BI'
+  | 'DANG_GIAO'
+  | 'DA_GIAO'
+  | 'GIAO_THAT_BAI'
+  | 'GIAO_LAI'
+  | 'DANG_HOAN_HANG'
+  | 'DA_HOAN_HANG'
   | 'DA_HUY'
 
 export type PaymentStatus = 'CHUA_THANH_TOAN' | 'DA_THANH_TOAN' | 'THAT_BAI' | 'DA_HOAN_TIEN'
@@ -43,6 +47,11 @@ export interface Order {
   refundAmount?: number | null
   refundReason?: string | null
   refundAdminNote?: string | null
+  email?: string
+  adminNote?: string
+  shippingProvider?: string
+  trackingCode?: string
+  exports?: Array<{ id: string; code: string; type: string; status: string; exportedAt?: string }>
   isReviewed?: boolean
   items: OrderItem[]
   lineCount?: number

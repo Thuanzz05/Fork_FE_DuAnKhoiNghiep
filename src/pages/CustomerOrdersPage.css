@@ -1,4 +1,22 @@
 /* Customer Orders Page Styles */
+.review-reward-note {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid #f0d6ae;
+  border-radius: 8px;
+  background: #fff8e9;
+  color: #7d571f;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.review-coin-preview {
+  display: block;
+  margin-top: 7px;
+  color: #ad6228;
+  font-size: 12px;
+  font-weight: 700;
+}
 
 .order-panel {
   display: flex;

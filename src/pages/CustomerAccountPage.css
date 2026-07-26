@@ -168,6 +168,72 @@
   gap: 30px;
 }
 
+.profile-loyalty-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding: 16px 18px;
+  border: 1px solid #ecd9c5;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fff9ef, #fff4f3);
+}
+
+.profile-loyalty-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #d59331, #bd3944);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.profile-loyalty-card > div:nth-child(2) {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profile-loyalty-card small {
+  color: #846f64;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.profile-loyalty-card strong {
+  color: #4a3030;
+  font-size: 21px;
+}
+
+.profile-loyalty-card span {
+  color: #8d7772;
+  font-size: 12px;
+}
+
+.profile-loyalty-card a {
+  padding: 9px 13px;
+  border: 1px solid #d8a9a7;
+  border-radius: 999px;
+  color: #a52f39;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.profile-loyalty-card a:hover {
+  border-color: #b53740;
+  background: #fff0f1;
+}
+
 .profile-avatar-editor {
   display: flex;
   flex-direction: column;
@@ -489,6 +555,15 @@
 }
 
 @media (max-width: 640px) {
+  .profile-loyalty-card {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .profile-loyalty-card a {
+    grid-column: 1 / -1;
+    text-align: center;
+  }
+
   .customer-account-page {
     padding: 24px 0 42px;
   }

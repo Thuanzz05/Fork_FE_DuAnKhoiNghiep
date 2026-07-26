@@ -66,7 +66,7 @@ function AdminReviewsPage() {
         id: String(item.id), orderId: String(item.orderCode || ''), productId: String(item.productId), userId: String(item.userId),
         userName: String(item.userName), rating: Number(item.rating), comment: String(item.content || ''),
         createdAt: String(item.createdAt),
-        status: item.status === 'DA_DUYET' ? 'approved' : item.status === 'TU_CHOI' ? 'hidden' : 'pending',
+        status: item.status === 'DA_DUYET' ? 'approved' : ['TU_CHOI', 'DA_AN'].includes(String(item.status)) ? 'hidden' : 'pending',
         reply: item.reply || undefined, verifiedPurchase: true,
       })))
     } catch {
@@ -173,10 +173,10 @@ function AdminReviewsPage() {
   const confirmDelete = async () => {
     if (!deletingReview) return
     try {
-      await api.delete(`/admin/reviews/${deletingReview.id}`)
+      await api.patch(`/admin/reviews/${deletingReview.id}`, { status: 'DA_AN' })
       await loadReviews()
       window.dispatchEvent(new Event('admin-reviews-updated'))
-      setNotice({ message: `Đã xóa đánh giá của ${deletingReview.userName}`, type: 'success' })
+      setNotice({ message: `Đã ẩn và lưu lại đánh giá của ${deletingReview.userName} để đối soát`, type: 'success' })
       setDeletingReview(null)
     } catch (error) {
       setNotice({ message: error instanceof Error ? error.message : 'Không thể xóa đánh giá', type: 'error' })
@@ -252,7 +252,7 @@ function AdminReviewsPage() {
 
       {deletingReview ? (
         <div className="admin-review-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setDeletingReview(null)}>
-          <section className="admin-review-delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="admin-review-delete-title"><span><AdminIcon name="trash" /></span><h2 id="admin-review-delete-title">Xóa đánh giá?</h2><p>Đánh giá của <strong>{deletingReview.userName}</strong> sẽ bị xóa khỏi dữ liệu. Hành động này không thể hoàn tác trên giao diện hiện tại.</p><div><button type="button" className="admin-review-secondary" onClick={() => setDeletingReview(null)}>Hủy</button><button type="button" className="admin-review-danger" onClick={confirmDelete}>Xóa đánh giá</button></div></section>
+          <section className="admin-review-delete-modal" role="alertdialog" aria-modal="true" aria-labelledby="admin-review-delete-title"><span><AdminIcon name="trash" /></span><h2 id="admin-review-delete-title">Ẩn đánh giá?</h2><p>Đánh giá của <strong>{deletingReview.userName}</strong> sẽ không còn hiển thị, nhưng bản ghi vẫn được giữ lại để đối soát và ngăn đánh giá lại nhận thưởng.</p><div><button type="button" className="admin-review-secondary" onClick={() => setDeletingReview(null)}>Hủy</button><button type="button" className="admin-review-danger" onClick={confirmDelete}>Ẩn đánh giá</button></div></section>
         </div>
       ) : null}
 
