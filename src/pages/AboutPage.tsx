@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useStoreSettings } from '../utils/storeSettings'
 import './AboutPage.css'
 
 function LeafIcon() {
@@ -28,12 +29,13 @@ function DropIcon() {
 }
 
 function AboutPage() {
+  const storeSettings = useStoreSettings()
   return (
     <main className="about-page">
       {/* Banner Section */}
       <section className="about-hero-section">
         <div className="about-hero-image-wrapper">
-          <img src="/images/banner3.png" alt="Giới thiệu Red Bean Beauty" className="about-hero-bg-img" />
+          <img src="/images/banner3.png" alt={`Giới thiệu ${storeSettings.storeName}`} className="about-hero-bg-img" />
           
           <div className="about-hero-overlay">
             <div className="about-container">
@@ -46,7 +48,7 @@ function AboutPage() {
 
               {/* Text content block */}
               <div className="about-hero-content">
-                <h1 className="about-hero-title">Về Red Bean Beauty</h1>
+                <h1 className="about-hero-title">Về {storeSettings.storeName}</h1>
                 
                 <h2 className="about-hero-subtitle">
                   Chăm sóc da từ đậu đỏ –<br />
@@ -54,7 +56,7 @@ function AboutPage() {
                 </h2>
                 
                 <p className="about-hero-desc">
-                  Red Bean Beauty là thương hiệu chăm sóc da thuần thiên nhiên, ứng dụng sức mạnh của đậu đỏ để mang đến những sản phẩm lành tính, an toàn và hiệu quả cho làn da Việt.
+                  {storeSettings.storeName} là thương hiệu chăm sóc da thuần thiên nhiên, ứng dụng sức mạnh của đậu đỏ để mang đến những sản phẩm lành tính, an toàn và hiệu quả cho làn da Việt.
                 </p>
 
                 {/* Features row */}
@@ -201,7 +203,7 @@ function AboutPage() {
           <div className="about-story-card">
             {/* Left: Image */}
             <div className="about-story-img-box">
-              <img src="/images/chung_toi.png" alt="Đội ngũ Red Bean Beauty" />
+              <img src="/images/chung_toi.png" alt={`Đội ngũ ${storeSettings.storeName}`} />
             </div>
 
             {/* Middle: Content */}
@@ -212,7 +214,7 @@ function AboutPage() {
                 cho làn da khỏe đẹp mỗi ngày
               </h2>
               <p>
-                Red Bean Beauty được khởi nguồn từ tình yêu với thiên nhiên và làn da phụ nữ Việt. Chúng tôi tin rằng, vẻ đẹp bền vững bắt đầu từ sự lành tính và thấu hiểu làn da.
+                {storeSettings.storeName} được khởi nguồn từ tình yêu với thiên nhiên và làn da phụ nữ Việt. Chúng tôi tin rằng, vẻ đẹp bền vững bắt đầu từ sự lành tính và thấu hiểu làn da.
               </p>
               <p>
                 Mỗi sản phẩm là kết quả của quá trình nghiên cứu kỹ lưỡng, chọn lọc nguyên liệu tự nhiên và công thức tối ưu – để làn da bạn luôn được nuôi dưỡng một cách dịu nhẹ, hiệu quả và an toàn.

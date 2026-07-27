@@ -74,12 +74,23 @@ function getNameInitials(name: string) {
     .toLocaleUpperCase('vi-VN')
 }
 
+function LeafTitleIcon() {
+  return (
+    <svg className="leaf-icon featured-leaf-icon" viewBox="0 0 28 28" aria-hidden="true">
+      <path className="leaf-shape" d="M23.8 3.6C15 4.2 8.4 7.5 6.2 13.1c-1.6 4.1.4 8.4 4.5 9.2 4.8.9 8.8-2.4 10.4-7.3 1.2-3.7 1.3-7.7 2.7-11.4Z" />
+      <path className="leaf-vein" d="M4.2 24.3c3.6-6.5 8.4-10.8 15.4-15.2M9.7 17.1c2.5.1 4.6-.3 6.5-1.1M13 13.3c.1-1.5-.1-2.8-.5-4" />
+    </svg>
+  )
+}
+
 function HomePage() {
   const { products } = useCatalog()
   const [articles, setArticles] = useState<NewsArticle[]>([])
   const testimonialsRef = useRef<HTMLDivElement>(null)
   const bestSellers = products.slice(0, 5)
   const featuredCombo = products.find((product) => product.isCombo)
+  const heroProduct = products.find((product) => product.slug === 'combo-cham-soc-da-toan-dien-dau-do-3-mon-150g')
+    ?? featuredCombo
 
   useEffect(() => {
     api.get<{ articles: NewsArticle[] }>('/news')
@@ -179,7 +190,11 @@ function HomePage() {
                 </div>
               </div>
 
-              <Link to="/san-pham/combo-cham-soc-da-toan-dien-dau-do-3-mon-150g" className="hero-btn-green">
+              <Link
+                to={heroProduct ? `/san-pham/${heroProduct.slug}` : '/san-pham'}
+                className="hero-btn-green"
+                aria-label={heroProduct ? `Xem sản phẩm ${heroProduct.name}` : 'Xem danh sách sản phẩm'}
+              >
                 <span>MUA NGAY</span>
                 <svg className="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -259,9 +274,7 @@ function HomePage() {
           <div className="featured-section-title-wrapper">
             <h2 className="featured-section-title">
               BỘ SƯU TẬP NỔI BẬT
-              <svg className="leaf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 22 2c-2.48 5-3 6.5-4.1 12.2A7 7 0 0 1 11 20z"></path>
-              </svg>
+              <LeafTitleIcon />
             </h2>
           </div>
 
@@ -341,9 +354,7 @@ function HomePage() {
           <div className="section-header">
             <h2 className="section-title">
               SẢN PHẨM BÁN CHẠY
-              <svg className="leaf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 22 2c-2.48 5-3 6.5-4.1 12.2A7 7 0 0 1 11 20z"></path>
-              </svg>
+              <LeafTitleIcon />
             </h2>
             <Link to="/san-pham" className="view-all-link">
               <span>Xem tất cả</span>
@@ -493,6 +504,7 @@ function HomePage() {
           <div className="testimonials-header">
             <h2 id="testimonials-title" className="testimonials-section-title">
               KHÁCH HÀNG NÓI GÌ VỀ CHÚNG TÔI
+              <LeafTitleIcon />
             </h2>
           </div>
 
@@ -571,6 +583,7 @@ function HomePage() {
           <div className="news-header">
             <h2 id="news-title" className="news-section-title">
               BÍ QUYẾT LÀM ĐẸP TỰ NHIÊN
+              <LeafTitleIcon />
             </h2>
             <Link to="/tin-tuc" className="news-view-all-btn">
               Xem tất cả bài viết

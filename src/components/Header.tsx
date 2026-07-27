@@ -8,6 +8,7 @@ import { getCurrentUser, getUserDisplayName, getUserInitial, logoutDemo } from '
 import { useStoreSettings } from '../utils/storeSettings'
 import NotificationBell from './NotificationBell'
 import { disablePushNotifications } from '../services/notifications'
+import { api } from '../services/api'
 import './Header.css'
 
 const menuItems = [
@@ -44,6 +45,13 @@ function Header() {
   const [searchTerm, setSearchTerm] = useState(() => new URLSearchParams(location.search).get('tu-khoa') || '')
   const [searchSuggestionsOpen, setSearchSuggestionsOpen] = useState(false)
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1)
+  const [loyalty, setLoyalty] = useState<{
+    availableCoins: number
+    tierName: string
+    claimedToday: boolean
+  } | null>(null)
+  const [checkingIn, setCheckingIn] = useState(false)
+  const [checkInNotice, setCheckInNotice] = useState('')
 
   const productSuggestions = useMemo(() => {
     const normalizedQuery = normalizeSearchText(searchTerm)
@@ -95,6 +103,48 @@ function Header() {
       window.removeEventListener('auth-updated', syncAuth)
     }
   }, [])
+
+  useEffect(() => {
+    if (!authUser || authUser.role === 'ADMIN') {
+      setLoyalty(null)
+      return
+    }
+    void api.get<{
+      wallet: { availableCoins: number }
+      member: { tierName: string }
+      dailyCheckIn: { claimedToday: boolean }
+    }>('/customers/me/loyalty').then((data) => {
+      setLoyalty({
+        availableCoins: data.wallet.availableCoins,
+        tierName: data.member.tierName,
+        claimedToday: data.dailyCheckIn.claimedToday,
+      })
+    }).catch(() => setLoyalty(null))
+  }, [authUser])
+
+  const handleDailyCheckIn = async () => {
+    if (checkingIn || loyalty?.claimedToday) return
+    setCheckingIn(true)
+    setCheckInNotice('')
+    try {
+      const result = await api.post<{
+        rewarded: boolean
+        availableCoins: number
+        tierName: string
+      }>('/customers/me/loyalty/daily-check-in')
+      setLoyalty({
+        availableCoins: result.availableCoins,
+        tierName: result.tierName,
+        claimedToday: true,
+      })
+      setCheckInNotice(result.rewarded ? 'Điểm danh thành công: +100 xu' : 'Hôm nay bạn đã điểm danh rồi')
+      window.dispatchEvent(new CustomEvent('loyalty-updated'))
+    } catch (error) {
+      setCheckInNotice(error instanceof Error ? error.message : 'Không thể điểm danh lúc này')
+    } finally {
+      setCheckingIn(false)
+    }
+  }
 
   useEffect(() => {
     const syncWishlistCount = () => setWishlistCount(getWishlistIds().length)
@@ -399,6 +449,18 @@ function Header() {
                     <strong>{getUserDisplayName(authUser)}</strong>
                     <small>{authUser.email}</small>
                   </div>
+                  {authUser.role !== 'ADMIN' ? (
+                    <div className="account-loyalty-card">
+                      <Link to="/tai-khoan/xu-thanh-vien" onClick={() => setAccountMenuOpen(false)}>
+                        <span><small>Xu hiện có</small><strong>{loyalty ? loyalty.availableCoins.toLocaleString('vi-VN') : '—'} xu</strong></span>
+                        <span><small>Hạng thành viên</small><strong>{loyalty?.tierName || 'Đang tải...'}</strong></span>
+                      </Link>
+                      <button type="button" className="account-checkin-button" disabled={checkingIn || Boolean(loyalty?.claimedToday)} onClick={() => void handleDailyCheckIn()}>
+                        {loyalty?.claimedToday ? '✓ Đã điểm danh hôm nay' : checkingIn ? 'Đang điểm danh...' : 'Điểm danh nhận 100 xu'}
+                      </button>
+                      {checkInNotice ? <small className="account-checkin-notice">{checkInNotice}</small> : null}
+                    </div>
+                  ) : null}
                   {authUser.role === 'ADMIN' ? (
                     <Link role="menuitem" to="/admin" onClick={(event) => { event.currentTarget.blur(); setAccountMenuOpen(false) }}>
                       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>

@@ -347,6 +347,7 @@ function AdminOrdersPage() {
               <div className="admin-order-detail-main">
                 <section><h3>Sản phẩm ({selectedOrder.items.reduce((total, item) => total + item.quantity, 0)})</h3><div className="admin-order-detail-items">{selectedOrder.items.map((item) => <article key={`${item.productId}-${item.weight}`}><img src={item.productImage} alt="" /><div><strong>{item.productName}</strong><span>{item.weight} · Số lượng: {item.quantity}</span></div><b>{formatPrice(item.price * item.quantity)}</b></article>)}</div></section>
                 <section className="admin-order-customer-detail"><h3>Thông tin nhận hàng</h3><div><p><span>Người nhận</span><strong>{selectedOrder.recipientName}</strong></p><p><span>Số điện thoại</span><strong>{selectedOrder.phone}</strong></p><p><span>Địa chỉ</span><strong>{selectedOrder.shippingAddress}</strong></p>{selectedOrder.customerNote ? <p><span>Ghi chú</span><strong>{selectedOrder.customerNote}</strong></p> : null}{selectedOrder.cancelReason ? <p className="is-warning"><span>Lý do hủy/trả</span><strong>{selectedOrder.cancelReason}</strong></p> : null}</div></section>
+                <section className="admin-order-payment-summary"><h3>Thông tin thanh toán</h3><div className="admin-order-payment-grid"><p><span>Tiền hàng</span><strong>{formatPrice(selectedOrder.totalProductPrice)}</strong></p><p><span>Giảm giá</span><strong>-{formatPrice(selectedOrder.discountAmount)}</strong></p><p><span>Phí vận chuyển</span><strong>{formatPrice(selectedOrder.shippingFee)}</strong></p><p className="is-method"><span>Phương thức thanh toán</span><strong>{paymentMethodMeta[selectedOrder.paymentMethod]}</strong></p><p className="is-total"><span>Tổng thanh toán</span><strong>{formatPrice(selectedOrder.totalPayment)}</strong></p></div></section>
               </div>
               <aside className="admin-order-detail-aside">
                 <section>
@@ -380,7 +381,6 @@ function AdminOrdersPage() {
                   <p>Chỉ hiển thị chứng từ hợp lệ với trạng thái đơn hiện tại.</p>
                   <button type="button" onClick={handlePrintDocument}><AdminIcon name="print" />In chứng từ</button>
                 </section>
-                <section className="admin-order-payment-summary"><h3>Thanh toán</h3><p><span>Tiền hàng</span><strong>{formatPrice(selectedOrder.totalProductPrice)}</strong></p><p><span>Giảm giá</span><strong>-{formatPrice(selectedOrder.discountAmount)}</strong></p><p><span>Phí vận chuyển</span><strong>{formatPrice(selectedOrder.shippingFee)}</strong></p><p className="is-total"><span>Tổng thanh toán</span><strong>{formatPrice(selectedOrder.totalPayment)}</strong></p><small>{paymentMethodMeta[selectedOrder.paymentMethod]}</small></section>
               </aside>
             </div>
           </section>

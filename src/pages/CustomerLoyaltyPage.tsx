@@ -44,6 +44,7 @@ const transactionLabels: Record<string, string> = {
   HOAN_TAC_DANH_GIA: 'Thu hồi thưởng đánh giá',
   THU_HOI_XU_HOAN_HANG: 'Thu hồi xu hoàn hàng',
   DIEU_CHINH_ADMIN: 'Điều chỉnh',
+  DIEM_DANH_HANG_NGAY: 'Điểm danh hằng ngày',
 }
 
 function CustomerLoyaltyPage() {

@@ -365,7 +365,7 @@
   top: calc(100% + 9px);
   right: 0;
   z-index: 1100;
-  width: 205px;
+  width: 270px;
   padding: 7px;
   border: 1px solid #ead9da;
   border-radius: 7px;
@@ -496,6 +496,75 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.account-loyalty-card {
+  position: relative;
+  z-index: 1;
+  margin: 0 3px 7px;
+  padding: 9px;
+  border: 1px solid #efd9dc;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #fff7f7, #fff0f2);
+}
+
+.account-loyalty-card > a {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.account-loyalty-card > a:hover {
+  background: transparent;
+}
+
+.account-loyalty-card > a span,
+.account-loyalty-card > a small,
+.account-loyalty-card > a strong {
+  display: block;
+}
+
+.account-loyalty-card > a small {
+  margin-bottom: 2px;
+  color: #8b7375;
+  font-size: 10px;
+}
+
+.account-loyalty-card > a strong {
+  color: #a92f39;
+  font-size: 13px;
+}
+
+.account-loyalty-card .account-checkin-button {
+  width: 100%;
+  min-height: 32px;
+  margin-top: 8px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 6px;
+  color: #fff;
+  background: #b53740;
+  font-size: 11px;
+  font-weight: 750;
+  text-align: center;
+  cursor: pointer;
+}
+
+.account-loyalty-card .account-checkin-button:disabled {
+  color: #6f6263;
+  background: #eadfe0;
+  cursor: default;
+}
+
+.account-checkin-notice {
+  display: block;
+  margin-top: 6px;
+  color: #8d2932;
+  font-size: 10px;
+  text-align: center;
 }
 
 .account-dropdown-user strong {
