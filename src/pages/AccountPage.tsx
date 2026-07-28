@@ -39,7 +39,7 @@ function AccountPage() {
   const requestedMode = resolveMode(searchParams.get('che-do'), resetToken)
   const [mode, setMode] = useState<AccountMode>(requestedMode)
   const [showPassword, setShowPassword] = useState(false)
-  const [rememberLogin, setRememberLogin] = useState(false)
+  const [rememberLogin, setRememberLogin] = useState(true)
   const [notice, setNotice] = useState('')
   const [noticeKind, setNoticeKind] = useState<NoticeKind>('info')
   const [isSubmitting, setIsSubmitting] = useState(false)
