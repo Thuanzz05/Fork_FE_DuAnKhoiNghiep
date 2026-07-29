@@ -21,6 +21,8 @@ interface CreateOrderResponse {
 interface CheckoutQuote {
   subtotal: number
   discountAmount: number
+  availableCoins: number
+  coinsUsed: number
   shippingFee: number
   totalPayment: number
   appliedPromotion: { code: string; description: string } | null
@@ -96,6 +98,7 @@ function CheckoutPage() {
   const [voucherNotice, setVoucherNotice] = useState({ message: '', type: '' })
   const [isQuoteLoading, setIsQuoteLoading] = useState(true)
   const [updatingVoucherCode, setUpdatingVoucherCode] = useState<string | null>(null)
+  const [useCoins, setUseCoins] = useState(false)
 
   const loadProvinces = async () => {
     setAddressLoading(true)
@@ -222,6 +225,7 @@ function CheckoutPage() {
 
   const totalProductPrice = checkoutQuote?.subtotal ?? 0
   const voucherDiscount = checkoutQuote?.discountAmount ?? 0
+  const coinsUsed = checkoutQuote?.coinsUsed ?? 0
   const shippingFee = checkoutQuote?.shippingFee ?? 0
   const totalPayment = checkoutQuote?.totalPayment ?? 0
 
@@ -229,6 +233,7 @@ function CheckoutPage() {
     const quote = await api.post<CheckoutQuote>('/customers/me/checkout/quote', {
       productIds: selectedIds,
       promotionCode,
+      useCoins,
     })
     setCheckoutQuote(quote)
     setAppliedVoucher(quote.appliedPromotion?.code ?? null)
@@ -241,7 +246,8 @@ function CheckoutPage() {
     setVoucherCode('')
     setVoucherNotice({ message: '', type: '' })
     setIsQuoteLoading(true)
-    void api.post<CheckoutQuote>('/customers/me/checkout/quote', { productIds: selectedIds })
+    setUseCoins(false)
+    void api.post<CheckoutQuote>('/customers/me/checkout/quote', { productIds: selectedIds, useCoins: false })
       .then(setCheckoutQuote)
       .catch((error) => {
         setCheckoutQuote(null)
@@ -285,6 +291,25 @@ function CheckoutPage() {
     }
   }
 
+  const handleToggleCoins = async () => {
+    const nextValue = !useCoins
+    setUseCoins(nextValue)
+    setIsQuoteLoading(true)
+    try {
+      const quote = await api.post<CheckoutQuote>('/customers/me/checkout/quote', {
+        productIds: selectedIds,
+        promotionCode: appliedVoucher || undefined,
+        useCoins: nextValue,
+      })
+      setCheckoutQuote(quote)
+    } catch (error) {
+      setUseCoins(!nextValue)
+      setVoucherNotice({ message: error instanceof Error ? error.message : 'Không thể áp dụng xu.', type: 'error' })
+    } finally {
+      setIsQuoteLoading(false)
+    }
+  }
+
   // Handle Order Submit
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -318,6 +343,7 @@ function CheckoutPage() {
         customerNote: customerNote.trim() || undefined,
         paymentMethod,
         promotionCode: appliedVoucher || undefined,
+        useCoins,
       })
       const cartItems = getCartItems()
       saveCartItems(cartItems.filter((item) => !selectedIds.includes(item.productId)))
@@ -585,6 +611,24 @@ function CheckoutPage() {
                 </div>
               </section>
 
+              <section className="checkout-card-section coin-section">
+                <div className="coin-section-copy">
+                  <span className="coin-icon" aria-hidden="true">S</span>
+                  <span>Dùng {(checkoutQuote?.availableCoins ?? 0).toLocaleString('vi-VN')} xu</span>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={useCoins}
+                  aria-label={`Dùng ${(checkoutQuote?.availableCoins ?? 0).toLocaleString('vi-VN')} xu`}
+                  className={`coin-toggle${useCoins ? ' is-applied' : ''}`}
+                  disabled={isQuoteLoading || (!useCoins && !(checkoutQuote?.availableCoins))}
+                  onClick={() => void handleToggleCoins()}
+                >
+                  <span />
+                </button>
+              </section>
+
               {/* Total calculations */}
               <section className="checkout-card-section summary-invoice">
                 <div className="invoice-row">
@@ -599,6 +643,12 @@ function CheckoutPage() {
                   <div className="invoice-row discount">
                     <span>Mã giảm giá áp dụng:</span>
                     <span>-{formatPrice(voucherDiscount)}</span>
+                  </div>
+                )}
+                {coinsUsed > 0 && (
+                  <div className="invoice-row discount">
+                    <span>Xu đã áp dụng:</span>
+                    <span>-{formatPrice(coinsUsed)}</span>
                   </div>
                 )}
                 <div className="invoice-row grand-total">
