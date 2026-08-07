@@ -96,7 +96,7 @@ export const AdminIcon = ({ name, ...props }: AdminIconProps) => {
   )
 }
 
-type AdminSection = 'dashboard' | 'orders' | 'products' | 'categories' | 'inventory' | 'accounts' | 'promotions' | 'articles' | 'articleComments' | 'reviews' | 'messages' | 'reports' | 'settings'
+type AdminSection = 'dashboard' | 'orders' | 'products' | 'categories' | 'inventory' | 'accounts' | 'hangThanhVien' | 'promotions' | 'articles' | 'articleComments' | 'reviews' | 'messages' | 'reports' | 'settings'
 
 interface AdminLayoutProps {
   activeItem: AdminSection
@@ -113,6 +113,7 @@ const navItems: Array<{ label: string; icon: AdminIconName; section?: AdminSecti
   { label: 'Danh mục', icon: 'folder', section: 'categories', to: '/admin/danh-muc' },
   { label: 'Kho hàng', icon: 'box', section: 'inventory', to: '/admin/kho' },
   { label: 'Tài khoản', icon: 'customers', section: 'accounts', to: '/admin/tai-khoan' },
+  { label: 'Hạng khách hàng', icon: 'star', section: 'hangThanhVien', to: '/admin/hang-thanh-vien' },
   { label: 'Khuyến mãi', icon: 'discount', section: 'promotions', to: '/admin/khuyen-mai' },
   { label: 'Bài viết', icon: 'news', section: 'articles', to: '/admin/bai-viet' },
   { label: 'Bình luận bài viết', icon: 'message', section: 'articleComments', to: '/admin/binh-luan-bai-viet' },
