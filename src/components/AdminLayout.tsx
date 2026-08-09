@@ -128,7 +128,7 @@ function AdminLayout({
   onSearchChange,
   searchPlaceholder = 'Tìm kiếm đơn hàng, sản phẩm...',
 }: AdminLayoutProps) {
-  const showTopbarSearch = !(['dashboard', 'reports', 'settings'] as AdminSection[]).includes(activeItem)
+  const showTopbarSearch = !(['dashboard', 'reports', 'settings', 'hangThanhVien'] as AdminSection[]).includes(activeItem)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [newContactCount, setNewContactCount] = useState(0)
   const [newOrderCount, setNewOrderCount] = useState(0)

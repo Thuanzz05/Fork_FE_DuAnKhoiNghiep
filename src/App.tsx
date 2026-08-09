@@ -39,6 +39,7 @@ import AdminReviewsPage from './pages/admin/AdminReviewsPage'
 import AdminSettingsPage from './pages/admin/AdminSettingsPage'
 import AdminReportsPage from './pages/admin/AdminReportsPage'
 import AdminMessagesPage from './pages/admin/AdminMessagesPage'
+import AdminLoyaltyTiersPage from './pages/admin/AdminLoyaltyTiersPage'
 import NotFoundPage from './pages/NotFoundPage'
 import { useStoreSettings } from './utils/storeSettings'
 import { getCurrentUser } from './utils/auth'
@@ -101,6 +102,7 @@ function AppContent() {
         <Route path="/admin/san-pham" element={<AdminGuard><AdminProductsPage /></AdminGuard>} />
         <Route path="/admin/danh-muc" element={<AdminGuard><AdminCategoriesPage /></AdminGuard>} />
         <Route path="/admin/tai-khoan" element={<AdminGuard><AdminAccountsPage /></AdminGuard>} />
+        <Route path="/admin/hang-thanh-vien" element={<AdminGuard><AdminLoyaltyTiersPage /></AdminGuard>} />
         <Route path="/admin/khuyen-mai" element={<AdminGuard><AdminPromotionsPage /></AdminGuard>} />
         <Route path="/admin/don-hang" element={<AdminGuard><AdminOrdersPage /></AdminGuard>} />
         <Route path="/admin/kho" element={<AdminGuard><AdminInventoryPage /></AdminGuard>} />
