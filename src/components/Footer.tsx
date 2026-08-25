@@ -46,7 +46,7 @@ function Footer() {
             <h3>Hỗ Trợ Khách Hàng</h3>
             <ul>
               <li>
-                <a href="/don-hang">Đơn hàng</a>
+                <a href="/tai-khoan/don-hang">Đơn hàng</a>
               </li>
               <li>
                 <a href="/chinh-sach-giao-hang">Chính sách giao hàng</a>
