@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import AdminLayout, { AdminIcon, type AdminIconName } from '../../components/AdminLayout'
 import { api } from '../../services/api'
@@ -441,7 +442,7 @@ function AdminDashboardPage() {
                 <h2>Đơn hàng gần đây</h2>
                 <p>5 đơn hàng mới nhất · {periodMeta.label}</p>
               </div>
-              <button type="button" className="admin-view-all">Xem tất cả đơn hàng <span>→</span></button>
+              <Link to="/admin/don-hang" className="admin-view-all">Xem tất cả đơn hàng <span>→</span></Link>
             </div>
 
             <div className="admin-orders-table-wrap">
