@@ -1044,6 +1044,7 @@ body:has(.admin-dashboard-page) {
   color: var(--admin-brand);
   font-size: 10px;
   font-weight: 700;
+  text-decoration: none;
 }
 
 .admin-view-all span {
